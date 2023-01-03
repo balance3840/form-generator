@@ -137,6 +137,24 @@
       "attributes": {
         "value": "1"
       }
+    },
+    {
+      "type": "checkboxGroup",
+      "label": "Fruits group",
+      "id": "fruits-input",
+      "inputName": "fruits",
+      "visible": true,
+      "model": "fruits",
+      "items": [
+        { "value": "apple", "label": "Apple" },
+        { "value": "orange", "label": "Orange" }
+      ],
+      "validationType": "string",
+      "validations": [
+        {
+          "name": "required"
+        }
+      ]
     }
     ]' ref="channelForm">
     

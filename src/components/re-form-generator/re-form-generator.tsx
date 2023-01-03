@@ -154,6 +154,9 @@ export class ReFormGenerator {
       case 'select':
         fieldMethod = 'renderSelectField';
         break;
+      case 'checkboxGroup':
+        fieldMethod = 'renderCheckboxGroup';
+        break;
       default:
         fieldMethod = 'renderInputField';
         break;
@@ -167,6 +170,25 @@ export class ReFormGenerator {
           {this.fieldHasErrors(field) && <span class="error-message">{this.fieldErrorMessage(field)}</span>}
         </div>
       </Fragment>
+    )
+  }
+
+  public renderCheckboxGroup(field) {
+    field.inputType = 'checkbox';
+    const { attributes, model, inputType, items } = field;
+    const { values } = this;
+    const props = this.buildProps(field);
+    return (
+      <div class="checkboxGroup">
+        {items.map(item => {
+          return (
+            <div class="checkboxGroup-element">
+              <input class={`channel-input input-${inputType}`} {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></input>
+              <span class="label">{item.label}</span>
+            </div>
+          )
+        })}
+      </div>
     )
   }
 
