@@ -1,4 +1,60 @@
+body {
+    background: rgb(131 136 143 / 14%);
+}
+
+.input {
+    &__description {
+        color: #6c757d;
+        font-size: 13px;
+        margin: 0;
+    }
+}
+
 .re-form-generator {
+    width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid #0000003b;
+    padding: 20px;
+    border-radius: 20px;
+    background: #FFFFFF;
+
+    .select-input {
+        min-width: 350px;
+        position: relative;
+        appearance: none;
+        -webkit-appearance: none;
+        width: 100%;
+        font-size: 14px;
+        padding: 0.675em 6em 0.675em 1em;
+        background-color: #fff;
+        border: 1px solid #caced1;
+        border-radius: 0.25rem;
+        color: #000;
+        cursor: pointer;
+
+        &::after,
+        &::before {
+            content: "";
+            position: absolute;
+            right: 1rem;
+            pointer-events: none;
+        }
+
+        &::before {
+            border-left: 0.3rem solid transparent;
+            border-right: 0.3rem solid transparent;
+            border-bottom: 0.3rem solid black;
+            top: 40%;
+        }
+
+        &::after {
+            border-left: 0.3rem solid transparent;
+            border-right: 0.3rem solid transparent;
+            border-top: 0.3rem solid black;
+            top: 55%;
+        }
+    }
 
     .group-title {
         font-size: 24px;
@@ -13,9 +69,18 @@
         font-size: 14px;
         line-height: 17px;
         color: #252733;
+        background: #FAFAFA;
+        padding: 12px;
+        border: 1px solid #E3E8EB;
+        border-radius: 5px;
+        width: 100%;
+        font-size: 14px;
+        color: #252733;
+        box-sizing: border-box;
+        font-family: inherit;
     }
 
-    .channel-input {
+    .input-text {
         background: #FAFAFA;
         padding: 12px;
         border: 1px solid #E3E8EB;
@@ -131,7 +196,7 @@
         position: relative;
         display: flex;
         flex-direction: column;
-        padding: 0 0 32px 0;
+        padding: 0 0 16px 0;
         font-weight: 700;
         font-size: 14px;
         line-height: 20px;
@@ -146,6 +211,7 @@
             .input__label {
                 margin-bottom: 0px;
                 margin-left: 6px;
+                font-weight: normal;
             }
 
             .error-message {
@@ -153,11 +219,40 @@
             }
         }
 
+        &.input-checkboxGroup-container {
+            .checkboxGroup {
+                .label {
+                    margin-bottom: 0px;
+                    margin-left: 6px;
+                    font-weight: normal;
+                }
+            }
+        }
+
         &.two-columns {
             display: flex;
             flex-direction: row;
             justify-content: space-between;
-            padding-bottom: 32px;
+        }
+    }
+
+    .submit-container {
+        display: flex;
+        margin-top: 16px;
+        &__button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196f3;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+
+            &:hover {
+                background-color: #1565c0;
+            }
         }
     }
 }

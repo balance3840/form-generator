@@ -11,23 +11,46 @@ export class ReFormGenerator {
 
   @Prop() schema: any = [];
   @Prop() model: any = {};
+  @Prop() action: any = {};
   @State() values: any = null;
   @State() validationErrors: any = {};
   @State() processedRows: any = [];
   @State() processedGroups: any = [];
   @Event() handleSubmit: EventEmitter<any>;
+  @Event() submitted: EventEmitter<any>;
   @Event() validationError: EventEmitter<any>;
   public fields: any[] = [];
   public tag: string = 'input';
   public validationSchema: any = null;
+  public apiAction: any = null;
+  public shouldUseFormData = false;
 
   componentWillLoad() {
     this.buildModelSchema();
+    this.setApiAction();
+    this.setDefaultValues();
   }
 
   componentWillUpdate() {
     this.processedRows = [];
     this.processedGroups = [];
+  }
+
+  setApiAction() {
+    if (this.action) {
+      if (typeof this.action === 'string') {
+        this.apiAction = JSON.parse(this.action);
+      } else {
+        this.apiAction = this.action;
+      }
+    }
+  }
+
+  setDefaultValues() {
+    const { fields } = this;
+    fields.map(({ defaultValue, model }) => {
+      this.values[model] = defaultValue;
+    });
   }
 
   buildModelSchema() {
@@ -62,11 +85,57 @@ export class ReFormGenerator {
     this.validationError.emit(newValue);
   }
 
+  sendToApi() {
+    const requestOptions = {
+      method: this.apiAction.httpMethod,
+      body: JSON.stringify(this.values) as any
+    };
+    const fileFields = this.fields.filter(field => field.inputType === 'file');
+    const shouldUseFormData = fileFields.length;
+
+    if (shouldUseFormData) {
+      const body = new FormData();
+
+      fileFields.map(field => {
+        const fileInput = document.querySelector<HTMLInputElement>(`re-form-generator #${field.id}`);
+        if (fileInput) {
+          const file = fileInput.files[0];
+          body.append(field.model, file);
+        }
+      });
+
+      const nonFileFields = this.fields.filter(field => field.inputType !== 'file');
+      nonFileFields.map(field => {
+        body.append(field.model, this.values[field.model]);
+      });
+
+      requestOptions.body = body;
+    } else {
+      (requestOptions as any).headers = { 'Content-Type': 'application/json' };
+    }
+
+    return fetch(this.apiAction.endpoint, requestOptions)
+      .then(response => response.json())
+      .then(data => data)
+  }
+
   @Method()
   async submit() {
     return await this.validateForm(this.values)
-      .then(() => {
+      .then(async () => {
         this.resetValidationErrors();
+        if (this.apiAction) {
+          const submitResult = {
+            error: null,
+            response: null
+          };
+          try {
+            submitResult.response = await this.sendToApi();
+          } catch (err) {
+            submitResult.error = err;
+          }
+          return this.submitted.emit(submitResult);
+        }
         return this.values;
       }).catch(err => {
         this.setValidationErrors(err);
@@ -134,16 +203,33 @@ export class ReFormGenerator {
   }
 
   public handleInputChange(e, field) {
-    const { model, validationType = 'string' } = field;
+    const { model, validationType = 'string', items } = field;
     const { target: { value } } = e;
     let modelValue = validationType === 'number' ? Number(value) : value;
+    if (items) {
+      modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
+    }
     this.values = { ...this.values, [model]: modelValue };
   }
 
+  public handleCheckboxGroupChange(modelValue, model, value) {
+    if (this.values[model]) {
+      if (this.values[model].includes(value)) {
+        modelValue = this.values[model].filter(element => element !== modelValue);
+      } else {
+        modelValue = [...this.values[model], modelValue];
+      }
+    } else {
+      modelValue = [modelValue];
+    }
+    return modelValue;
+  }
+
   public renderField(field) {
-    const { inputType, type, inputWrapperClass, id, label, layout } = field;
+    const { inputType, type, inputWrapperClass, id, label, layout, visible } = field;
     const cols = layout && layout.cols || 12;
     let fieldMethod = 'renderInputField';
+    let customType = null;
     switch (type) {
       case 'textarea':
         fieldMethod = 'renderTextareaField';
@@ -154,19 +240,43 @@ export class ReFormGenerator {
       case 'select':
         fieldMethod = 'renderSelectField';
         break;
+      case 'checkboxGroup':
+        fieldMethod = 'renderCheckboxGroup';
+        customType = 'checkboxGroup';
+        break;
       default:
         fieldMethod = 'renderInputField';
         break;
     }
     return (
       <Fragment>
-        <div class={`input-group col-${cols} input-${inputType || type}-container ${inputWrapperClass || ''}`}>
-          {label && <label class="input__label" htmlFor={id}>{label}</label>}
-          <slot name={`field-label@${id}`} />
-          {this[fieldMethod](field)}
-          {this.fieldHasErrors(field) && <span class="error-message">{this.fieldErrorMessage(field)}</span>}
-        </div>
+        {visible && (
+          <div class={`input-group col-${cols} input-${customType || inputType || type}-container ${inputWrapperClass || ''}`}>
+            {label && <label class="input__label" htmlFor={id}>{label}</label>}
+            <slot name={`field-label@${id}`} />
+            {this[fieldMethod](field)}
+            {this.fieldHasErrors(field) && <span class="error-message">{this.fieldErrorMessage(field)}</span>}
+          </div>
+        )}
       </Fragment>
+    )
+  }
+
+  public renderCheckboxGroup(field) {
+    field.inputType = 'checkbox';
+    const { inputType, items } = field;
+    const props = this.buildProps(field);
+    return (
+      <div class="checkboxGroup">
+        {items.map(({ label, attributes }) => {
+          return (
+            <div class="checkboxGroup-element">
+              <input class={`input-${inputType}`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}></input>
+              <span class="label">{label}</span>
+            </div>
+          )
+        })}
+      </div>
     )
   }
 
@@ -181,7 +291,7 @@ export class ReFormGenerator {
     delete props.placeholder;
     return (
       <Fragment>
-        <select {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}>
+        <select class={`select-input`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}>
           {showPlaceholder && <option value="" disabled selected hidden>{placeholder}</option>}
           {optionValues.map(({ value: optionValue, display = optionValue, group }) => {
             if (group) {
@@ -212,24 +322,24 @@ export class ReFormGenerator {
     const { attributes, model } = field;
     const { values } = this;
     const props = this.buildProps(field);
-    return <textarea class="channel-input" {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></textarea>
+    return <textarea class="textarea-input" {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></textarea>
   }
 
   public renderInputField(field) {
     const { attributes, model, inputType } = field;
     const { values } = this;
     const props = this.buildProps(field);
-    return <input class={`channel-input input-${inputType}`} {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></input>;
+    return <input class={`input-${inputType}`} {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></input>;
   }
 
   public renderToggleField(field) {
-    const { attributes, model } = field;
+    const { attributes, model, defaultValue } = field;
     const { values } = this;
     const props = this.buildProps(field);
     const inputProps = { ...props, type: 'checkbox' };
     return (
       <label class="switch">
-        <input class="channel-input" {...inputProps} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></input>
+        <input class="toggle-input" {...inputProps} {...attributes} defaultValue={values[model]} checked={defaultValue} onChange={(e) => this.handleInputChange(e, field)}></input>
         <span class="slider round"></span>
       </label>
     );
@@ -315,6 +425,9 @@ export class ReFormGenerator {
               </Fragment>
             );
           })}
+          <div class="submit-container">
+            <button type="submit" class="submit-container__button" onClick={() => this.submit()}>Submit</button>
+          </div>
         </div>
       </Host>
     );

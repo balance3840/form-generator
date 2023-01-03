@@ -7,6 +7,7 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
     interface ReFormGenerator {
+        "action": any;
         "model": any;
         "schema": any;
         "submit": () => Promise<any>;
@@ -18,7 +19,20 @@ export interface ReFormGeneratorCustomEvent<T> extends CustomEvent<T> {
     target: HTMLReFormGeneratorElement;
 }
 declare global {
+    interface HTMLReFormGeneratorElementEventMap {
+        "handleSubmit": any;
+        "submitted": any;
+        "validationError": any;
+    }
     interface HTMLReFormGeneratorElement extends Components.ReFormGenerator, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
     }
     var HTMLReFormGeneratorElement: {
         prototype: HTMLReFormGeneratorElement;
@@ -30,8 +44,10 @@ declare global {
 }
 declare namespace LocalJSX {
     interface ReFormGenerator {
+        "action"?: any;
         "model"?: any;
         "onHandleSubmit"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        "onSubmitted"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValidationError"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "schema"?: any;
     }

@@ -1,0 +1,19 @@
+[
+  {
+    "type": "input",
+    "inputType": "file",
+    "label": "Choose a profile picture",
+    "id": "profilePicture",
+    "inputName": "profilePicture",
+    "visible": true,
+    "model": "profilePicture",
+    "readonly": false,
+    "disabled": false,
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required"
+      }
+    ]
+  }
+]

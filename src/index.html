@@ -10,7 +10,10 @@
   </head>
   <body>
 
-    <re-form-generator schema='[
+    <re-form-generator action='{
+      "httpMethod": "POST",
+      "endpoint": "http://localhost:9000/submit"
+    }' schema='[
     {
       "type": "input",
       "id": "name",
@@ -25,7 +28,8 @@
       "validationType": "string",
       "validations": [
         {
-          "name": "required"
+          "name": "required",
+          "params": ["Channel name is required"]
         }
       ],
       "layout": {
@@ -47,6 +51,7 @@
       "disabled": false,
       "placeholder": "What is the type?",
       "validationType": "string",
+      "defaultValue": "sports",
       "validations": [
         {
           "name": "required"
@@ -68,13 +73,14 @@
       "readonly": false,
       "disabled": false,
       "placeholder": "Please select a project...",
+      "defaultValue": "236",
       "values": [
-        { "value": "234", "display": "Project 1", "group": "Best projects" },
-        { "value": "235", "display": "Project 2", "group": "Best projects" },
-        { "value": "236", "display": "Project 3", "group": "Best projects" },
-        { "value": "237", "display": "Project 4", "group": "Worst projects" }
+        { "value": 234, "display": "Project 1", "group": "Best projects" },
+        { "value": 235, "display": "Project 2", "group": "Best projects" },
+        { "value": 236, "display": "Project 3", "group": "Best projects" },
+        { "value": 237, "display": "Project 4", "group": "Worst projects" }
       ],
-      "validationType": "string",
+      "validationType": "number",
       "validations": [
         {
           "name": "required"
@@ -95,9 +101,36 @@
       "disabled": false,
       "placeholder": "What is this channel about?",
       "validationType": "string",
+      "defaultValue": "Text sds",
       "validations": [
         {
           "name": "required"
+        }
+      ],
+      "layout": {
+        "group": "details"
+      }
+    },
+    {
+      "type": "input",
+      "inputType": "date",
+      "id": "birthday",
+      "inputName": "birthday",
+      "visible": true,
+      "label": "Birthday",
+      "model": "birthday",
+      "readonly": false,
+      "disabled": false,
+      "placeholder": "1994-01-01",
+      "validationType": "date",
+      "validations": [
+        {
+          "name": "max",
+          "params": ["2006-01-01", "You should be more than 18 years."]
+        },
+        {
+          "name": "required",
+          "params": ["Birthday is required"]
         }
       ],
       "layout": {
@@ -113,46 +146,67 @@
       "model": "mandatory",
       "readonly": false,
       "disabled": false,
-      "validationType": "string",
+      "validationType": "number",
+      "defaultValue": 1,
       "attributes": {
-        "value": "1"
+        "value": 1
       }
     },
     {
       "type": "input",
       "inputType": "checkbox",
-      "label": "This is a test label",
+      "label": "A simple checkbox",
       "id": "test",
       "inputName": "test",
       "visible": true,
       "model": "test",
       "readonly": false,
       "disabled": false,
-      "validationType": "string",
+      "validationType": "number",
+      "defaultValue": 1,
       "validations": [
         {
           "name": "required"
         }
       ],
       "attributes": {
-        "value": "1"
+        "value": 1,
+        "checked": true
       }
+    },
+    {
+      "type": "checkboxGroup",
+      "label": "Fruits group",
+      "id": "fruits-input",
+      "inputName": "fruits",
+      "visible": true,
+      "model": "fruits",
+      "defaultValue": ["apple"],
+      "items": [
+        { "label": "Apple", "attributes": { "value": "apple", "checked": true } },
+        { "label": "Orange", "attributes": { "value": "orange", "checked": false } }
+      ],
+      "validationType": "array",
+      "validations": [
+        {
+          "name": "min",
+          "params": [1, "Custom error message"]
+        }
+      ]
     }
     ]' ref="channelForm">
     
       <div slot="field-label@mandatory">
         <label class="input__label">Make channel mandatory</label>
-        <p class="input__description">All the tenants from all the project will be invited by default. asdasd</p>
+        <p class="input__description">All the tenants from all the project will be invited by default.</p>
       </div>
 
     </re-form-generator>
 
-      <br><br>
-      <button type="button" onclick="validateForm()">VALIDATE FROM OUTSIDE</button>
-
       <script>
         const formGenerator = document.querySelector('re-form-generator');
-        formGenerator.addEventListener('handleSubmit', event => {  /*console.log(event.detail)*/ })
+        formGenerator.addEventListener('handleSubmit', event => {  console.log(event.detail) })
+        formGenerator.addEventListener('submitted', event => {  console.log(event.detail) })
         formGenerator.addEventListener('onValidationError', event => {  console.log(event.detail) })
 
         async function validateForm() {
