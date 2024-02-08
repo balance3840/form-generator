@@ -20,12 +20,12 @@ body {
     background: #FFFFFF;
 
     .select-input {
-        min-width: 350px;
         position: relative;
         appearance: none;
         -webkit-appearance: none;
         width: 100%;
         font-size: 14px;
+        height: 44px;
         padding: 0.675em 6em 0.675em 1em;
         background-color: #fff;
         border: 1px solid #caced1;
@@ -80,7 +80,7 @@ body {
         font-family: inherit;
     }
 
-    .input-text {
+    .input-text, .input-email, .input-date, .select-input {
         background: #FAFAFA;
         padding: 12px;
         border: 1px solid #E3E8EB;
@@ -106,7 +106,7 @@ body {
 
         @for $i from 1 through 12 {
             .col-#{$i} {
-                flex-grow: $i;
+                width: calc((100% / 12) * #{$i});
             }
         }
     }
