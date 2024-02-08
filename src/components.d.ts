@@ -6,23 +6,98 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface ReCountrySelect {
+        "defaultValue": string;
+        "disabled": any;
+        "inputDisplayKey": string;
+        "inputOptions": any;
+        "modelKey": string;
+        "showDialCode": boolean;
+        "zIndex": string;
+    }
+    interface ReFileInputField {
+        "inputAttributes": any;
+        "inputProps": any;
+        "modelKey": string;
+        "placeholder": string;
+        "subTitle": string;
+        "textTitle": string;
+    }
     interface ReFormGenerator {
         "action": any;
+        "formId": string;
+        "mapping": any;
         "model": any;
         "schema": any;
         "submit": () => Promise<any>;
+        "updateValue": (key: any, value: any) => Promise<void>;
         "validate": () => Promise<any>;
     }
+    interface ReMultiSelect {
+        "defaultOptions": any;
+        "disabled": boolean;
+        "inputName": string;
+        "inputOptions": any;
+        "modelKey": string;
+        "options": Array<{ value: any, label: string }>;
+    }
+}
+export interface ReCountrySelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReCountrySelectElement;
+}
+export interface ReFileInputFieldCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReFileInputFieldElement;
 }
 export interface ReFormGeneratorCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLReFormGeneratorElement;
 }
+export interface ReMultiSelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReMultiSelectElement;
+}
 declare global {
+    interface HTMLReCountrySelectElementEventMap {
+        "selectedCountryChanged": any;
+    }
+    interface HTMLReCountrySelectElement extends Components.ReCountrySelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReCountrySelectElementEventMap>(type: K, listener: (this: HTMLReCountrySelectElement, ev: ReCountrySelectCustomEvent<HTMLReCountrySelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReCountrySelectElementEventMap>(type: K, listener: (this: HTMLReCountrySelectElement, ev: ReCountrySelectCustomEvent<HTMLReCountrySelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReCountrySelectElement: {
+        prototype: HTMLReCountrySelectElement;
+        new (): HTMLReCountrySelectElement;
+    };
+    interface HTMLReFileInputFieldElementEventMap {
+        "selectedFileChanged": any;
+    }
+    interface HTMLReFileInputFieldElement extends Components.ReFileInputField, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReFileInputFieldElementEventMap>(type: K, listener: (this: HTMLReFileInputFieldElement, ev: ReFileInputFieldCustomEvent<HTMLReFileInputFieldElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReFileInputFieldElementEventMap>(type: K, listener: (this: HTMLReFileInputFieldElement, ev: ReFileInputFieldCustomEvent<HTMLReFileInputFieldElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReFileInputFieldElement: {
+        prototype: HTMLReFileInputFieldElement;
+        new (): HTMLReFileInputFieldElement;
+    };
     interface HTMLReFormGeneratorElementEventMap {
         "handleSubmit": any;
         "submitted": any;
         "validationError": any;
+        "valueChanged": any;
     }
     interface HTMLReFormGeneratorElement extends Components.ReFormGenerator, HTMLStencilElement {
         addEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -38,28 +113,85 @@ declare global {
         prototype: HTMLReFormGeneratorElement;
         new (): HTMLReFormGeneratorElement;
     };
+    interface HTMLReMultiSelectElementEventMap {
+        "multiSelectValueChanged": any;
+    }
+    interface HTMLReMultiSelectElement extends Components.ReMultiSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReMultiSelectElementEventMap>(type: K, listener: (this: HTMLReMultiSelectElement, ev: ReMultiSelectCustomEvent<HTMLReMultiSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReMultiSelectElementEventMap>(type: K, listener: (this: HTMLReMultiSelectElement, ev: ReMultiSelectCustomEvent<HTMLReMultiSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReMultiSelectElement: {
+        prototype: HTMLReMultiSelectElement;
+        new (): HTMLReMultiSelectElement;
+    };
     interface HTMLElementTagNameMap {
+        "re-country-select": HTMLReCountrySelectElement;
+        "re-file-input-field": HTMLReFileInputFieldElement;
         "re-form-generator": HTMLReFormGeneratorElement;
+        "re-multi-select": HTMLReMultiSelectElement;
     }
 }
 declare namespace LocalJSX {
+    interface ReCountrySelect {
+        "defaultValue"?: string;
+        "disabled"?: any;
+        "inputDisplayKey"?: string;
+        "inputOptions"?: any;
+        "modelKey"?: string;
+        "onSelectedCountryChanged"?: (event: ReCountrySelectCustomEvent<any>) => void;
+        "showDialCode"?: boolean;
+        "zIndex"?: string;
+    }
+    interface ReFileInputField {
+        "inputAttributes"?: any;
+        "inputProps"?: any;
+        "modelKey"?: string;
+        "onSelectedFileChanged"?: (event: ReFileInputFieldCustomEvent<any>) => void;
+        "placeholder"?: string;
+        "subTitle"?: string;
+        "textTitle"?: string;
+    }
     interface ReFormGenerator {
         "action"?: any;
+        "formId"?: string;
+        "mapping"?: any;
         "model"?: any;
         "onHandleSubmit"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onSubmitted"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValidationError"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        "onValueChanged"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "schema"?: any;
     }
+    interface ReMultiSelect {
+        "defaultOptions"?: any;
+        "disabled"?: boolean;
+        "inputName"?: string;
+        "inputOptions"?: any;
+        "modelKey"?: string;
+        "onMultiSelectValueChanged"?: (event: ReMultiSelectCustomEvent<any>) => void;
+        "options"?: Array<{ value: any, label: string }>;
+    }
     interface IntrinsicElements {
+        "re-country-select": ReCountrySelect;
+        "re-file-input-field": ReFileInputField;
         "re-form-generator": ReFormGenerator;
+        "re-multi-select": ReMultiSelect;
     }
 }
 export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "re-country-select": LocalJSX.ReCountrySelect & JSXBase.HTMLAttributes<HTMLReCountrySelectElement>;
+            "re-file-input-field": LocalJSX.ReFileInputField & JSXBase.HTMLAttributes<HTMLReFileInputFieldElement>;
             "re-form-generator": LocalJSX.ReFormGenerator & JSXBase.HTMLAttributes<HTMLReFormGeneratorElement>;
+            "re-multi-select": LocalJSX.ReMultiSelect & JSXBase.HTMLAttributes<HTMLReMultiSelectElement>;
         }
     }
 }

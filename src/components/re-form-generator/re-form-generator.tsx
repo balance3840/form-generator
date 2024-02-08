@@ -1,6 +1,7 @@
-import { Component, Host, h, Prop, State, Event, EventEmitter, Method, Watch, Fragment } from '@stencil/core';
+import { Component, Host, h, Prop, State, Event, EventEmitter, Method, Watch, Fragment, Listen } from '@stencil/core';
 import * as yup from 'yup';
 import { createYupSchema, getValidationErrors } from '../../utils/utils';
+import set from 'lodash/set';
 
 @Component({
   tag: 're-form-generator',
@@ -10,30 +11,60 @@ import { createYupSchema, getValidationErrors } from '../../utils/utils';
 export class ReFormGenerator {
 
   @Prop() schema: any = [];
+  @Prop() formId: string;
   @Prop() model: any = {};
   @Prop() action: any = {};
+  @Prop() mapping: any = null;
   @State() values: any = null;
   @State() validationErrors: any = {};
   @State() processedRows: any = [];
   @State() processedGroups: any = [];
+  @State() recaptchaRendered: boolean = false;
   @Event() handleSubmit: EventEmitter<any>;
   @Event() submitted: EventEmitter<any>;
   @Event() validationError: EventEmitter<any>;
+  @Event() valueChanged: EventEmitter<any>;
   public fields: any[] = [];
   public tag: string = 'input';
   public validationSchema: any = null;
   public apiAction: any = null;
   public shouldUseFormData = false;
+  public dataMapping = null;
 
   componentWillLoad() {
     this.buildModelSchema();
     this.setApiAction();
+    this.setDataMapping();
     this.setDefaultValues();
   }
 
   componentWillUpdate() {
     this.processedRows = [];
     this.processedGroups = [];
+  }
+
+  componentDidRender() {
+    // Render ReCaptcha
+    if (this.apiAction?.recaptchaSiteKey && !this.recaptchaRendered) {
+      try {
+        (window as any).grecaptcha.render('recaptcha-wrapper', {
+          'sitekey': this.apiAction.recaptchaSiteKey
+        });
+        this.recaptchaRendered = true;
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  }
+
+  setDataMapping() {
+    if (this.mapping) {
+      if (typeof this.mapping === 'string') {
+        this.dataMapping = JSON.parse(this.mapping);
+      } else {
+        this.dataMapping = this.mapping;
+      }
+    }
   }
 
   setApiAction() {
@@ -69,6 +100,12 @@ export class ReFormGenerator {
       }
     }
     this.buildValidationSchema(this.fields);
+    for (let index = 0; index < this.fields.length; index++) {
+      const field = this.fields[index];
+      if (field) {
+        this.fields[index].zIndex = (this.fields.length - index) + 1;
+      }
+    }
   }
 
   buildValidationSchema(fields) {
@@ -86,37 +123,153 @@ export class ReFormGenerator {
   }
 
   sendToApi() {
-    const requestOptions = {
-      method: this.apiAction.httpMethod,
-      body: JSON.stringify(this.values) as any
-    };
-    const fileFields = this.fields.filter(field => field.inputType === 'file');
-    const shouldUseFormData = fileFields.length;
+    let payload = {};
+    const fileInputs = [];
 
-    if (shouldUseFormData) {
-      const body = new FormData();
+    if (this.dataMapping) {
+      Object.keys(this.dataMapping).map(key => {
+        const mappingKeys = this.dataMapping[key];
+        const field = this.fields.filter(field => field.model === key)[0];
 
-      fileFields.map(field => {
-        const fileInput = document.querySelector<HTMLInputElement>(`re-form-generator #${field.id}`);
-        if (fileInput) {
-          const file = fileInput.files[0];
-          body.append(field.model, file);
+        if (field) {
+          if (field.inputType !== 'file') {
+            mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
+          } else {
+            if (this.values[key]) {
+              fileInputs.push({
+                key,
+                value: this.values[key]
+              });
+            }
+          }
+        } else {
+          mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
         }
       });
+    } else {
+      Object.keys(this.values).map(key => {
+        if (!(this.values[key] instanceof FileList)) {
+          payload = { ...payload, [key]: this.values[key] }
+        } else {
+          if (this.values[key]) {
+            fileInputs.push({
+              key,
+              value: this.values[key]
+            });
+          }
+        }
+      })
+    }
 
-      const nonFileFields = this.fields.filter(field => field.inputType !== 'file');
-      nonFileFields.map(field => {
-        body.append(field.model, this.values[field.model]);
+    if (this.apiAction?.recaptchaSiteKey) {
+      const recaptchaResponse = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
+      payload = { ...payload, 'g-recaptcha-response': recaptchaResponse };
+    }
+
+    let requestOptions: any = {
+      method: this.apiAction?.httpMethod || 'POST',
+      body: JSON.stringify(payload) as any
+    };
+
+    if (this.apiAction.bearerToken) {
+      const headers = {
+        'Authorization': `Bearer ${this.apiAction.bearerToken}`
+      };
+      requestOptions.headers = headers;
+    }
+
+    let shouldUseFormData = false;
+    if (this.apiAction.formData) {
+      shouldUseFormData = JSON.parse(this.apiAction.formData);
+    }
+
+    if (shouldUseFormData || fileInputs.length) {
+      const body = new FormData();
+
+      Object.keys(payload).map(key => {
+        let payloadKeyValue = payload[key];
+        if (typeof payloadKeyValue === 'object' || Array.isArray(payloadKeyValue)) {
+          payloadKeyValue = JSON.stringify(payloadKeyValue);
+        }
+        body.append(key, payloadKeyValue);
       });
+
+      fileInputs.map(element => {
+        const files = element.value;
+        let formDataKey = element.key;
+        const field = this.fields.find(field => field.model === formDataKey);
+        if (field) {
+          const { attributes } = field;
+          if (attributes?.multiple) {
+            formDataKey += '[]';
+          }
+        }
+        Array.from(files).map((file: any) => {
+          body.append(formDataKey, file);
+        })
+      })
 
       requestOptions.body = body;
     } else {
-      (requestOptions as any).headers = { 'Content-Type': 'application/json' };
+      (requestOptions as any).headers = {
+        'Content-Type': 'application/json'
+      };
+      if (this.apiAction.bearerToken) {
+        requestOptions.headers['Authorization'] = `Bearer ${this.apiAction.bearerToken}`;
+      }
     }
 
     return fetch(this.apiAction.endpoint, requestOptions)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          response.text().then(res => {
+            this.triggerWebhook({
+              type: "submit.failed",
+              payload,
+              actionEndpointResponse: res
+            })
+          }
+          );
+          return;
+        }
+        response.json();
+      })
       .then(data => data)
+      .catch(error => {
+        this.triggerWebhook({
+          type: "submit.failed",
+          payload,
+          actionEndpointResponse: null,
+          exception: error.toString()
+        })
+      });
+  }
+
+  triggerWebhook({ type, payload, actionEndpointResponse, exception = null }) {
+    const webhookApi = this.apiAction.webhoookEndpoint;
+
+    if (webhookApi) {
+      fetch(webhookApi, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event: {
+            type,
+            payload,
+            actionEndpointResponse,
+            exception
+          }
+        })
+      });
+    }
+  }
+
+  @Method()
+  async updateValue(key, value) {
+    this.values = { ...this.values, [key]: value };
   }
 
   @Method()
@@ -124,7 +277,7 @@ export class ReFormGenerator {
     return await this.validateForm(this.values)
       .then(async () => {
         this.resetValidationErrors();
-        if (this.apiAction) {
+        if (Object.keys(this.apiAction).length) {
           const submitResult = {
             error: null,
             response: null
@@ -133,10 +286,16 @@ export class ReFormGenerator {
             submitResult.response = await this.sendToApi();
           } catch (err) {
             submitResult.error = err;
+            this.triggerWebhook({
+              type: "submit.failed",
+              payload: this.values,
+              actionEndpointResponse: 'null',
+              exception: err.toString()
+            });
           }
           return this.submitted.emit(submitResult);
         }
-        return this.values;
+        return this.submitted.emit(this.values);
       }).catch(err => {
         this.setValidationErrors(err);
       });
@@ -152,6 +311,53 @@ export class ReFormGenerator {
         this.setValidationErrors(err);
         return getValidationErrors(err);
       });
+  }
+
+  @Listen('multiSelectValueChanged')
+  handleMultiselect(event: any) {
+    try {
+      const modelKey = Object.keys(event.detail)[0];
+      const value = event.detail[modelKey];
+      this.values = { ...this.values, [modelKey]: value };
+      this.valueChanged.emit({
+        [modelKey]: value
+      });
+    } catch (e) {
+      console.log('multiSelectValueChanged error', e, event.detail);
+    }
+  }
+
+  @Listen('selectedCountryChanged')
+  handleCountrySelectChange(event: any) {
+    try {
+      const modelKey = Object.keys(event.detail)[0];
+      const value = event.detail[modelKey];
+      const field = this.fields.find(field => field.model === modelKey);
+      let modelValueKey = 'code';
+      if (field.modelValueKey) {
+        modelValueKey = field.modelValueKey;
+      }
+      this.values = { ...this.values, [modelKey]: value[modelValueKey] };
+      this.valueChanged.emit({
+        [modelKey]: value[modelValueKey]
+      });
+    } catch (e) {
+      console.log('selectedCountryChanged error', e, event.detail);
+    }
+  }
+
+  @Listen('selectedFileChanged')
+  handleFileSelectChange(event: any) {
+    try {
+      const modelKey = Object.keys(event.detail)[0];
+      const value = event.detail[modelKey];
+      this.values = { ...this.values, [modelKey]: value };
+      this.valueChanged.emit({
+        [modelKey]: value
+      });
+    } catch (e) {
+      console.log('selectedFileChanged error', e, event.detail);
+    }
   }
 
   resetValidationErrors() {
@@ -190,6 +396,13 @@ export class ReFormGenerator {
       visible,
       required,
       placeholder,
+      selectedWord,
+      defaultOptions,
+      modelValueKey,
+      inputDisplayKey,
+      showDialCode,
+      textTitle,
+      subTitle
     } = field;
     return {
       type: inputType,
@@ -199,17 +412,44 @@ export class ReFormGenerator {
       hidden: !visible,
       required,
       placeholder,
+      selectedWord,
+      defaultOptions,
+      modelValueKey,
+      inputDisplayKey,
+      showDialCode,
+      textTitle,
+      subTitle
     };
   }
 
   public handleInputChange(e, field) {
-    const { model, validationType = 'string', items } = field;
+    const { model, validationType = 'string', type } = field;
     const { target: { value } } = e;
-    let modelValue = validationType === 'number' ? Number(value) : value;
-    if (items) {
-      modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
+    let modelValue = value;
+    switch (validationType) {
+      case 'number':
+        modelValue = Number(value)
+        break;
+      case 'boolean':
+        modelValue = Boolean(value)
+        break;
+      case 'object':
+        modelValue = JSON.parse(value)
+        break;
+      default:
+        break;
+    }
+    switch (type) {
+      case 'checkboxGroup':
+        modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
+        break;
+      default:
+        break;
     }
     this.values = { ...this.values, [model]: modelValue };
+    this.valueChanged.emit({
+      [model]: modelValue
+    });
   }
 
   public handleCheckboxGroupChange(modelValue, model, value) {
@@ -230,6 +470,8 @@ export class ReFormGenerator {
     const cols = layout && layout.cols || 12;
     let fieldMethod = 'renderInputField';
     let customType = null;
+    let extraClasses = visible ? '' : 'hidden';
+    extraClasses += this.fieldHasErrors(field) ? 'hasErrors' : '';
     switch (type) {
       case 'textarea':
         fieldMethod = 'renderTextareaField';
@@ -244,20 +486,33 @@ export class ReFormGenerator {
         fieldMethod = 'renderCheckboxGroup';
         customType = 'checkboxGroup';
         break;
+      case 'radioGroup':
+        fieldMethod = 'renderRadioGroup';
+        customType = 'radioGroup';
+        break;
+      case 'multiSelect':
+        fieldMethod = 'renderMultiSelectField';
+        break;
+      case 'countrySelect':
+        fieldMethod = 'renderCountrySelectField';
+        break;
+      case 'file':
+        fieldMethod = 'renderFileField';
+        break;
       default:
         fieldMethod = 'renderInputField';
         break;
     }
     return (
       <Fragment>
-        {visible && (
-          <div class={`input-group col-${cols} input-${customType || inputType || type}-container ${inputWrapperClass || ''}`}>
-            {label && <label class="input__label" htmlFor={id}>{label}</label>}
+        {
+          <div class={`input-group col-${cols} input-${customType || inputType || type}-container ${inputWrapperClass || ''} ${extraClasses}`}>
+            {label && <label class="input__label" htmlFor={id} innerHTML={label}></label>}
             <slot name={`field-label@${id}`} />
             {this[fieldMethod](field)}
             {this.fieldHasErrors(field) && <span class="error-message">{this.fieldErrorMessage(field)}</span>}
           </div>
-        )}
+        }
       </Fragment>
     )
   }
@@ -271,6 +526,24 @@ export class ReFormGenerator {
         {items.map(({ label, attributes }) => {
           return (
             <div class="checkboxGroup-element">
+              <input class={`input-${inputType}`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}></input>
+              <span class="label">{label}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  public renderRadioGroup(field) {
+    field.inputType = 'radio';
+    const { inputType, items } = field;
+    const props = this.buildProps(field);
+    return (
+      <div class="radioGroup">
+        {items.map(({ label, attributes }) => {
+          return (
+            <div class="radioGroup-element">
               <input class={`input-${inputType}`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}></input>
               <span class="label">{label}</span>
             </div>
@@ -301,7 +574,7 @@ export class ReFormGenerator {
                   <Fragment>
                     <optgroup label={group}>
                       {this.getOptGroup(group, optionValues).map(option => (
-                        <option value={option.value} selected={defaultOption === option.value}>{option.display}</option>
+                        <option value={typeof option.value === 'object' ? JSON.stringify(option.value) : option.value} selected={defaultOption === option.value}>{option.display}</option>
                       ))}
                     </optgroup>
                   </Fragment>
@@ -318,11 +591,83 @@ export class ReFormGenerator {
     )
   }
 
+  public renderMultiSelectField(field) {
+    const { values: optionValues = [] } = field;
+    const props = this.buildProps(field);
+    const placeholder = props.placeholder || '';
+    const selectedWord = props.selectedWord || '';
+    const defaultOptions = props.defaultOptions || [];
+    const disabled = props.disabled;
+
+    const multiSelectOptions = optionValues.map((option) => { return { value: option.value, label: option.display } });
+    return (
+      <Fragment>
+        <re-multi-select
+          options={multiSelectOptions}
+          inputOptions={
+            {
+              placeholder,
+              selectedWord,
+            }
+          }
+          defaultOptions={
+            defaultOptions
+          }
+          disabled={disabled}
+          modelKey={field.model}
+        ></re-multi-select>
+      </Fragment>
+    )
+  }
+
+  public renderCountrySelectField(field) {
+    const { model, zIndex } = field;
+    const { values } = this;
+    const props = this.buildProps(field);
+    const placeholder = props.placeholder || '';
+    const defaultValue = values[model];
+    const disabled = props.disabled;
+
+    return (
+      <Fragment>
+        <re-country-select
+          inputOptions={
+            {
+              placeholder
+            }
+          }
+          disabled={disabled}
+          modelKey={field.model}
+          defaultValue={defaultValue}
+          zIndex={zIndex}
+          inputDisplayKey={props.inputDisplayKey}
+          showDialCode={props.showDialCode}
+        ></re-country-select>
+      </Fragment>
+    )
+  }
+
   public renderTextareaField(field) {
     const { attributes, model } = field;
     const { values } = this;
     const props = this.buildProps(field);
     return <textarea class="textarea-input" {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></textarea>
+  }
+
+  public renderFileField(field) {
+    const { attributes, model } = field;
+    const props = this.buildProps(field);
+    return (
+      <re-file-input-field
+        inputAttributes={attributes}
+        inputProps={props}
+        textTitle={props.textTitle}
+        placeholder={props.placeholder}
+        subTitle={props.subTitle}
+        modelKey={model}
+      >
+      </re-file-input-field>
+    )
   }
 
   public renderInputField(field) {
@@ -381,7 +726,7 @@ export class ReFormGenerator {
     this.processedGroups.push(groupName);
     return (
       <div class={`group-container group-${groupName}-container`}>
-        {groupTitle && <div class='group-title'>{groupTitle}</div>}
+        {groupTitle && <div class='group-title' innerHTML={groupTitle}></div>}
         {groupFields.map(field => {
           const { layout } = field;
           const row = layout && layout.row ? layout.row : '';
@@ -425,9 +770,22 @@ export class ReFormGenerator {
               </Fragment>
             );
           })}
-          <div class="submit-container">
-            <button type="submit" class="submit-container__button" onClick={() => this.submit()}>Submit</button>
-          </div>
+          {Object.keys(this.validationErrors).length ? (
+            <div class='form-error-message'>
+              <div class='form-error-message__message' innerHTML={this.apiAction.formErrorMessage || 'Please fill all required fields'}></div>
+            </div>
+          ) : ''}
+          {Object.keys(this.apiAction).length !== 0 && (
+            <Fragment>
+              {this.apiAction.recaptchaSiteKey ? (
+                <div class="recaptcha-wrapper" id="recaptcha-wrapper">
+                </div>
+              ) : null}
+              <div class="submit-container">
+                <button type="submit" class="submit-container__button" onClick={() => this.submit()}>{this.apiAction.submitButtonText || 'Submit'}</button>
+              </div>
+            </Fragment>
+          )}
         </div>
       </Host>
     );

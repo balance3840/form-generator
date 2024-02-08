@@ -1,23 +1,4 @@
-<!DOCTYPE html>
-<html dir="ltr" lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0" />
-    <title>Stencil Component Starter</title>
-
-    <script type="module" src="/build/form-generator.esm.js"></script>
-    <script nomodule src="/build/form-generator.js"></script>
-  </head>
-  <body>
-
-    <div style="max-width: 99%; margin-right: auto; margin-left: auto;">
-      <re-form-generator action='{
-        "httpMethod": "POST",
-        "endpoint": "ENDPOINT",
-        "bearerToken": "TOKEN",
-        "formData": "true",
-        "submitButtonText": "Apply now"
-      }' schema='[
+[
       {
           "type": "input",
           "id": "first_name",
@@ -249,12 +230,7 @@
                   "value": 178,
                   "display": "Unit group 1",
                   "group": "unitGroups"
-              },
-              {
-                "value": 189,
-                "display": "Unit group 2",
-                "group": "unitGroups"
-            }
+              }
           ],
           "layout": {
               "row": "row3",
@@ -307,32 +283,29 @@
           ]
       },
       {
-        "type": "countrySelect",
-        "id": "dial_code",
-        "inputName": "dial_code",
-        "visible": true,
-        "label": "Dial code",
-        "model": "dial_code",
-        "modelValueKey": "dialCode",
-        "inputDisplayKey": "dialCode",
-        "disabled": false,
-        "showDialCode": true,
-        "placeholder": "Select dial code",
-        "validationType": "string",
-        "validations": [
-            {
-                "name": "required",
-                "params": [
-                    "First name is a required field"
-                ]
-            }
-        ],
-        "layout": {
-            "row": "row4",
-            "cols": 2,
-            "group": "applicant"
-        }
-    },
+          "type": "input",
+          "id": "dial_code",
+          "inputType": "text",
+          "inputName": "dial_code",
+          "placeholder": "+45",
+          "visible": true,
+          "label": "Dial code",
+          "model": "dial_code",
+          "readonly": false,
+          "disabled": false,
+          "defaultValue": "+45",
+          "validationType": "string",
+          "validations": [
+              {
+                  "name": "required"
+              }
+          ],
+          "layout": {
+              "group": "reference",
+              "row": "row4",
+              "cols": 2
+          }
+      },
       {
           "type": "input",
           "id": "phone",
@@ -383,30 +356,29 @@
           }
       },
       {
-        "type": "countrySelect",
-        "id": "nationality",
-        "inputName": "nationality",
-        "visible": true,
-        "label": "Nationality",
-        "model": "nationality",
-        "modelValueKey": "code",
-        "disabled": false,
-        "placeholder": "Select nationality",
-        "validationType": "string",
-        "validations": [
-            {
-                "name": "required",
-                "params": [
-                    "First name is a required field"
-                ]
-            }
-        ],
-        "layout": {
-            "row": "row5",
-            "cols": 6,
-            "group": "applicant"
-        }
-    },
+          "type": "select",
+          "id": "nationality",
+          "inputType": "text",
+          "inputName": "nationality",
+          "visible": true,
+          "label": "Nationality",
+          "model": "nationality",
+          "readonly": false,
+          "disabled": false,
+          "placeholder": "Nationality",
+          "values": [
+              {
+                  "value": "Danmark",
+                  "display": "Danmark",
+                  "group": "nationality"
+              }
+          ],
+          "layout": {
+              "row": "row5",
+              "cols": 6,
+              "group": "applicant"
+          }
+      },
       {
           "type": "input",
           "id": "resident",
@@ -498,31 +470,29 @@
           }
       },
       {
-        "type": "countrySelect",
-        "id": "country",
-        "inputName": "country",
-        "visible": true,
-        "label": "Country",
-        "model": "country",
-        "modelValueKey": "code",
-        "defaultValue" : "dk",
-        "disabled": false,
-        "placeholder": "Select country",
-        "validationType": "string",
-        "validations": [
-            {
-                "name": "required",
-                "params": [
-                    "First name is a required field"
-                ]
-            }
-        ],
-        "layout": {
-            "row": "row7",
-            "cols": 12,
-            "group": "applicant"
-        }
-    },
+          "type": "select",
+          "id": "country",
+          "inputType": "text",
+          "inputName": "country",
+          "visible": true,
+          "label": "Country",
+          "model": "country",
+          "readonly": false,
+          "disabled": false,
+          "placeholder": "Denmark",
+          "values": [
+              {
+                  "value": "Denmark",
+                  "display": "Denmark",
+                  "group": "country"
+              }
+          ],
+          "layout": {
+              "row": "row7",
+              "cols": 12,
+              "group": "applicant"
+          }
+      },
       {
           "type": "input",
           "id": "minApartmentSize",
@@ -660,7 +630,7 @@
           "id": "projects",
           "inputType": "text",
           "inputName": "projects",
-          "visible": false,
+          "visible": true,
           "label": "Projects",
           "model": "projects",
           "readonly": false,
@@ -694,45 +664,19 @@
           ]
       },
       {
-          "type": "radioGroup",
+          "type": "input",
           "id": "professional",
-          "inputType": "radio",
+          "inputType": "checkbox",
           "inputName": "professional",
           "visible": true,
-          "label": "Proffesion",
+          "label": "Student",
           "model": "professional",
           "readonly": false,
           "disabled": false,
-          "items": [
-            {
-                "label": "Student",
-                "attributes": {
-                    "value": "stud",
-                    "checked": "checked"
-                }
-            },
-            {
-                "label": "New gratuate",
-                "attributes": {
-                    "value": "grad"
-                }
-            },
-            {
-                "label": "Young proffesional",
-                "attributes": {
-                    "value": "prof"
-                }
-            }
-          ],
-            "validationType": "string",
-            "validations": [
-                {
-                    "name": "required",
-                    "params": [
-                        "First name is a required field"
-                    ]
-                }
-            ],
+          "attributes": {
+              "value": "stud",
+              "checked": false
+          },
           "layout": {
               "row": "row11",
               "cols": 12,
@@ -742,11 +686,51 @@
       },
       {
           "type": "input",
+          "id": "professional",
+          "inputType": "checkbox",
+          "inputName": "professional",
+          "visible": true,
+          "label": "New gratuate",
+          "model": "professional",
+          "readonly": false,
+          "disabled": false,
+          "attributes": {
+              "value": "grad",
+              "checked": false
+          },
+          "layout": {
+              "row": "row12",
+              "cols": 12,
+              "group": "profession"
+          }
+      },
+      {
+          "type": "input",
+          "id": "professional",
+          "inputType": "checkbox",
+          "inputName": "professional",
+          "visible": true,
+          "label": "New gratuate",
+          "model": "professional",
+          "readonly": false,
+          "disabled": false,
+          "attributes": {
+              "value": "grad",
+              "checked": false
+          },
+          "layout": {
+              "row": "row13",
+              "cols": 12,
+              "group": "profession"
+          }
+      },
+      {
+          "type": "input",
           "id": "allow",
           "inputType": "checkbox",
           "inputName": "allow",
           "visible": true,
-          "label": "I hereby accept the processing and storage of my personal data as described in the privacy policy and thereby give Hococo Test the right to contact me by any communication channel in order to proceed with this application. I am informed that I can withdraw my consent at any time by contacting Hococo Test. Our Privacy policy can be read <a target=\"_blank\" href=\"https://www.hococo.io/privacy-policy\">here</a>",
+          "label": "I hereby accept the processing and storage of my personal data as described in the privacy policy and thereby give Hococo Test the right to contact me by any communication channel in order to proceed with this application. I am informed that I can withdraw my consent at any time by contacting Hococo Test. Our Privacy policy can be read here",
           "model": "allow",
           "readonly": false,
           "disabled": false,
@@ -770,30 +754,20 @@
           }
       },
       {
-        "type": "file",
-        "inputType": "file",
-        "label": "Documents",
-        "id": "documents",
-        "inputName": "documents",
-        "visible": true,
-        "model": "documents",
-        "attributes": {
-            "multiple": true,
-            "accept": "image/*,.pdf"
-        }
-      },
-      {
         "type": "multiSelect",
         "id": "educations",
         "inputType": "text",
         "inputName": "educations",
-        "visible": false,
+        "visible": true,
         "label": "educations",
         "model": "educations",
         "readonly": false,
         "disabled": false,
         "placeholder": "Select an option",
         "selectedWord": "Selected",
+        "defaultOptions": [
+            0
+          ],
         "values": [
             {
                 "value": 178,
@@ -808,36 +782,4 @@
         },
         "validationType": "array"
     }
-  ]' ref="channelForm">
-      
-        <div slot="field-label@mandatory">
-          <label class="input__label">Make channel mandatory</label>
-          <p class="input__description">All the tenants from all the project will be invited by default.</p>
-        </div>
-  
-      </re-form-generator>
-    </div>
-      <script>
-        const formGenerator = document.querySelector('re-form-generator');
-        formGenerator.addEventListener('valueChanged', event => { 
-            console.log(event.detail);
-          const field = event.detail;
-          const { birthday } = field;
-          if (birthday) {
-            const parts = birthday.split('-');
-            const [year, month, date] = parts;
-            formGenerator.updateValue('year', year);
-            formGenerator.updateValue('month', month);
-            formGenerator.updateValue('date', date);
-          }
-        });
-
-        async function validateForm() {
-          await customElements.whenDefined('re-form-generator');
-          const formGenerator = document.querySelector('re-form-generator');
-          const errors = await formGenerator.submit();
-          //console.log({errors});
-        };
-      </script>
-  </body>
-</html>
+  ]
