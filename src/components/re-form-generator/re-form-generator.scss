@@ -1,6 +1,5 @@
-body {
-    background: rgb(131 136 143 / 14%);
-}
+$mobile-breakpoint: 480px;
+$tablet-breakpoint: 768px;
 
 .input {
     &__description {
@@ -11,21 +10,19 @@ body {
 }
 
 .re-form-generator {
-    width: 500px;
-    margin-left: auto;
-    margin-right: auto;
+    width: calc(100% - 40px);
     border: 1px solid #0000003b;
     padding: 20px;
     border-radius: 20px;
     background: #FFFFFF;
 
     .select-input {
-        min-width: 350px;
         position: relative;
         appearance: none;
         -webkit-appearance: none;
         width: 100%;
         font-size: 14px;
+        height: 44px;
         padding: 0.675em 6em 0.675em 1em;
         background-color: #fff;
         border: 1px solid #caced1;
@@ -80,7 +77,18 @@ body {
         font-family: inherit;
     }
 
-    .input-text {
+    .input-text,
+    .input-email,
+    .input-date,
+    .input-month,
+    .input-number,
+    .input-datetime-local,
+    .input-tel,
+    .input-time,
+    .input-url,
+    .input-week,
+    .input-password,
+    .select-input {
         background: #FAFAFA;
         padding: 12px;
         border: 1px solid #E3E8EB;
@@ -90,6 +98,7 @@ body {
         color: #252733;
         box-sizing: border-box;
         font-family: inherit;
+        height: 43px;
 
         &.input-checkbox {
             height: 18px;
@@ -104,11 +113,25 @@ body {
         gap: 10px;
         flex-grow: 12;
 
+        @media (max-width: $tablet-breakpoint) {
+            display: block;
+        }
+
         @for $i from 1 through 12 {
             .col-#{$i} {
-                flex-grow: $i;
+                width: calc((100% / 12) * #{$i});
             }
         }
+
+        // Mobile columns
+        @media (max-width: $tablet-breakpoint) {
+            @for $i from 1 through 12 {
+                .col-#{$i} {
+                    width: 100%;
+                }
+            }
+        }
+
     }
 
     .input__label {
@@ -201,12 +224,27 @@ body {
         font-size: 14px;
         line-height: 20px;
 
+        &.hasErrors {
+
+            input,
+            .multi-select,
+            .select-input {
+                border: 1.5px solid #FF6868;
+                border-radius: 5px;
+            }
+
+            .file-field-container {
+                border: 1.5px solid #FF6868;
+                border-radius: 5px;
+            }
+        }
+
         &.input-checkbox-container {
             display: flex;
             flex-direction: row-reverse;
             align-items: center;
             justify-content: start;
-            flex-wrap: wrap;
+            gap: 0.5rem;
 
             .input__label {
                 margin-bottom: 0px;
@@ -216,6 +254,12 @@ body {
 
             .error-message {
                 flex-basis: 100%;
+                position: absolute;
+                bottom: 0px;
+            }
+
+            &.hasErrors {
+                margin-bottom: 16px;
             }
         }
 
@@ -239,6 +283,7 @@ body {
     .submit-container {
         display: flex;
         margin-top: 16px;
+
         &__button {
             padding: 10px 20px;
             font-size: 16px;
@@ -253,6 +298,44 @@ body {
             &:hover {
                 background-color: #1565c0;
             }
+        }
+    }
+
+    .radioGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        &-element {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            align-items: center;
+
+            .label {
+                font-weight: normal;
+            }
+        }
+
+        .input-radio {
+            padding: 2px;
+            margin: 0;
+        }
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .form-error-message {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        &__message {
+            color: #FF6868;
+            font-size: 12px;
+            font-weight: 700;
         }
     }
 }

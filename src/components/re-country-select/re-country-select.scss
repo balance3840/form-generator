@@ -1,0 +1,125 @@
+re-form-generator {
+  re-country-select {
+    .country-select-input-wrapper {
+      position: relative;
+      width: 100%;
+      height: 43px;
+
+      .dropdown-container {
+        position: absolute;
+        width: 100%;
+        max-height: 300px;
+        background: #fff;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+
+        .selected-country-wrapper {
+          position: relative;
+          font-size: 14px;
+          font-weight: normal;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          display: block;
+
+          .selected-flag {
+            transform: translateY(-50%) scale(0.8);
+            width: 24px;
+            position: absolute;
+            left: 10px;
+            top: 20px;
+            display: block;
+          }
+
+          .selected-country-value {
+            position: absolute;
+            top: 11px;
+            left: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: -webkit-fill-available;
+            text-wrap: nowrap;
+            margin-right: 5px;
+            display: block;
+          }
+
+          &.hidden {
+            display: none;
+          }
+        }
+      }
+
+      .country-search {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #E3E8EB;
+        padding: 10px;
+        text-indent: 26px;
+        border-radius: 5px;
+        height: 43px;
+        font-family: unset;
+        text-indent: 26px;
+        background: #fafafa;
+
+        input::placeholder {
+          font-family: unset;
+        }
+
+        &.no-indent {
+          text-indent: 0px;
+        }
+      }
+
+      input::placeholder {
+        font-family: 'Times-Roman';
+      }
+
+      .dropdown {
+        position: absolute;
+        top: 40px;
+        width: 100%;
+        border: 1px solid #E3E8EB;
+        background-color: white;
+        overflow-y: auto;
+        display: none;
+      }
+
+      .dropdown-item {
+        padding: 10px;
+        cursor: pointer;
+        border: 0.5px solid #E3E8EB;
+        border-top: 0px;
+        background: #ffffff;
+        font-weight: normal;
+
+        &:last-of-type {
+          border-bottom: 0px;
+        }
+
+        &:hover {
+          background: #f0f0f0;
+        }
+      }
+
+      .flag {
+        width: 20px;
+        height: 15px;
+        margin-right: 10px;
+      }
+
+      .country-select-dropdown-wrapper {
+        overflow-y: scroll;
+        max-height: 200px;
+        border-bottom: 1px solid #E3E8EB;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+    }
+  }
+}

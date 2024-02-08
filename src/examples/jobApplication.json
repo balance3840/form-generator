@@ -1,0 +1,194 @@
+[
+  {
+    "type": "input",
+    "id": "name",
+    "inputType": "text",
+    "inputName": "name",
+    "visible": true,
+    "label": "Name",
+    "model": "applicantName",
+    "readonly": false,
+    "disabled": false,
+    "placeholder": "John",
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required",
+        "params": [
+          "First name is a required field"
+        ]
+      }
+    ],
+    "layout": {
+      "row": "row1",
+      "cols": 6,
+      "group": "applicant",
+      "groupTitle": "Job application form"
+    }
+  },
+  {
+    "type": "input",
+    "id": "lastName",
+    "inputType": "text",
+    "inputName": "lastName",
+    "visible": true,
+    "label": "Last name",
+    "model": "applicantLastName",
+    "readonly": false,
+    "disabled": false,
+    "placeholder": "Doe",
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required",
+        "params": [
+          "Last name is a required field"
+        ]
+      }
+    ],
+    "layout": {
+      "row": "row1",
+      "cols": 6,
+      "group": "applicant"
+    }
+  },
+  {
+    "type": "input",
+    "id": "email",
+    "inputType": "email",
+    "inputName": "email",
+    "visible": true,
+    "label": "Email",
+    "model": "applicantEmail",
+    "readonly": false,
+    "disabled": false,
+    "placeholder": "john.doe@email.com",
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required",
+        "params": [
+          "Email is a required field"
+        ]
+      },
+      {
+        "name": "email",
+        "params": [
+          "The email is not in the right format"
+        ]
+      }
+    ],
+    "layout": {
+      "group": "applicant"
+    }
+  },
+  {
+    "type": "select",
+    "id": "position",
+    "inputName": "position",
+    "visible": true,
+    "label": "What position are you applying for?",
+    "model": "apllicationPosition",
+    "readonly": false,
+    "disabled": false,
+    "placeholder": "Please select a position...",
+    "defaultValue": "",
+    "values": [
+      {
+        "value": 1,
+        "display": "Chief Executive Officer (CEO)",
+        "group": "Vacant positions"
+      },
+      {
+        "value": 2,
+        "display": "Chief Technology Officer (CTO)",
+        "group": "Vacant positions"
+      }
+    ],
+    "validationType": "number",
+    "validations": [
+      {
+        "name": "required"
+      }
+    ],
+    "layout": {
+      "row": "row2",
+      "group": "applicant",
+      "cols": 6
+    }
+  },
+  {
+    "type": "input",
+    "id": "availableDate",
+    "inputType": "date",
+    "inputName": "availableDate",
+    "visible": true,
+    "label": "Available date",
+    "model": "availableDate",
+    "readonly": false,
+    "disabled": false,
+    "validationType": "date",
+    "validations": [
+      {
+        "name": "required",
+        "params": ["Available date is required"]
+      },
+      {
+        "name": "max",
+        "params": ["2024-02-20", "You should be available before the the 20th of February"]
+      }
+    ],
+    "layout": {
+      "group": "applicant",
+      "row": "row2",
+      "cols": 6
+    }
+  },
+  {
+    "type": "input",
+    "id": "referenceName",
+    "inputType": "text",
+    "inputName": "referenceName",
+    "placeholder": "Martin",
+    "visible": true,
+    "label": "First name",
+    "model": "referenceName",
+    "readonly": false,
+    "disabled": false,
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required"
+      }
+    ],
+    "layout": {
+      "group": "reference",
+      "groupTitle": "Personal references",
+      "row": "row3",
+      "cols": 6
+    }
+  },
+  {
+    "type": "input",
+    "id": "referenceLastName",
+    "inputType": "text",
+    "inputName": "referenceLastName",
+    "placeholder": "Martin",
+    "visible": true,
+    "label": "Last name",
+    "model": "referenceLastName",
+    "readonly": false,
+    "disabled": false,
+    "validationType": "string",
+    "validations": [
+      {
+        "name": "required"
+      }
+    ],
+    "layout": {
+      "group": "reference",
+      "row": "row3",
+      "cols": 6
+    }
+  }
+]

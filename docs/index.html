@@ -1,0 +1,3756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+<link rel="manifest" href="/assets/favicon/site.webmanifest">
+<link rel="mask-icon" href="/assets/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<title>Form generator documentation</title>
+<meta name="description" content="Form generator documentation">
+<meta name="author" content="balance3840.github.io">
+
+<!-- Stylesheet
+============================== -->
+<!-- Bootstrap -->
+<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap/css/bootstrap.min.css" />
+<!-- Font Awesome Icon -->
+<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css" />
+<!-- Magnific Popup -->
+<link rel="stylesheet" type="text/css" href="assets/vendor/magnific-popup/magnific-popup.min.css" />
+<!-- Highlight Syntax -->
+<link rel="stylesheet" type="text/css" href="assets/vendor/highlight.js/styles/github.css" />
+<!-- Custom Stylesheet -->
+<link rel="stylesheet" type="text/css" href="assets/css/stylesheet.css" />
+</head>
+
+<body class="box" data-spy="scroll" data-target=".idocs-navigation" data-offset="125">
+
+<!-- Preloader -->
+<div class="preloader">
+  <div class="lds-ellipsis">
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+  </div>
+</div>
+<!-- Preloader End --> 
+
+<!-- Document Wrapper   
+=============================== -->
+<div id="main-wrapper"> 
+  
+  <!-- Header
+  ============================ -->
+  <header id="header" class="sticky-top"> 
+    <!-- Navbar -->
+    <nav class="primary-menu navbar navbar-expand-lg navbar-dropdown-dark">
+      <div class="container-fluid">
+        <!-- Sidebar Toggler -->
+		<button id="sidebarCollapse" class="navbar-toggler d-block d-md-none" type="button"><span></span><span class="w-75"></span><span class="w-50"></span></button>
+		
+		<!-- Logo --> 
+        <a class="logo ml-md-3" href="index.html" title="iDocs Template"> <img src="assets/images/logo.png" alt="iDocs Template"/> </a> 
+		<span class="text-2 ml-2">v0.0.9</span> 
+        <!-- Logo End -->
+        
+		<!-- Navbar Toggler -->
+		<button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#header-nav"><span></span><span></span><span></span></button>
+        
+		<div id="header-nav" class="collapse navbar-collapse justify-content-end">
+          <ul class="navbar-nav">
+            <li><a target="_blank" href="https://github.com/balance3840/form-generator">Github repository</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <!-- Navbar End --> 
+  </header>
+  <!-- Header End --> 
+  
+  <!-- Content
+  ============================ -->
+  <div id="content" role="main">
+    
+	<!-- Sidebar Navigation
+	============================ -->
+	<div class="idocs-navigation bg-light">
+      <ul class="nav flex-column ">
+        <li class="nav-item"><a class="nav-link active" href="#idocs_start">Getting Started</a>
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#idocs_installation">Installation</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_html_structure">Basic Usage</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_config">Action</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_mapping">Fields mapping</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_schema">Schema</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_layout">Layout</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_validations">Validations</a>
+			<ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_string">String</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_number">Number</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_date">Date</a></li>
+			      <li class="nav-item"><a class="nav-link" href="#formgenerator_array">Array</a></li>
+            <li class="nav-item"><a class="nav-link" href="#formgenerator_mixed">Mixed</a></li>
+          </ul>
+		</li>
+    <li class="nav-item"><a class="nav-link" href="#formgenerator_fields">Schema fields</a>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_input">Input</a>
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#input_checkbox">Checkbox</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_color">Color</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_date">Date</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_datetime-local">Datetime-local</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_email">Email</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_month">Month</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_number">Number</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_password">Password</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_range">Range</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_tel">Tel</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_text">Text</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_time">Time</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_url">Url</a></li>
+            <li class="nav-item"><a class="nav-link" href="#input_week">Week</a></li>
+        </ul></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_checkbox_group">Checkbox group</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_country_select">Country select</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_file_input">File drag and drop</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_multiselect">Multiselect</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_radio">Radio group</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_select">Select</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_textarea">Textarea</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_toggle">Toggle</a></li>
+      </ul>
+    </li>
+		<li class="nav-item"><a class="nav-link" href="#formgenerator_events">Events</a></li>
+    <li class="nav-item"><a class="nav-link" href="#formgenerator_methods">Methods</a></li>
+        <li class="nav-item"><a class="nav-link" href="#formgenerator_styles">Styles</a></li>
+		<li class="nav-item"><a class="nav-link" href="#idocs_changelog">Changelog</a>
+			<ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#v0.0.9">v0.0.9</a></li>
+          </ul>
+		</li>
+      </ul>
+    </div>
+    
+    <!-- Docs Content
+	============================ -->
+    <div class="idocs-content">
+      <div class="container"> 
+        
+        <!-- Getting Started
+		============================ -->
+        <section id="idocs_start">
+        <h1>Documentation</h1>
+        <h2>Form generator</h2>
+        <p class="lead">Guide for implementing and understanding the form generator web component library.</p>
+		<hr>
+		<div class="row">
+			<div class="col-sm-6 col-lg-4">
+				<ul class="list-unstyled">
+					<li><strong>Version:</strong> 0.0.9</li>
+					<li><strong>Authors:</strong> 
+                        <a href="https://github.com/balance3840" target="_blank">Ramiro Estrella</a>
+                        <a href="https://github.com/losica" class="ml-5 pl-4" target="_blank">Adrianna Wiącek </a>
+                    </li>
+				</ul>
+			</div>
+			<div class="col-sm-6 col-lg-4">
+				<ul class="list-unstyled">
+					<li><strong class="font-weight-700">Created:</strong> 3 July, 2024</li>
+					<li><strong>Update:</strong> 3 July, 2024</li>
+				</ul>
+			</div>
+		</div>
+        </section>
+        
+		<hr class="divider">
+		
+        <!-- Installation
+		============================ -->
+        <section id="idocs_installation">
+          <h2>Installation</h2>
+          <p class="lead">Follow the steps below to setup the form generator in your website:</p>
+          <ol>
+            <li>Place the following scripts preferably just before the closing <code>body</code> tag in the HTML
+                <ul>
+                    <li><code>
+                        &lt;script type="module" src="https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.esm.js"&gt;&lt;/script&gt;
+                      </code>                      
+                    </li>
+                    <li><code>&lt;script nomodule src="https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.js"&gt;&lt;/script&gt;</code>
+                    </ul>
+            </li>
+            <li>Insert the <code>re-form-generator</code> tag where you want the component to be displayed
+            </li>
+            <li>You are good to go for adding your form schema now!</li>
+          </ol>
+        </section>
+        
+		<hr class="divider">
+		
+        <!-- HTML Structure
+		============================ -->
+        <section id="formgenerator_html_structure">
+          <h2>Basic Usage</h2>
+          <p>The form generator follows a JSON schema structure to add fields and configuration to the form. Here is the sample for your reference:<br>
+          <pre>
+<code class="html">
+&lt;!DOCTYPE html&gt;<br>
+&lt;html lang=&quot;en&quot;&gt;<br>
+    &lt;head&gt;<br>
+    &lt;title&gt;Form Generator&lt;/title&gt;<br>
+    &lt;meta charset=&quot;UTF-8&quot; /&gt;<br>
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width&quot; /&gt;<br>
+    &lt;script<br>
+        type=&quot;module&quot;<br>
+        src=&quot;https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.esm.js&quot;<br>
+    &gt;&lt;/script&gt;<br>
+    &lt;script<br>
+        nomodule<br>
+        src=&quot;https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.js&quot;<br>
+    &gt;&lt;/script&gt;<br>
+    &lt;/head&gt;<br>
+    &lt;body&gt;<br>
+    &lt;re-form-generator<br>
+        schema='[<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;name&quot;,<br>
+        &quot;inputType&quot;: &quot;text&quot;,<br>
+        &quot;inputName&quot;: &quot;name&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;Name&quot;,<br>
+        &quot;model&quot;: &quot;applicantName&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;placeholder&quot;: &quot;John&quot;,<br>
+        &quot;validationType&quot;: &quot;string&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;,<br>
+            &quot;params&quot;: [<br>
+                &quot;First name is a required field&quot;<br>
+            ]<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;row&quot;: &quot;row1&quot;,<br>
+            &quot;cols&quot;: 6,<br>
+            &quot;group&quot;: &quot;applicant&quot;,<br>
+            &quot;groupTitle&quot;: &quot;Job application form&quot;<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;lastName&quot;,<br>
+        &quot;inputType&quot;: &quot;text&quot;,<br>
+        &quot;inputName&quot;: &quot;lastName&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;Last name&quot;,<br>
+        &quot;model&quot;: &quot;applicantLastName&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;placeholder&quot;: &quot;Doe&quot;,<br>
+        &quot;validationType&quot;: &quot;string&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;,<br>
+            &quot;params&quot;: [<br>
+                &quot;Last name is a required field&quot;<br>
+            ]<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;row&quot;: &quot;row1&quot;,<br>
+            &quot;cols&quot;: 6,<br>
+            &quot;group&quot;: &quot;applicant&quot;<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;email&quot;,<br>
+        &quot;inputType&quot;: &quot;email&quot;,<br>
+        &quot;inputName&quot;: &quot;email&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;Email&quot;,<br>
+        &quot;model&quot;: &quot;applicantEmail&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;placeholder&quot;: &quot;john.doe@email.com&quot;,<br>
+        &quot;validationType&quot;: &quot;string&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;,<br>
+            &quot;params&quot;: [<br>
+                &quot;Email is a required field&quot;<br>
+            ]<br>
+            },<br>
+            {<br>
+            &quot;name&quot;: &quot;email&quot;,<br>
+            &quot;params&quot;: [<br>
+                &quot;The email is not in the right format&quot;<br>
+            ]<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;group&quot;: &quot;applicant&quot;<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;select&quot;,<br>
+        &quot;id&quot;: &quot;position&quot;,<br>
+        &quot;inputName&quot;: &quot;position&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;What position are you applying for?&quot;,<br>
+        &quot;model&quot;: &quot;apllicationPosition&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;placeholder&quot;: &quot;Please select a position...&quot;,<br>
+        &quot;defaultValue&quot;: &quot;&quot;,<br>
+        &quot;values&quot;: [<br>
+            {<br>
+            &quot;value&quot;: 1,<br>
+            &quot;display&quot;: &quot;Chief Executive Officer (CEO)&quot;,<br>
+            &quot;group&quot;: &quot;Vacant positions&quot;<br>
+            },<br>
+            {<br>
+            &quot;value&quot;: 2,<br>
+            &quot;display&quot;: &quot;Chief Technology Officer (CTO)&quot;,<br>
+            &quot;group&quot;: &quot;Vacant positions&quot;<br>
+            }<br>
+        ],<br>
+        &quot;validationType&quot;: &quot;number&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;row&quot;: &quot;row2&quot;,<br>
+            &quot;group&quot;: &quot;applicant&quot;,<br>
+            &quot;cols&quot;: 6<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;availableDate&quot;,<br>
+        &quot;inputType&quot;: &quot;date&quot;,<br>
+        &quot;inputName&quot;: &quot;availableDate&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;Available date&quot;,<br>
+        &quot;model&quot;: &quot;availableDate&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;validationType&quot;: &quot;date&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;,<br>
+            &quot;params&quot;: [&quot;Available date is required&quot;]<br>
+            },<br>
+            {<br>
+            &quot;name&quot;: &quot;max&quot;,<br>
+            &quot;params&quot;: [&quot;2024-02-20&quot;, &quot;You should be available before the the 20th of February&quot;]<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;group&quot;: &quot;applicant&quot;,<br>
+            &quot;row&quot;: &quot;row2&quot;,<br>
+            &quot;cols&quot;: 6<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;referenceName&quot;,<br>
+        &quot;inputType&quot;: &quot;text&quot;,<br>
+        &quot;inputName&quot;: &quot;referenceName&quot;,<br>
+        &quot;placeholder&quot;: &quot;Martin&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;First name&quot;,<br>
+        &quot;model&quot;: &quot;referenceName&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;validationType&quot;: &quot;string&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;group&quot;: &quot;reference&quot;,<br>
+            &quot;groupTitle&quot;: &quot;Personal references&quot;,<br>
+            &quot;row&quot;: &quot;row3&quot;,<br>
+            &quot;cols&quot;: 6<br>
+        }<br>
+        },<br>
+        {<br>
+        &quot;type&quot;: &quot;input&quot;,<br>
+        &quot;id&quot;: &quot;referenceLastName&quot;,<br>
+        &quot;inputType&quot;: &quot;text&quot;,<br>
+        &quot;inputName&quot;: &quot;referenceLastName&quot;,<br>
+        &quot;placeholder&quot;: &quot;Martin&quot;,<br>
+        &quot;visible&quot;: true,<br>
+        &quot;label&quot;: &quot;Last name&quot;,<br>
+        &quot;model&quot;: &quot;referenceLastName&quot;,<br>
+        &quot;readonly&quot;: false,<br>
+        &quot;disabled&quot;: false,<br>
+        &quot;validationType&quot;: &quot;string&quot;,<br>
+        &quot;validations&quot;: [<br>
+            {<br>
+            &quot;name&quot;: &quot;required&quot;<br>
+            }<br>
+        ],<br>
+        &quot;layout&quot;: {<br>
+            &quot;group&quot;: &quot;reference&quot;,<br>
+            &quot;row&quot;: &quot;row3&quot;,<br>
+            &quot;cols&quot;: 6<br>
+        }<br>
+        }<br>
+    ]'<br>
+        action='{<br>
+        &quot;httpMethod&quot;: &quot;POST&quot;,<br>
+        &quot;endpoint&quot;: &quot;ENDPOINT&quot;,<br>
+        &quot;bearerToken&quot;: &quot;TOKEN&quot;,<br>
+        &quot;formData&quot;: &quot;true&quot;,<br>
+        &quot;submitButtonText&quot;: &quot;Apply now&quot;<br>
+    }'<br>
+    &gt;<br>
+    &lt;/re-form-generator&gt;<br>
+    &lt;/body&gt;<br>
+&lt;/html&gt;
+          </code>
+          </pre>
+          <re-form-generator
+          schema='[
+          {
+            "type": "input",
+            "id": "name",
+            "inputType": "text",
+            "inputName": "name",
+            "visible": true,
+            "label": "Name",
+            "model": "applicantName",
+            "readonly": false,
+            "disabled": false,
+            "placeholder": "John",
+            "validationType": "string",
+            "validations": [
+              {
+                "name": "required",
+                "params": [
+                  "First name is a required field"
+                ]
+              }
+            ],
+            "layout": {
+              "row": "row1",
+              "cols": 6,
+              "group": "applicant",
+              "groupTitle": "Job application form"
+            }
+          },
+          {
+            "type": "input",
+            "id": "lastName",
+            "inputType": "text",
+            "inputName": "lastName",
+            "visible": true,
+            "label": "Last name",
+            "model": "applicantLastName",
+            "readonly": false,
+            "disabled": false,
+            "placeholder": "Doe",
+            "validationType": "string",
+            "validations": [
+              {
+                "name": "required",
+                "params": [
+                  "Last name is a required field"
+                ]
+              }
+            ],
+            "layout": {
+              "row": "row1",
+              "cols": 6,
+              "group": "applicant"
+            }
+          },
+          {
+            "type": "input",
+            "id": "email",
+            "inputType": "email",
+            "inputName": "email",
+            "visible": true,
+            "label": "Email",
+            "model": "applicantEmail",
+            "readonly": false,
+            "disabled": false,
+            "placeholder": "john.doe@email.com",
+            "validationType": "string",
+            "validations": [
+              {
+                "name": "required",
+                "params": [
+                  "Email is a required field"
+                ]
+              },
+              {
+                "name": "email",
+                "params": [
+                  "The email is not in the right format"
+                ]
+              }
+            ],
+            "layout": {
+              "group": "applicant"
+            }
+          },
+          {
+            "type": "select",
+            "id": "position",
+            "inputName": "position",
+            "visible": true,
+            "label": "What position are you applying for?",
+            "model": "apllicationPosition",
+            "readonly": false,
+            "disabled": false,
+            "placeholder": "Please select a position...",
+            "defaultValue": "",
+            "values": [
+              {
+                "value": 1,
+                "display": "Chief Executive Officer (CEO)",
+                "group": "Vacant positions"
+              },
+              {
+                "value": 2,
+                "display": "Chief Technology Officer (CTO)",
+                "group": "Vacant positions"
+              }
+            ],
+            "validationType": "number",
+            "validations": [
+              {
+                "name": "required"
+              }
+            ],
+            "layout": {
+              "row": "row2",
+              "group": "applicant",
+              "cols": 6
+            }
+          },
+          {
+            "type": "input",
+            "id": "availableDate",
+            "inputType": "date",
+            "inputName": "availableDate",
+            "visible": true,
+            "label": "Available date",
+            "model": "availableDate",
+            "readonly": false,
+            "disabled": false,
+            "validationType": "date",
+            "validations": [
+              {
+                "name": "required",
+                "params": ["Available date is required"]
+              },
+              {
+                "name": "max",
+                "params": ["2024-02-20", "You should be available before the the 20th of February"]
+              }
+            ],
+            "layout": {
+              "group": "applicant",
+              "row": "row2",
+              "cols": 6
+            }
+          },
+          {
+            "type": "input",
+            "id": "referenceName",
+            "inputType": "text",
+            "inputName": "referenceName",
+            "placeholder": "Martin",
+            "visible": true,
+            "label": "First name",
+            "model": "referenceName",
+            "readonly": false,
+            "disabled": false,
+            "validationType": "string",
+            "validations": [
+              {
+                "name": "required"
+              }
+            ],
+            "layout": {
+              "group": "reference",
+              "groupTitle": "Personal references",
+              "row": "row3",
+              "cols": 6
+            }
+          },
+          {
+            "type": "input",
+            "id": "referenceLastName",
+            "inputType": "text",
+            "inputName": "referenceLastName",
+            "placeholder": "Martin",
+            "visible": true,
+            "label": "Last name",
+            "model": "referenceLastName",
+            "readonly": false,
+            "disabled": false,
+            "validationType": "string",
+            "validations": [
+              {
+                "name": "required"
+              }
+            ],
+            "layout": {
+              "group": "reference",
+              "row": "row3",
+              "cols": 6
+            }
+          }
+        ]'
+          action='{
+          "httpMethod": "POST",
+          "endpoint": "ENDPOINT",
+          "bearerToken": "TOKEN",
+          "formData": "true",
+          "submitButtonText": "Apply now"
+        }'
+        >
+        </re-form-generator>
+        </section>
+        
+		<hr class="divider">
+		        
+		<!-- Sass
+		============================ -->
+        <section id="formgenerator_config">
+          <h2>Action</h2>
+          <p>The form action is defined in a JSON schema passed through the <code>action</code> attribute of the form generator component.</p>
+          <p>The properties that can be defined in this object are the following:</p>
+          <ul>
+            <li><span class="valueType">String</span> <code>recaptchaSiteKey</code> - In case your backend endpoint is protected using reCAPTCHA.</li>
+            <li><span class="valueType">String</span> <code>httpMethod</code> - HTTP method of the endpoint
+                <ul>
+                    <li>default: <span class="valueDefault">POST</span></li>
+                </ul>
+            </li>
+            <li><span class="valueType">String</span> <code>bearerToken</code> - Bearer token to be used in the endpoint (if endpoint requires authorization)</li>
+            <li><span class="valueType">Boolean</span> <code>formData</code> - The request body should be made using form-data
+                <ul>
+                    <li>default: <span class="valueDefault">false</span></li>
+                </ul>
+            </li>
+            <li><span class="valueType">String</span> <code>endpoint</code> - Endpoint where the request should be sent</li>
+            <li><span class="valueType">String</span> <code>webhoookEndpoint</code> - Endpoint where the form events should be sent. List of events:
+                <ul>
+                    <li><span class="valueDefault">submit.failed</span></li>
+                </ul>
+            </li>
+            <li><span class="valueType">String</span> <code>formErrorMessage</code> - Message that should be shown when the validation fails (supports HTML)</li>
+            <li><span class="valueType">String</span> <code>submitButtonText</code> - Text the submit button should display (supports HTML)</li>
+          </ul>
+
+          <p>An example of how this would look like:</p>
+          <pre>
+            <code class="json">
+{
+    "recaptchaSiteKey": "MY_SITE_KEY",
+    "bearerToken": "MY_BEARER_TOKEN",
+    "formData": true,
+    "endpoint": "MY_API_ENDPOINT",
+    "webhoookEndpoint": "MY_WEBHOOK_ENDPOINT",
+    "formErrorMessage": "Please fix the errors in the form before submiting",
+    "submitButtonText": "Send form"
+}
+              </code>
+          </pre>
+
+        </section>
+        
+		<hr class="divider">
+		
+		<!-- Color Schemes
+		============================ -->
+        <section id="formgenerator_mapping">
+          <h2>Fields mapping (optional)</h2>
+          <p>The fields are send to the api endpoint specified in the config based on the <code>model</code> property inside the field in the schema.</p>
+          <p>Let's say you have a simple form with fields contaning the models <code>firstName</code> and <code>lastName</code>, 
+            the form generator will generate a request body similar to the following one:</p>
+            <pre>
+                <code class="json">
+{
+    "name": "FIELD_VALUE",
+    "lastName": "FIELD_VALUE"
+}
+                </code>
+            </pre>
+        <p>However, this will not always be the format the API will expect. The form generator offers a way to define a custom field mapping by passing an array.
+            Following the previous example, let's say that now we want to put the <code>name</code> and <code>lastName</code> inside a <code>person</code> object.
+        </p>
+        <p>This can be achieved using the following object structure:</p>
+        <pre>
+            <code class="json">
+{
+    "name": ["person.name"],
+    "lastName": ["person.lastName"]
+}
+            </code>
+            </pre>
+        <p>It is important to mention that you can map the same field to multiple objects/object property. Here is an example:</p>
+        <pre>
+            <code class="json">
+{
+    "name": ["person.name", "applicant.name"],
+    "lastName": ["person.lastName", "person.familyName"]
+}
+            </code>
+        </pre>
+        </section>
+        
+		<hr class="divider">
+		
+		<!-- Customization
+		============================ -->
+        <section id="formgenerator_schema">
+          <h2>Form Schema</h2>
+          <p>The <code>schema</code> attribute is basically the core of the component. In this, you can specify all the fields, layout, and validations that your form should contain.</p>
+          <p>Further in the doumentation we will conver the different type of fields and validations you can use in the form, for now let's just see an example of how a field looks like in the schema:</p>
+          <pre>
+            <code class="json">
+{
+  "type": "input",
+  "id": "name",
+  "inputType": "text",
+  "inputName": "name",
+  "visible": true,
+  "label": "Name",
+  "model": "applicantName",
+  "readonly": false,
+  "disabled": false,
+  "placeholder": "John",
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "required",
+      "params": [
+        "First name is a required field"
+      ]
+    }
+  ]
+}
+            </code>
+          </pre>
+          <p>These properties in the schema can vary based on the <code>type</code> and as mentioned before are going to be detailed individually.
+        These are some of the most common properties that can be applied to the fields:</p>
+        <ul>
+            <li>
+                <span class="valueType">String</span> <code>type</code> - Input field type. Accepted values:
+                <ul>
+                    <li><span class="valueDefault">input</span></li>
+                    <li><span class="valueDefault">textarea</span></li>
+                    <li><span class="valueDefault">toggle</span></li>
+                    <li><span class="valueDefault">select</span></li>
+                    <li><span class="valueDefault">checkboxGroup</span></li>
+                    <li><span class="valueDefault">radioGroup</span></li>
+                    <li><span class="valueDefault">multiSelect</span></li>
+                    <li><span class="valueDefault">countrySelect</span></li>
+                    <li><span class="valueDefault">file</span></li>
+                </ul>
+            </li>
+            <li>
+                <span class="valueType">String</span> <code>id</code> - id selector of the field
+            </li>
+            <li>
+                <span class="valueType">Boolean</span> <code>visible</code> - Wether the field should be visible or not
+            </li>
+            <li>
+                <span class="valueType">String</span> <code>label</code> - Field label (supports HTML)
+            </li>
+            <li>
+                <span class="valueType">String</span> <code>model</code> - Object property name to be send to the API
+            </li>
+            <li>
+                <span class="valueType">Boolean</span> <code>readonly</code> - Wether the field is read only or not
+            </li>
+            <li>
+                <span class="valueType">Boolean</span> <code>disabled</code> - Wether the field is disabled or not
+            </li>
+            <li>
+                <span class="valueType">String</span> <code>placeholder</code> - Field placeholder
+            </li>
+            <li>
+                <span class="valueType">String</span> <code>validationType</code> - 
+                <a href="https://www.npmjs.com/package/yup" target="_blank">Yup</a> validation type
+                <ul>
+                    <li><span class="valueDefault"><a href="https://www.npmjs.com/package/yup#string" target="_blank">string</a></span></li>
+                    <li><span class="valueDefault"><a href="https://www.npmjs.com/package/yup#number" target="_blank">number</a></span></li>
+                    <li><span class="valueDefault"><a href="https://www.npmjs.com/package/yup#date" target="_blank">date</a></span></li>
+                    <li><span class="valueDefault"><a href="https://www.npmjs.com/package/yup#array" target="_blank">array</a></span></li>
+                    <li><span class="valueDefault"><a href="https://www.npmjs.com/package/yup#mixed" target="_blank">mixed</a></span></li>
+                </ul>
+            </li>
+            <li>
+                <span class="valueType">Array</span> <code>validations</code> - Validations rule to apply based on <a href="https://www.npmjs.com/package/yup" target="_blank">Yup</a> validation type (This is explained in <a href="#formgenerator_validations">Validations</a> section)
+            </li>
+        </ul>
+        </section>
+
+		<hr class="divider">
+		
+		<!-- Layout
+		============================ -->
+        <section id="formgenerator_layout">
+          <h2>Layout</h2>
+          <p>The layout configuration is specified inside the layout property of the field in the form 
+            <a href="#formgenerator_schema">schema</a>. Here is an example:</p>
+            <pre>
+                <code class="json">
+{
+    // Other field properties
+    "layout": {
+        "row": "row1", // Row where it should be displayed,
+        "cols": 6, // Number of columns to display (from 1 to 12),
+        "group": "applicant", // If the field is part of a group (Optional)
+        "groupTitle": "Applicant details" // Title of the group (Optional)
+    }
+}
+                </code>
+            </pre>
+        </section>
+	
+		<hr class="divider">
+		
+		<!-- Content
+		============================ -->
+        <section id="formgenerator_validations">
+          <h2>Validations</h2>
+          <p class="lead mb-5">Examples about how to implement some commonly used validations from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a> in the JSON schema.
+          These validations must be implemented in the schema using a combination of 
+          <span class="valueType">String</span> <code>validationType</code> and <span class="valueType">Array&lt;any&gt;</span>
+          <code>validations</code> properties.
+          </p>
+        </section>
+		  
+		<!-- Typography
+		============================ -->
+		<section id="formgenerator_string">
+		  <h3>String</h3>
+		  <p class="text-4">Examples about <b>string</b> <code>validationType</code> from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a></p>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Validation</th>
+            <th>Implementation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>string.required(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "required",
+      "params": [
+        "This is a required field"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.length(limit: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "length",
+      "params": [
+        15,
+        "The string should be exactly ${length} characters"
+      ]
+    }
+  ]
+}                            
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.min(limit: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "min",
+      "params": [
+        10,
+        "The string should contain minimum ${min} characters"
+      ]
+    }
+  ]
+}                                                       
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.max(limit: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "max",
+      "params": [
+        20,
+        "The string should contain maximum ${max} characters"
+      ]
+    }
+  ]
+}                                                                             
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.matches(regex: RegExp, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "matches",
+      "params": [
+        "^[a-zA-Z0-9]*$", // Regex pattern
+        "The string should match the required pattern"
+      ]
+    }
+  ]
+}    
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.matches(regex: RegExp, options: { message: string, excludeEmptyString: bool }): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "matches",
+      "params": [
+        "^[a-zA-Z0-9]*$", // Regex pattern
+        {
+          "message": "The string should match the required pattern",
+          "excludeEmptyString": true
+        }
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.email(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "email",
+      "params": [
+        "The string should be a valid email address"
+      ]
+    }
+  ]
+} 
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.url(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "url",
+      "params": [
+        "The string should be a valid URL"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.uuid(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "uuid",
+      "params": [
+        "The string should be a valid UUID"
+      ]
+    }
+  ]
+}  
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.datetime(options?: {message?: string | function, allowOffset?: boolean, precision?: number})</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "datetime",
+      "params": [
+        {
+          "message": "The string should be a valid datetime",
+          "allowOffset": true,
+          "precision": 3
+        }
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.datetime(message?: string | function)</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "datetime",
+      "params": [
+        "The string should be a valid datetime"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.ensure(): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "ensure",
+      "params": []
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.trim(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "trim",
+      "params": [
+        "The string should not have leading or trailing whitespace"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.lowercase(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "lowercase",
+      "params": [
+        "The string should be in lowercase"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>string.uppercase(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "string",
+  "validations": [
+    {
+      "name": "uppercase",
+      "params": [
+        "The string should be in uppercase"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+        </tbody>
+      </table>        
+		</section>
+	
+    <section id="formgenerator_number">
+      <h3 class="mt-5">Number</h3>
+		  <p class="text-4">Examples about <b>number</b> <code>validationType</code> from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a></p>
+
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Validation</th>
+            <th>Implementation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>number.min(limit: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "min",
+      "params": [
+        5,
+        "The number should be at least ${min}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.max(limit: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "max",
+      "params": [
+        100,
+        "The number should be at most ${max}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.lessThan(max: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "lessThan",
+      "params": [
+        50,
+        "The number should be less than ${less}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.moreThan(min: number | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "moreThan",
+      "params": [
+        10,
+        "The number should be more than ${more}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.positive(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "positive",
+      "params": [
+        "The number should be positive"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.negative(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "negative",
+      "params": [
+        "The number should be negative"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.integer(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "integer",
+      "params": [
+        "The number should be an integer"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.truncate(): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "truncate",
+      "params": []
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>number.round(type: 'floor' | 'ceil' | 'trunc' | 'round' = 'round'): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "number",
+  "validations": [
+    {
+      "name": "round",
+      "params": [
+        "round"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+        </tbody>
+      </table>    
+    </section>
+
+    <section id="formgenerator_date">
+      <h3 class="mt-5">Date</h3>
+		  <p class="text-4">Examples about <b>date</b> <code>validationType</code> from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a></p>
+
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Validation</th>
+            <th>Implementation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>date.min(limit: Date | string | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "date",
+  "validations": [
+    {
+      "name": "min",
+      "params": [
+        "2023-01-01", // Date limit
+        "The date should be later than ${min}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>date.max(limit: Date | string | Ref, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "date",
+  "validations": [
+    {
+      "name": "max",
+      "params": [
+        "2024-01-01", // Date limit
+        "The date should be earlier than ${max}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+        </tbody>
+      </table>      
+    </section>
+
+    <section id="formgenerator_array">
+      <h3 class="mt-5">Array</h3>
+		  <p class="text-4">Examples about <b>array</b> <code>validationType</code> from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a></p>
+
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Validation</th>
+            <th>Implementation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>array.json(): this</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "json",
+      "params": []
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>array.length(length: number | Ref, message?: string | function): this</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "length",
+      "params": [
+        5,
+        "The array should contain exactly ${length} items"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>array.min(limit: number | Ref, message?: string | function): this</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "min",
+      "params": [
+        2,
+        "The array should contain at least ${min} items"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>array.max(limit: number | Ref, message?: string | function): this</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "max",
+      "params": [
+        10,
+        "The array should contain at most ${max} items"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>array.ensure(): this</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "ensure",
+      "params": []
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>array.compact(rejector: (value) => boolean): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "array",
+  "validations": [
+    {
+      "name": "compact",
+      "params": [
+        "function(value) { return value === null; }"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+        
+    </section>
+
+    <section id="formgenerator_mixed">
+      <h3 class="mt-5">Mixed</h3>
+		  <p class="text-4">Examples about <b>mixed</b> <code>validationType</code> from <a target="_blank" href="https://www.npmjs.com/package/yup">Yup</a></p>
+
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Validation</th>
+            <th>Implementation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>mixed.required(message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "required",
+      "params": [
+        "This field is required"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.oneOf(arrayOfValues: Array<any | Ref>, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "oneOf",
+      "params": [
+        [1, 2, 3], // Example array of valid values
+        "The value must be one of ${values}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.notOneOf(arrayOfValues: Array<any | Ref>, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "notOneOf",
+      "params": [
+        [1, 2, 3], // Example array of invalid values
+        "The value must not be one of ${values}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.equals(arrayOfValues: Array<any | Ref>, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "equals",
+      "params": [
+        [1, 2, 3], // Example array of equal values
+        "The value must be equal to one of ${values}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.notEquals(arrayOfValues: Array<any | Ref>, message?: string | function): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "notEquals",
+      "params": [
+        [1, 2, 3], // Example array of not equal values
+        "The value must not be equal to one of ${values}"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.default(value: any): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "default",
+      "params": [
+        "default value"
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mixed.nullable(isNullable?: boolean): Schema</code></td>
+            <td>
+              <pre class="grid-code">
+                <code class="json">
+{
+  "validationType": "mixed",
+  "validations": [
+    {
+      "name": "nullable",
+      "params": [
+        true // Allows the value to be null
+      ]
+    }
+  ]
+}
+                </code>
+              </pre>
+            </td>
+          </tr>
+        </tbody>
+      </table>     
+    </section>
+        <!-- Components
+		============================ -->
+    <section id="formgenerator_fields">
+      <h2>Schema fields</h2>
+      <p class="mb-2">Form schema allows following components to be generated:</p>
+      <ul>
+        <li class="valueDefault"><a href="#formgenerator_input">Input</a></li>
+        <li class="valueDefault"><a href="#formgenerator_checkbox_group">Checkbox group</a></li>
+        <li class="valueDefault"><a href="#formgenerator_country_select">Country select</a></li>
+        <li class="valueDefault"><a href="#formgenerator_file_input">File drag and drop</a></li>
+        <li class="valueDefault"><a href="#formgenerator_multiselect">Multiselect</a></li>
+        <li class="valueDefault"><a href="#formgenerator_radio">Radio group</a></li>
+        <li class="valueDefault"><a href="#formgenerator_select">Select</a></li>
+        <li class="valueDefault"><a href="#formgenerator_textarea">Textarea</a></li>
+        <li class="valueDefault"><a href="#formgenerator_toggle">Toggle</a></li>
+      </ul>
+      
+    </section>
+  
+  <section id="formgenerator_input">
+        <h2>Input</h2>
+  <p>Input field allow following <code>inputType</code> values in the form schema:</p>
+  <ul>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/checkbox">checkbox</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/color">color</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/date">date</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local">datetime-local</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email">email</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/month">month</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/number">number</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/password">password</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/range">range</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/tel">tel</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/text">text</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/time">time</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/url">url</a></span></li>
+    <li><span class="valueDefault"><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/week">week</a></span></li>
+</ul>
+  <p>If you want to specify any attirbutte that given input type supports natively you can do it in the schema using <code>attributtes</code> property.
+    For example, if you want an <code>inputType</code> week to have the attibutes <code>min</code> and <code>max</code>, you can do it as follow: </p>
+    <pre><code class="json">
+{
+  // Other field properties
+  "inputType": "week",
+  "attributes": {
+    "min": "2024-W1",
+    "max": "2024-W10"
+  }
+}
+    </code>
+   </pre>
+   <hr class="divder">
+   <section id="input_checkbox">
+   <h3>Checkbox</h3>
+   <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;checkbox-field&quot;,
+    &quot;inputType&quot;: &quot;checkbox&quot;,
+    &quot;inputName&quot;: &quot;checkbox-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Checkbox field&quot;,
+    &quot;model&quot;: &quot;checkboxField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "checkbox-field",
+"inputType": "checkbox",
+"inputName": "checkbox-name",
+"visible": "true",
+"label": "Checkbox field",
+"model": "checkboxField"
+}]'>
+</re-form-generator>
+</section>
+<hr class="divder">
+<section id="input_color">
+<h3>Color</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;color-field&quot;,
+    &quot;inputType&quot;: &quot;color&quot;,
+    &quot;inputName&quot;: &quot;color-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Color field&quot;,
+    &quot;model&quot;: &quot;colorField&quot;
+    &quot;defaultValue&quot;: &quot;#FFC0CB&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "color-field",
+"inputType": "color",
+"inputName": "color-name",
+"visible": "true",
+"label": "Color field",
+"model": "colorField",
+"defaultValue": "#FFC0CB"
+}]'>
+</re-form-generator>
+</section>
+<hr class="divder">
+<section id="input_date">
+<h3>Date</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;date-field&quot;,
+    &quot;inputType&quot;: &quot;date&quot;,
+    &quot;inputName&quot;: &quot;date-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Date field&quot;,
+    &quot;model&quot;: &quot;dateField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "date-field",
+"inputType": "date",
+"inputName": "date-name",
+"visible": "true",
+"label": "Date field",
+"model": "dateField"
+}]'>
+</re-form-generator>
+</section>
+<hr class="divder">
+<section id="input_datetime-local">
+<h3>Datetime-local</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;datetime-local-field&quot;,
+    &quot;inputType&quot;: &quot;datetime-local&quot;,
+    &quot;inputName&quot;: &quot;datetime-local-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Datetime-local field&quot;,
+    &quot;model&quot;: &quot;datetime-localField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "datetime-local-field",
+"inputType": "datetime-local",
+"inputName": "datetime-local-name",
+"visible": "true",
+"label": "Datetime-local field",
+"model": "datetime-localField"
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_email">
+<h3>Email</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;email-field&quot;,
+    &quot;inputType&quot;: &quot;email&quot;,
+    &quot;inputName&quot;: &quot;email-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Email field&quot;,
+    &quot;model&quot;: &quot;emailField&quot;,
+    &quot;placeholder&quot;: &quot;example@example.com&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "email-field",
+"inputType": "email",
+"inputName": "email-name",
+"visible": "true",
+"label": "Email field",
+"model": "emailField",
+"placeholder": "example@example.com"
+}]'>
+</re-form-generator>
+</section>
+<hr class="divder">
+<section id="input_month">
+<h3>Month</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;month-field&quot;,
+    &quot;inputType&quot;: &quot;month&quot;,
+    &quot;inputName&quot;: &quot;month-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Month field&quot;,
+    &quot;model&quot;: &quot;monthField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "month-field",
+"inputType": "month",
+"inputName": "month-name",
+"visible": "true",
+"label": "Month field",
+"model": "monthField"
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_number">
+<h3>Number</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;number-field&quot;,
+    &quot;inputType&quot;: &quot;number&quot;,
+    &quot;inputName&quot;: &quot;number-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;&lt;h1&gt;I also support HTML&lt;/h1&gt;&quot;,
+    &quot;model&quot;: &quot;numberField&quot;,
+    &quot;defaultValue&quot;: 69
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "number-field",
+"inputType": "number",
+"inputName": "number-name",
+"visible": "true",
+"label": "<h1>I also support HTML</h1>",
+"model": "numberField",
+"defaultValue": 69
+}]'>
+</re-form-generator>
+</section>
+<hr class="divder">
+<section id="input_password">
+<h3>Password</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;password-field&quot;,
+    &quot;inputType&quot;: &quot;password&quot;,
+    &quot;inputName&quot;: &quot;password-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Password field&quot;,
+    &quot;model&quot;: &quot;passwordField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "password-field",
+"inputType": "password",
+"inputName": "password-name",
+"visible": "true",
+"label": "Password field",
+"model": "passwordField"
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_range">
+<h3>range</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;range-field&quot;,
+    &quot;inputType&quot;: &quot;range&quot;,
+    &quot;inputName&quot;: &quot;range-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Range field&quot;,
+    &quot;model&quot;: &quot;rangeField&quot;,
+    &quot;attributes&quot;: {
+      &quot;min&quot;: 0,
+      &quot;max&quot;: 100,
+      &quot;step&quot;: 10
+    },
+    &quot;defaultValue&quot;: 50
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "range-field",
+"inputType": "range",
+"inputName": "range-name",
+"visible": "true",
+"label": "Range field",
+"model": "rangeField",
+"attributes": {
+"min": 0,
+"max": 100,
+"step": 10
+},
+"defaultValue": 50
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_tel">
+<h3>Tel</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;phone-field&quot;,
+    &quot;inputType&quot;: &quot;tel&quot;,
+    &quot;inputName&quot;: &quot;phone-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Phone field&quot;,
+    &quot;model&quot;: &quot;phoneField&quot;,
+    &quot;attributes&quot;: {
+      &quot;pattern&quot;:&quot;[0-9]{3}-[0-9]{3}-[0-9]{4}&quot;
+    }
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "phone-field",
+"inputType": "tel",
+"inputName": "phone-name",
+"visible": "true",
+"label": "Phone field",
+"model": "phoneField",
+"attributes": {
+"pattern":"[0-9]{3}-[0-9]{3}-[0-9]{4}"
+}
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_text">
+<h3>text</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;text-field&quot;,
+    &quot;inputType&quot;: &quot;text&quot;,
+    &quot;inputName&quot;: &quot;text-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Text field&quot;,
+    &quot;model&quot;: &quot;textField&quot;,
+    &quot;defaultValue&quot;: &quot;This is a disabled and readonly field&quot;,
+    &quot;readonly&quot;: true,
+    &quot;disabled&quot;: true
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "text-field",
+"inputType": "text",
+"inputName": "text-name",
+"visible": "true",
+"label": "Text field",
+"model": "textField",
+"defaultValue": "This is a disabled and readonly field",
+"readonly": true,
+"disabled": true
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_time">
+<h3>Time</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;time-field&quot;,
+    &quot;inputType&quot;: &quot;time&quot;,
+    &quot;inputName&quot;: &quot;time-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Time field&quot;,
+    &quot;model&quot;: &quot;timeField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "time-field",
+"inputType": "time",
+"inputName": "time-name",
+"visible": "true",
+"label": "Time field",
+"model": "timeField"
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_url">
+<h3>Url</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;url-field&quot;,
+    &quot;inputType&quot;: &quot;url&quot;,
+    &quot;inputName&quot;: &quot;url-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Url field&quot;,
+    &quot;model&quot;: &quot;urlField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "url-field",
+"inputType": "url",
+"inputName": "url-name",
+"visible": "true",
+"label": "Url field",
+"model": "urlField"
+}]'>
+</re-form-generator>
+</section>
+
+<hr class="divder">
+<section id="input_week">
+<h3>Week</h3>
+<pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;input&quot;,
+    &quot;id&quot;: &quot;week-field&quot;,
+    &quot;inputType&quot;: &quot;week&quot;,
+    &quot;inputName&quot;: &quot;week-name&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;label&quot;: &quot;Week field&quot;,
+    &quot;model&quot;: &quot;weekField&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+</code></pre>
+<re-form-generator
+schema='[{
+"type": "input",
+"id": "week-field",
+"inputType": "week",
+"inputName": "week-name",
+"visible": "true",
+"label": "Week field",
+"model": "weekField"
+}]'>
+</re-form-generator>
+</section>
+
+</section>
+
+<hr class="divider">
+<section id="formgenerator_checkbox_group">
+  <h2>Checkbox group</h2>
+  <p>Checkbox group is an input field that allows multiple items selection from pre-defined selection options.</p>
+  <p>Available radio buttons can be defined in the <code>items</code> property.</p>
+  <p>When it comes to the default values, they can defined with the <code>checked</code> property in the <code>attributes</code> array. For instance:</p>
+  <pre><code class="json">
+{
+  // Other field properties
+  &#x22;items&#x22;: [
+    {
+      &#x22;label&#x22;: &#x22;Checkbox option 1&#x22;,
+      &#x22;value&#x22;: &#x22;check-option-1&#x22;,
+      &#x22;attributes&#x22;: {
+        &#x22;checked&#x22;: true
+      }
+    },
+    {
+      &#x22;label&#x22;: &#x22;Checkbox option 2&#x22;,
+      &#x22;value&#x22;: &#x22;check-option-2&#x22;,
+      &#x22;attributes&#x22;: {
+        &#x22;checked&#x22;: true
+      }
+    },
+    {
+      &#x22;label&#x22;: &#x22;Checkbox option 3&#x22;,
+      &#x22;value&#x22;: &#x22;check-option-3&#x22;
+    }
+  ]
+}
+                      </code></pre>
+         
+        <section id="checkbox_group_input">
+          <h3>Checkbox group</h3>
+          <pre><code class="html">
+&#x3C;re-form-generator
+  schema=&#x27;[{
+    &#x22;type&#x22;: &#x22;checkboxGroup&#x22;,
+    &#x22;inputType&#x22;: &#x22;object&#x22;,
+    &#x22;id&#x22;: &#x22;checkbox-group&#x22;,
+    &#x22;inputName&#x22;: &#x22;checkbox-group&#x22;,
+    &#x22;visible&#x22;: true,
+    &#x22;label&#x22;: &#x22;Checkbox Group&#x22;,
+    &#x22;model&#x22;: &#x22;checkboxOptions&#x22;,
+    &#x22;items&#x22;: [
+      {
+        &#x22;label&#x22;: &#x22;Checkbox option 1&#x22;,
+        &#x22;value&#x22;: &#x22;check-option-1&#x22;,
+        &#x22;attributes&#x22;: {
+          &#x22;checked&#x22;: true
+        }
+      },
+      {
+        &#x22;label&#x22;: &#x22;Checkbox option 2&#x22;,
+        &#x22;value&#x22;: &#x22;check-option-2&#x22;,
+        &#x22;attributes&#x22;: {
+          &#x22;checked&#x22;: true
+        }
+      },
+      {
+        &#x22;label&#x22;: &#x22;Checkbox option 3&#x22;,
+        &#x22;value&#x22;: &#x22;check-option-3&#x22;
+      }
+    ]
+  }]&#x27;&#x3E;
+&#x3C;/re-form-generator&#x3E;
+          </code></pre>
+          <re-form-generator
+            schema='[{
+                "type": "checkboxGroup",
+                "inputType": "object",
+                "id": "checkbox-group",
+                "inputName": "checkbox-group",
+                "visible": true,
+                "label": "Checkbox Group",
+                "model": "checkboxOptions",
+                "items": [
+                  {
+                    "label": "Checkbox option 1",
+                    "value": "check-option-1",
+                    "attributes": {
+                      "checked": true
+                    }
+                  },
+                  {
+                    "label": "Checkbox option 2",
+                    "value": "check-option-2",
+                    "attributes": {
+                      "checked": true
+                    }
+                  },
+                  {
+                    "label": "Checkbox option 3",
+                    "value": "check-option-3"
+                  }
+                ]
+              }]'>
+          </re-form-generator>
+        </section>
+
+      </section>
+      
+  <hr class="divider">
+  <section id="formgenerator_country_select">
+    <h2>Country select</h2>
+    <p>Country select field allow selecting country or dial code. Countries are searchable by their names and dial codes.
+      The <code>modelValueKey</code> property defines which value is selected: <code>name</code>, <code>dialCode</code> or <code>code</code>.
+      The <code>inputDisplayKey</code> property is resposible for the value that is displayed after country selection.
+      To specify <code>defaultValue</code> use lowercase country ISO code, for example, <code>"defaultValue": "dk"</code>.
+    </p>
+    <section id="contry_select_country">
+      <h3>Country select</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;countrySelect&quot;,
+    &quot;id&quot;: &quot;country&quot;,
+    &quot;inputName&quot;: &quot;country&quot;,
+    &quot;visible&quot;: true,
+    &quot;label&quot;: &quot;Country&quot;,
+    &quot;model&quot;: &quot;country&quot;,
+    &quot;modelValueKey&quot;: &quot;code&quot;,
+    &quot;placeholder&quot;: &quot;Select country&quot;,
+    &quot;layout&quot;: {
+        &quot;row&quot;: &quot;row1&quot;,
+        &quot;cols&quot;: 6
+    }
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+      schema='[{
+        "type": "countrySelect",
+        "id": "country",
+        "inputName": "country",
+        "visible": true,
+        "label": "Country",
+        "model": "country",
+        "modelValueKey": "code",
+        "placeholder": "Select country",
+        "layout": {
+            "row": "row1",
+            "cols": 6
+        }
+    }]'>
+      </re-form-generator>
+    </section>
+
+    <hr class="divider">
+
+    <section id="contry_select_dial_code">
+      <h3>Dial code</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;countrySelect&quot;,
+    &quot;id&quot;: &quot;dial_code&quot;,
+    &quot;inputName&quot;: &quot;dial_code&quot;,
+    &quot;visible&quot;: true,
+    &quot;label&quot;: &quot;Dial code&quot;,
+    &quot;model&quot;: &quot;dial_code&quot;,
+    &quot;defaultValue&quot;: &quot;dk&quot;,
+    &quot;modelValueKey&quot;: &quot;dialCode&quot;,
+    &quot;inputDisplayKey&quot;: &quot;dialCode&quot;,
+    &quot;showDialCode&quot;: true,
+    &quot;placeholder&quot;: &quot;Select dial code&quot;,
+    &quot;layout&quot;: {
+        &quot;row&quot;: &quot;row1&quot;,
+        &quot;cols&quot;: 4
+    }
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+        schema='[{
+          "type": "countrySelect",
+          "id": "dial_code",
+          "inputName": "dial_code",
+          "visible": true,
+          "label": "Dial code",
+          "model": "dial_code",
+          "modelValueKey": "dialCode",
+          "defaultValue": "dk",
+          "inputDisplayKey": "dialCode",
+          "showDialCode": true,
+          "placeholder": "Select dial code",
+          "layout": {
+              "row": "row1",
+              "cols": 4
+          }
+      }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_file_input">
+    <h2>File drag and drop</h2>
+    <p>File drag and dropdown input field let the user choose one or more files from their device storage.
+      On default single file selection is allowed. To enable multiple file selection or to control allowed file types, specify the <code>attributes</code> property.
+      For instance:
+    </p>
+      <pre><code class="json">
+{
+  // Other field properties
+  &quot;attributes&quot;: {
+    &quot;multiple&quot;: true,
+    &quot;accept&quot;: &quot;image/*,.pdf&quot;
+  }
+}
+        </code></pre>
+      <p>
+        Text displayed in the dropdown zone can be changed by defining <code>textTitle</code>, <code>subTitle</code> and <code>placeholder</code> properties.
+      </p>
+        <pre><code class="json">
+{
+  {
+    // Other field properties
+    &quot;textTitle&quot;:  &quot;Custom title&quot;,
+    &quot;subTitle&quot;: &quot;Custom subtitle&quot;,
+    &quot;placeholder&quot;: &quot;Placeholder&quot;
+  }
+}
+                      </code></pre>
+    <section id="file_input">
+      <h3>File input</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;file&quot;,
+    &quot;inputType&quot;: &quot;file&quot;,
+    &quot;label&quot;: &quot;Documents&quot;,
+    &quot;id&quot;: &quot;documents&quot;,
+    &quot;inputName&quot;: &quot;documents&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;model&quot;: &quot;documents&quot;
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+      schema='[{
+        "type": "file",
+        "inputType": "file",
+        "label": "Documents",
+        "id": "documents",
+        "inputName": "documents",
+        "visible": true,
+        "model": "documents"
+    }]'>
+      </re-form-generator>
+    </section>
+
+    <hr class="divider">
+
+    <section id="file_input_custom">
+      <h3>File input - custom attributes</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;file&quot;,
+    &quot;inputType&quot;: &quot;file&quot;,
+    &quot;label&quot;: &quot;Documents&quot;,
+    &quot;id&quot;: &quot;documents&quot;,
+    &quot;inputName&quot;: &quot;documents&quot;,
+    &quot;visible&quot;: &quot;true&quot;,
+    &quot;model&quot;: &quot;documents&quot;,
+    &quot;textTitle&quot;:  &quot;Custom title&quot;,
+    &quot;subTitle&quot;: &quot;Custom subtitle&quot;,
+    &quot;placeholder&quot;: &quot;Placeholder&quot;,
+    &quot;attributes&quot;: {
+        &quot;multiple&quot;: true,
+        &quot;accept&quot;: &quot;image/*,.pdf&quot;
+    }
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+      schema='[{
+        "type": "file",
+        "inputType": "file",
+        "label": "Documents",
+        "id": "documents",
+        "inputName": "documents",
+        "visible": true,
+        "model": "documents",
+        "textTitle":  "Custom title",
+        "subTitle": "Custom subtitle",
+        "placeholder": "Placeholder",
+        "attributes": {
+            "multiple": true,
+            "accept": "image/*,.pdf"
+        }
+    }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_multiselect">
+    <h2>Multiselect</h2>
+    <p>Multiselect is an input field that allows multiple items to be selected.
+      Available selection options should be defined in the <code>values</code> property. For instance:
+    </p>
+      <pre><code class="json">
+{
+  // Other field properties
+  &quot;values&quot;: [
+    {
+      &quot;value&quot;: 1,
+      &quot;display&quot;: &quot;Option 1&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    },
+    {
+      &quot;value&quot;: 2,
+      &quot;display&quot;: &quot;Option 2&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    },
+    {
+      &quot;value&quot;: 3,
+      &quot;display&quot;: &quot;Option 3&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    }
+  ]
+}
+      </code></pre>
+      <p>
+        When it comes to the default values, they are controlled through <code>defaultOptions</code>, specifing indices of values that should be pre-selected. For example:
+      </p>
+      <pre><code class="json">
+{
+  // Other field properties
+  &quot;defaultOptions&quot;: [0, 1]
+}
+                  </code></pre>
+     
+    <section id="multiselect_input">
+      <h3>Multiselect</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+  &quot;type&quot;: &quot;multiSelect&quot;,
+  &quot;id&quot;: &quot;multiselect&quot;,
+  &quot;inputName&quot;: &quot;options&quot;,
+  &quot;inputType&quot;: &quot;number&quot;,
+  &quot;visible&quot;: true,
+  &quot;label&quot;: &quot;Multiselect&quot;,
+  &quot;model&quot;: &quot;options&quot;,
+  &quot;placeholder&quot;: &quot;Select options&quot;,
+  &quot;values&quot;: [
+      {
+        &quot;value&quot;: 1,
+        &quot;display&quot;: &quot;Option 1&quot;,
+        &quot;group&quot;: &quot;options&quot;
+      },
+      {
+        &quot;value&quot;: 2,
+        &quot;display&quot;: &quot;Option 2&quot;,
+        &quot;group&quot;: &quot;options&quot;
+      },
+      {
+        &quot;value&quot;: 3,
+        &quot;display&quot;: &quot;Option 3&quot;,
+        &quot;group&quot;: &quot;options&quot;
+      }
+  ]
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+      schema='[{
+        "type": "multiSelect",
+        "inputType": "number",
+        "id": "multiselect",
+        "inputName": "options",
+        "visible": true,
+        "label": "Multiselect",
+        "model": "options",
+        "placeholder": "Select options",
+        "values": [
+            {
+                "value": 1,
+                "display": "Option 1",
+                "group": "options"
+            },
+            {
+              "value": 2,
+              "display": "Option 2",
+              "group": "options"
+            },
+            {
+              "value": 3,
+              "display": "Option 3",
+              "group": "options"
+            }
+        ]
+    }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_radio">
+    <h2>Radio group</h2>
+    <p>Radio group is an input field that allows single value selection from pre-defined radio buttons. Selecting any radio button automatically deselects any other currently-selected radio button.</p>
+    <p>Available radio buttons can be defined in the <code>items</code> property.</p>
+    <p>When it comes to the default value, it is defined with the <code>checked</code> property in the <code>attributes</code> array. For instance:</p>
+    <pre><code class="json">
+{
+  // Other field properties
+  &quot;items&quot;: [
+    {
+      &quot;label&quot;: &quot;Radio 1&quot;,
+      &quot;value&quot;: &quot;radio-1&quot;
+    },
+    {
+      &quot;label&quot;: &quot;Radio 2&quot;,
+      &quot;value&quot;: &quot;radio-2&quot;,
+      &quot;attributes&quot;: {
+        &quot;checked&quot;: true
+      }
+    },
+    {
+      &quot;label&quot;: &quot;Radio 3&quot;,
+      &quot;value&quot;: &quot;radio-3&quot;
+    }
+  ]
+}
+                  </code></pre>
+     
+    <section id="radio_input">
+      <h3>Radio group</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;radioGroup&quot;,
+    &quot;inputType&quot;: &quot;radio&quot;,
+    &quot;id&quot;: &quot;radio-group&quot;,
+    &quot;inputName&quot;: &quot;radio-group&quot;,
+    &quot;visible&quot;: true,
+    &quot;label&quot;: &quot;Radio Group&quot;,
+    &quot;model&quot;: &quot;radioOption&quot;,
+    &quot;items&quot;: [
+      {
+        &quot;label&quot;: &quot;Radio 1&quot;,
+        &quot;value&quot;: &quot;radio-1&quot;
+      },
+      {
+        &quot;label&quot;: &quot;Radio 2&quot;,
+        &quot;value&quot;: &quot;radio-2&quot;,
+        &quot;attributes&quot;: {
+          &quot;checked&quot;: true
+        }
+      },
+      {
+        &quot;label&quot;: &quot;Radio 3&quot;,
+        &quot;value&quot;: &quot;radio-3&quot;
+      }
+    ]
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+        schema='[{
+            "type": "radioGroup",
+            "inputType": "radio",
+            "id": "radio-group",
+            "inputName": "radio-group",
+            "visible": true,
+            "label": "Radio Group",
+            "model": "radioOption",
+            "items": [
+              {
+                "label": "Radio 1",
+                "value": "radio-1"
+              },
+              {
+                "label": "Radio 2",
+                "value": "radio-2",
+                "attributes": {
+                  "checked": true
+                }
+              },
+              {
+                "label": "Radio 3",
+                "value": "radio-3"
+              }
+            ]
+          }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_select">
+    <h2>Select</h2>
+    <p>Select is an input field that allows an item to be selected out of pre-defined options.
+      Available selection options should be defined in the <code>values</code> property. Each <code>value</code> object should be described by following attributes: <code>value</code>, <code>display</code> and <code>group</code>. For instance:
+    </p>
+      <pre><code class="json">
+{
+  // Other field properties
+  &quot;values&quot;: [
+    {
+      &quot;value&quot;: &quot;one&quot;,
+      &quot;display&quot;: &quot;Option 1&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    },
+    {
+      &quot;value&quot;: &quot;two&quot;,
+      &quot;display&quot;: &quot;Option 2&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    },
+    {
+      &quot;value&quot;: &quot;three&quot;,
+      &quot;display&quot;: &quot;Option 3&quot;,
+      &quot;group&quot;: &quot;options&quot;
+    }
+  ]
+}
+      </code></pre>
+      <p>
+        When it comes to the default value, it is controlled through <code>defaultValue</code>, specifing of <code>value</code> property of the option that should be pre-selected. For example:
+      </p>
+      <pre><code class="json">
+{
+  // Other field properties
+  &quot;defaultValue&quot;: &quot;one&quot;
+}
+                  </code></pre>
+     
+    <section id="select_input">
+      <h3>Select</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;select&quot;,
+    &quot;id&quot;: &quot;select&quot;,
+    &quot;inputName&quot;: &quot;options&quot;,
+    &quot;visible&quot;: true,
+    &quot;label&quot;: &quot;Select&quot;,
+    &quot;model&quot;: &quot;selectOption&quot;,
+    &quot;readonly&quot;: false,
+    &quot;disabled&quot;: false,
+    &quot;placeholder&quot;: &quot;Please select an option...&quot;,
+    &quot;defaultValue&quot;: &quot;two&quot;,
+    &quot;values&quot;: [
+      {
+        &quot;value&quot;: &quot;one&quot;,
+        &quot;display&quot;: &quot;Option 1&quot;,
+        &quot;group&quot;: &quot;Options&quot;
+      },
+      {
+        &quot;value&quot;: &quot;two&quot;,
+        &quot;display&quot;: &quot;Option 2&quot;,
+        &quot;group&quot;: &quot;Options&quot;
+      },
+      {
+        &quot;value&quot;: &quot;three&quot;,
+        &quot;display&quot;: &quot;Option 3&quot;,
+        &quot;group&quot;: &quot;Options&quot;
+      }
+    ]
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+        schema='[{
+          "type": "select",
+          "id": "select",
+          "inputName": "options",
+          "visible": true,
+          "label": "Select",
+          "model": "selectOption",
+          "readonly": false,
+          "disabled": false,
+          "placeholder": "Please select an option...",
+          "defaultValue": "two",
+          "values": [
+          {
+            "value": "one",
+            "display": "Option 1",
+            "group": "Options"
+          },
+          {
+            "value": "two",
+            "display": "Option 2",
+            "group": "Options"
+          },
+          {
+            "value": "three",
+            "display": "Option 3",
+            "group": "Options"
+          }
+          ]
+          }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_textarea">
+    <h2>Textarea</h2>
+    <p>Textarea is an input field that allows for multi-line text.</p>
+    <p>Textarea attributes like <code>maxlength</code> or <code>rows</code> can be deffined in the <code>attributes</code> property in a following way:</p>
+    <pre>
+      <code class="json">
+{
+  // Other field properties
+  &quot;attributes&quot;: {
+    &quot;maxlength&quot;: 20,
+    &quot;rows&quot;: 2
+  }
+}
+      </code>
+    </pre>
+    <section id="textarea_input">
+      <h3>Textarea</h3>
+      <pre><code class="html">
+&lt;re-form-generator
+  schema=&apos;[{
+    &quot;type&quot;: &quot;textarea&quot;,
+    &quot;id&quot;: &quot;long-text&quot;,
+    &quot;inputName&quot;: &quot;long-text&quot;,
+    &quot;visible&quot;: true,
+    &quot;label&quot;: &quot;Textarea&quot;,
+    &quot;model&quot;: &quot;longText&quot;,
+    &quot;readonly&quot;: false,
+    &quot;disabled&quot;: false,
+    &quot;placeholder&quot;: &quot;Please feed me with some text...&quot;,
+    &quot;attributes&quot;: {
+      &quot;maxlength&quot;: 20,
+      &quot;rows&quot;: 2
+    }
+  }]&apos;&gt;
+&lt;/re-form-generator&gt;
+      </code></pre>
+      <re-form-generator
+        schema='[{
+          "type": "textarea",
+          "id": "long-text",
+          "inputName": "long-text",
+          "visible": true,
+          "label": "Textarea",
+          "model": "longText",
+          "readonly": false,
+          "disabled": false,
+          "placeholder": "Please feed me with the text...",
+          "attributes": {
+            "maxlength": 20,
+            "rows": 2
+          }
+          }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+  <hr class="divider">
+  <section id="formgenerator_toggle">
+    <h2>Toggle</h2>
+    <p>The toggle input is used to choose one of two values.</p>
+    <p>The <code>inputType</code> and <code>validationType</code> should be defined as <code>boolean</code>.</p>
+    
+    <pre><code class="json">
+{
+  // Other field properties
+  &quot;inputType&quot;: &quot;boolean&quot;,
+  &quot;validationType&quot;: &quot;boolean&quot;
+}
+      </code>
+    </pre>
+    <section id="toggle_input">
+      <h3>Toggle</h3>
+      <pre><code class="html">
+&#x3C;re-form-generator
+  schema=&#x27;[{
+    &#x22;type&#x22;: &#x22;toggle&#x22;,
+    &#x22;id&#x22;: &#x22;toggle-input&#x22;,
+    &quot;inputType&quot;: &quot;boolean&quot;,
+    &#x22;inputName&#x22;: &#x22;is-on&#x22;,
+    &#x22;visible&#x22;: true,
+    &#x22;label&#x22;: &#x22;Do you want subscribe?&#x22;,
+    &#x22;model&#x22;: &#x22;isOn&#x22;,
+    &#x22;validationType&#x22;: &#x22;boolean&#x22;,
+    &#x22;defaultValue&#x22;: true,
+    &#x22;attributes&#x22;: {
+      &#x22;value&#x22;: true
+    }
+  }]&#x27;&#x3E;
+&#x3C;/re-form-generator&#x3E;
+      </code></pre>
+      <re-form-generator
+        schema='[{
+          "type": "toggle",
+          "id": "toggle-input",
+          "inputType": "boolean",
+          "inputName": "is-on",
+          "visible": true,
+          "label": "Do you want subscribe?",
+          "model": "isOn",
+          "validationType": "boolean",
+          "defaultValue": true,
+          "attributes": {
+            "value": true
+          }
+          }]'>
+      </re-form-generator>
+    </section>
+
+  </section>
+
+	<hr class="divider">
+		
+		<!-- Events
+		============================ -->
+		<section id="formgenerator_events">
+          <h2>Events</h2>
+			<div class="table-responsive">
+			<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Code Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>submitted</code></td>
+      <td>Event emitted when the form is submitted. When form action is not defined, event will emit all form values, otherwise, if action is defined, the response of the request will be passed as an argument of the callback.</td>
+      <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.addEventListener(&#x27;submitted&#x27;, event =&#x3E; { 
+    console.log(event.detail);
+  });
+&#x3C;/script&#x3E;
+    </code></pre></td>
+    </tr>
+    <tr>
+      <td><code>validationError</code></td>
+      <td>In the submit process when there are errors this event is emitted.</td>
+      <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.addEventListener(&#x27;validationError&#x27;, event =&#x3E; { 
+    console.log(event.detail);
+  });
+&#x3C;/script&#x3E;
+    </code></pre></td>
+    </tr>
+    <tr>
+      <td><code>valueChanged</code></td>
+      <td>Event is emitted every time when form input data changes.</td>
+      <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.addEventListener(&#x27;valueChanged&#x27;, event =&#x3E; { 
+    console.log(event.detail);
+  });
+&#x3C;/script&#x3E;
+    </code></pre></td>
+    </tr>
+    
+  </tbody>
+</table>
+          
+        </section>
+        
+		<hr class="divider">
+        
+        <!-- Methods
+		============================ -->
+        <section id="formgenerator_methods">
+          <h2>Methods</h2>
+          <div class="table-responsive">
+            <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Code Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>updateValue</code></td>
+            <td>Updates the value of the model.</td>
+            <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.addEventListener(&#x27;valueChanged&#x27;, event =&#x3E; { 
+    const field = event.detail;
+    const { birthday } = field;
+    if (birthday) {
+      const parts = birthday.split(&#x27;-&#x27;);
+      const [year, month, date] = parts;
+      formGenerator.updateValue(&#x27;year&#x27;, year);
+      formGenerator.updateValue(&#x27;month&#x27;, month);
+      formGenerator.updateValue(&#x27;date&#x27;, date);
+    }
+  });
+&#x3C;/script&#x3E;
+          </code></pre></td>
+          </tr>
+          <tr>
+            <td><code>submit</code></td>
+            <td>It will submit the form with its values and will trigger the <code>submitted</code> event.</td>
+            <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.submit();
+&#x3C;/script&#x3E;
+          </code></pre></td>
+          </tr>
+          <tr>
+            <td><code>validate</code></td>
+            <td>Validates the form. In case of errors, the <code>validationError</code> event will be emitted.</td>
+            <td><pre class="mb-0 grid-code"><code>
+&#x3C;script&#x3E;
+  const formGenerator = document.querySelector(&#x27;re-form-generator&#x27;);
+  formGenerator.validate();
+&#x3C;/script&#x3E;
+          </code></pre></td>
+          </tr>
+          
+        </tbody>
+      </table>
+        </section>
+        
+		<hr class="divider">
+		
+		<!-- Support
+		============================ -->
+        <section id="formgenerator_styles">
+          <h2>Styles</h2>
+          <p>You can overwrite default input fields style. For example:</p>
+          <pre>
+            <code class="css">     
+.input__label {
+  font-size: 20px !important;
+  color: blue;
+  font-family: -apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, Roboto, Oxygen, Ubuntu, Cantarell, &#x27;Open Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;
+}
+
+.submit-container__button {
+  background-color: blue !important;
+}      
+            </code>
+          </pre>
+
+      <h3>Default styling</h3>
+      <h4>Form generator</h4>
+      <pre><code class="css">
+.input__description {
+  color: #6c757d;
+  font-size: 13px;
+  margin: 0;
+}
+.re-form-generator {
+  width: calc(100% - 40px);
+  border: 1px solid #000 3b;
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+  /* Rounded sliders */
+}
+.re-form-generator .select-input {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  font-size: 14px;
+  height: 44px;
+  padding: 0.675em 6em 0.675em 1em;
+  background-color: #fff;
+  border: 1px solid #caced1;
+  border-radius: 0.25rem;
+  color: #000;
+  cursor: pointer;
+}
+.re-form-generator .select-input::after, .re-form-generator .select-input::before {
+  content: "";
+  position: absolute;
+  right: 1rem;
+  pointer-events: none;
+}
+.re-form-generator .select-input::before {
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  border-bottom: 0.3rem solid black;
+  top: 40%;
+}
+.re-form-generator .select-input::after {
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  border-top: 0.3rem solid black;
+  top: 55%;
+}
+.re-form-generator .group-title {
+  font-size: 24px;
+  padding-bottom: 6px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #cbd5e1;
+}
+.re-form-generator textarea {
+  resize: none;
+  height: 90px;
+  font-size: 14px;
+  line-height: 17px;
+  color: #252733;
+  background: #fafafa;
+  padding: 12px;
+  border: 1px solid #e3e8eb;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 14px;
+  color: #252733;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.re-form-generator .input-text, .re-form-generator .input-email, .re-form-generator .input-date, .re-form-generator .input-number, .re-form-generator .select-input {
+  background: #fafafa;
+  padding: 12px;
+  border: 1px solid #e3e8eb;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 14px;
+  color: #252733;
+  box-sizing: border-box;
+  font-family: inherit;
+  height: 43px;
+}
+.re-form-generator .input-text.input-checkbox, .re-form-generator .input-email.input-checkbox, .re-form-generator .input-date.input-checkbox, .re-form-generator .input-number.input-checkbox, .re-form-generator .select-input.input-checkbox {
+  height: 18px;
+  width: 18px;
+  background-color: #eee;
+  margin: 0;
+}
+.re-form-generator .row-container {
+  display: flex;
+  gap: 10px;
+  flex-grow: 12;
+}
+@media (max-width: 768px) {
+  .re-form-generator .row-container {
+    display: block;
+  }
+}
+.re-form-generator .row-container .col-1 {
+  width: calc((100% / 12) * 1);
+}
+.re-form-generator .row-container .col-2 {
+  width: calc((100% / 12) * 2);
+}
+.re-form-generator .row-container .col-3 {
+  width: calc((100% / 12) * 3);
+}
+.re-form-generator .row-container .col-4 {
+  width: calc((100% / 12) * 4);
+}
+.re-form-generator .row-container .col-5 {
+  width: calc((100% / 12) * 5);
+}
+.re-form-generator .row-container .col-6 {
+  width: calc((100% / 12) * 6);
+}
+.re-form-generator .row-container .col-7 {
+  width: calc((100% / 12) * 7);
+}
+.re-form-generator .row-container .col-8 {
+  width: calc((100% / 12) * 8);
+}
+.re-form-generator .row-container .col-9 {
+  width: calc((100% / 12) * 9);
+}
+.re-form-generator .row-container .col-10 {
+  width: calc((100% / 12) * 10);
+}
+.re-form-generator .row-container .col-11 {
+  width: calc((100% / 12) * 11);
+}
+.re-form-generator .row-container .col-12 {
+  width: calc((100% / 12) * 12);
+}
+@media (max-width: 768px) {
+  .re-form-generator .row-container .col-1 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-2 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-3 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-4 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-5 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-6 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-7 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-8 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-9 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-10 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-11 {
+    width: 100%;
+  }
+  .re-form-generator .row-container .col-12 {
+    width: 100%;
+  }
+}
+.re-form-generator .input__label {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 20px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+.re-form-generator .error-message {
+  font-size: 12px;
+  color: #ff6868;
+}
+.re-form-generator .switch {
+  position: relative;
+  display: inline-block;
+  width: 45px;
+  height: 25px;
+}
+.re-form-generator .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.re-form-generator .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #83888f;
+  transition: 0.4s;
+  transition: 0.4s;
+}
+.re-form-generator .slider:before {
+  position: absolute;
+  content: "";
+  height: 21px;
+  width: 21px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  transition: 0.4s;
+}
+.re-form-generator input:checked + .slider {
+  background-color: #2196f3;
+}
+.re-form-generator input:checked + .slider:before {
+  transform: translateX(20px);
+}
+.re-form-generator input:focus + .slider {
+  box-shadow: 0 0 1px #2196f3;
+}
+.re-form-generator .slider.round {
+  border-radius: 34px;
+}
+.re-form-generator .slider.round:before {
+  border-radius: 50%;
+}
+.re-form-generator .input-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 16px 0;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 20px;
+}
+.re-form-generator .input-group.hasErrors input, .re-form-generator .input-group.hasErrors .multi-select, .re-form-generator .input-group.hasErrors .select-input {
+  border: 1.5px solid #ff6868;
+  border-radius: 5px;
+}
+.re-form-generator .input-group.hasErrors .file-field-container {
+  border: 1.5px solid #ff6868;
+  border-radius: 5px;
+}
+.re-form-generator .input-group.input-checkbox-container {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: start;
+  gap: 0.5rem;
+}
+.re-form-generator .input-group.input-checkbox-container .input__label {
+  margin-bottom: 0px;
+  margin-left: 6px;
+  font-weight: normal;
+}
+.re-form-generator .input-group.input-checkbox-container .error-message {
+  flex-basis: 100%;
+  position: absolute;
+  bottom: 0px;
+}
+.re-form-generator .input-group.input-checkbox-container.hasErrors {
+  margin-bottom: 16px;
+}
+.re-form-generator .input-group.input-checkboxGroup-container .checkboxGroup .label {
+  margin-bottom: 0px;
+  margin-left: 6px;
+  font-weight: normal;
+}
+.re-form-generator .input-group.two-columns {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.re-form-generator .submit-container {
+  display: flex;
+  margin-top: 16px;
+}
+.re-form-generator .submit-container__button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #2196f3;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+}
+.re-form-generator .submit-container__button:hover {
+  background-color: #1565c0;
+}
+.re-form-generator .radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.re-form-generator .radioGroup-element {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}
+.re-form-generator .radioGroup-element .label {
+  font-weight: normal;
+}
+.re-form-generator .radioGroup .input-radio {
+  padding: 2px;
+  margin: 0;
+}
+.re-form-generator .hidden {
+  display: none;
+}
+.re-form-generator .form-error-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.re-form-generator .form-error-message__message {
+  color: #ff6868;
+  font-size: 12px;
+  font-weight: 700;
+}
+      </code></pre>
+      <h4>File input</h4>
+      <pre>
+        <code class="css">
+re-file-input-field .file-field-container {
+  width: 100%;
+  display: flex;
+}
+re-file-input-field .file-field-container .file-dropzone {
+  width: 100%;
+  height: 16rem;
+  border: 1px dashed #e3e8eb;
+  border-radius: 5px;
+  background-color: #fafafa;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+re-file-input-field .file-field-container .file-dropzone.hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+}
+re-file-input-field .file-field-container .file-dropzone.hover .dropzone-icon, re-file-input-field .file-field-container .file-dropzone.hover .dropzone-text, re-file-input-field .file-field-container .file-dropzone.hover .dropzone-subtext {
+  color: #252733;
+}
+re-file-input-field .file-field-container .file-dropzone:hover {
+  background-color: #f9fafb;
+}
+re-file-input-field .file-field-container .file-dropzone:hover .dropzone-icon {
+  color: #9ca3af;
+}
+re-file-input-field .file-field-container .file-dropzone:hover .dropzone-text, re-file-input-field .file-field-container .file-dropzone:hover .dropzone-subtext {
+  color: #6b7280;
+}
+re-file-input-field .file-field-container .file-dropzone.dark {
+  background-color: #374151;
+  border-color: #4b5563;
+}
+re-file-input-field .file-field-container .file-dropzone.dark:hover {
+  background-color: #4b5563;
+  border-color: #6b7280;
+}
+re-file-input-field .file-field-container .file-dropzone.dark .dropzone-icon, re-file-input-field .file-field-container .file-dropzone.dark .dropzone-text, re-file-input-field .file-field-container .file-dropzone.dark .dropzone-subtext {
+  color: #9ca3af;
+}
+re-file-input-field .file-field-container .file-dropzone .dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1.25rem;
+  padding-bottom: 1.5rem;
+  font-weight: normal;
+}
+re-file-input-field .file-field-container .file-dropzone .dropzone-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 1rem;
+  color: #6b7280;
+  transition: color 0.3s;
+}
+re-file-input-field .file-field-container .file-dropzone .dropzone-text {
+  margin-bottom: 0.5rem;
+  color: #6b7280;
+  transition: color 0.3s;
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+re-file-input-field .file-field-container .file-dropzone .dropzone-text .file-element {
+  display: flex;
+  gap: 8px;
+  color: #252733;
+}
+re-file-input-field .file-field-container .file-dropzone .font-bold {
+  font-weight: bold;
+}
+re-file-input-field .file-field-container .file-dropzone .dropzone-subtext {
+  font-size: 0.8rem;
+  color: #6b7280;
+  transition: color 0.3s;
+}
+re-file-input-field .file-field-container .file-dropzone .remove-file {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #ff6868;
+  color: white;
+  text-align: center;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: bold;
+}
+re-file-input-field .file-field-container .file-dropzone .file-name {
+  font-weight: bold;
+  max-width: 250px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+        </code>
+      </pre>
+      <h4>Multiselect</h4>
+      <pre><code class="css">
+re-multi-select .multi-select {
+  position: relative;
+  width: 100%;
+  background: #fafafa;
+  font-weight: normal;
+}
+re-multi-select .multi-select__header {
+  padding: 10px;
+  border: 1px solid #e3e8eb;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  border-radius: 5px;
+}
+re-multi-select .multi-select__header.disabled {
+  pointer-events: none;
+  background-color: #ddd;
+}
+re-multi-select .multi-select__header .selected_options {
+  display: flex;
+  justify-content: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+re-multi-select .multi-select__header .selected_options__option {
+  background-color: #2196f3;
+  border-radius: 5px;
+  color: #fff;
+  padding: 0rem 0.5rem;
+  font-size: 11px;
+  font-weight: 400;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+re-multi-select .multi-select__header .selected_options__option-close {
+  padding: 0 0.25rem;
+}
+re-multi-select .multi-select__options {
+  position: absolute;
+  width: calc(100% - 2px);
+  border: 1px solid #e3e8eb;
+  border-top: none;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #fff;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+re-multi-select .multi-select__option {
+  padding: 10px;
+  cursor: pointer;
+}
+re-multi-select .multi-select__option.selected {
+  background-color: #f0f0f0;
+}
+re-multi-select .multi-select__option:not(.selected):hover {
+  background-color: #2196f3;
+  color: #fff;
+}
+re-multi-select .multi-select__option:last-of-type {
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+re-multi-select .multi-select .arrow-up::before {
+  content: '▲';
+}
+re-multi-select .multi-select .arrow-down::before {
+  content: '▼';
+}
+re-multi-select .multi-select .arrow {
+  font-size: 0.63rem;
+  padding: 0 0.25rem;
+}     
+      </code></pre>
+      <h4>Country select</h4>
+      <pre>
+        <code class="css">
+re-form-generator re-country-select .country-select-input-wrapper {
+  position: relative;
+  width: 100%;
+  height: 43px;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container {
+  position: absolute;
+  width: 100%;
+  max-height: 300px;
+  background: #fff;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container::-webkit-scrollbar {
+  display: none;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper {
+  position: relative;
+  font-size: 14px;
+  font-weight: normal;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: block;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper .selected-flag {
+  transform: translateY(-50%) scale(0.8);
+  width: 24px;
+  position: absolute;
+  left: 10px;
+  top: 20px;
+  display: block;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper .selected-country-value {
+  position: absolute;
+  top: 11px;
+  left: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: -webkit-fill-available;
+  text-wrap: nowrap;
+  margin-right: 5px;
+  display: block;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper.hidden {
+  display: none;
+}
+re-form-generator re-country-select .country-select-input-wrapper .country-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e3e8eb;
+  padding: 10px;
+  text-indent: 26px;
+  border-radius: 5px;
+  height: 43px;
+  font-family: unset;
+  text-indent: 26px;
+  background: #fafafa;
+}
+re-form-generator re-country-select .country-select-input-wrapper .country-search input::placeholder {
+  font-family: unset;
+}
+re-form-generator re-country-select .country-select-input-wrapper .country-search.no-indent {
+  text-indent: 0px;
+}
+re-form-generator re-country-select .country-select-input-wrapper input::placeholder {
+  font-family: 'Times-Roman';
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown {
+  position: absolute;
+  top: 40px;
+  width: 100%;
+  border: 1px solid #e3e8eb;
+  background-color: white;
+  overflow-y: auto;
+  display: none;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-item {
+  padding: 10px;
+  cursor: pointer;
+  border: 0.5px solid #e3e8eb;
+  border-top: 0px;
+  background: #fff;
+  font-weight: normal;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-item:last-of-type {
+  border-bottom: 0px;
+}
+re-form-generator re-country-select .country-select-input-wrapper .dropdown-item:hover {
+  background: #f0f0f0;
+}
+re-form-generator re-country-select .country-select-input-wrapper .flag {
+  width: 20px;
+  height: 15px;
+  margin-right: 10px;
+}
+re-form-generator re-country-select .country-select-input-wrapper .country-select-dropdown-wrapper {
+  overflow-y: scroll;
+  max-height: 200px;
+  border-bottom: 1px solid #e3e8eb;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+re-form-generator re-country-select .country-select-input-wrapper .country-select-dropdown-wrapper::-webkit-scrollbar {
+  display: none;
+}
+        </code>
+      </pre>
+		  
+    
+    </section>
+		
+		<hr class="divider">
+		
+        <!-- Changelog
+		============================ -->
+		
+        <section id="idocs_changelog">
+          <h2>Changelog</h2>
+          <p class="text-4">See what's new added, changed, fixed, improved or updated in the latest versions. </p>
+
+		  <h3 id="v1-1">Version 0.0.9 <small class="text-muted">(4 July, 2024)</small></h3>
+          <ul class="changelog">
+            <li><span class="badge badge-success">Added</span>Initial version</li>
+          </ul>
+        
+        </section>        
+        
+      </div>
+    </div>
+	
+  </div>
+  <!-- Content end --> 
+  
+  <!-- Footer
+  ============================ -->
+  <footer id="footer" class="section bg-dark footer-text-light">
+    <div class="container">
+      <ul class="social-icons social-icons-lg social-icons-muted justify-content-center mb-3">
+        <li><a data-toggle="tooltip" href="https://twitter.com/harnishdesign/" target="_blank" title="" data-original-title="Twitter"><i class="fab fa-twitter"></i></a></li>
+        <li><a data-toggle="tooltip" href="http://www.facebook.com/harnishdesign/" target="_blank" title="" data-original-title="Facebook"><i class="fab fa-facebook-f"></i></a></li>
+        <li><a data-toggle="tooltip" href="http://www.dribbble.com/harnishdesign/" target="_blank" title="" data-original-title="Dribbble"><i class="fab fa-dribbble"></i></a></li>
+        <li><a data-toggle="tooltip" href="http://www.github.com/" target="_blank" title="" data-original-title="GitHub"><i class="fab fa-github"></i></a></li>
+      </ul>
+      <p class="text-center">Copyright &copy; 2020 <a href="http://www.harnishdesign.net/idocs-one-page-documentation-html-template/">iDocs</a>. All Rights Reserved.</p>
+	  <p class="text-2 text-center mb-0">Design &amp; Develop by <a class="btn-link" target="_blank" href="http://www.harnishdesign.net/">HarnishDesign</a>.</p>
+    </div>
+  </footer>
+  <!-- Footer end -->
+  
+</div>
+<!-- Document Wrapper end --> 
+
+<!-- Back To Top --> 
+<a id="back-to-top" data-toggle="tooltip" title="Back to Top" href="javascript:void(0)"><i class="fa fa-chevron-up"></i></a> 
+
+<!-- JavaScript
+============================ -->
+<script src="assets/vendor/jquery/jquery.min.js"></script> 
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script> 
+<!-- Highlight JS -->
+<script src="assets/vendor/highlight.js/highlight.min.js"></script> 
+<!-- Easing --> 
+<script src="assets/vendor/jquery.easing/jquery.easing.min.js"></script> 
+<!-- Magnific Popup --> 
+<script src="assets/vendor/magnific-popup/jquery.magnific-popup.min.js"></script> 
+<!-- Custom Script -->
+<script src="assets/js/theme.js"></script>
+<script type="module"
+    src="https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.esm.js"></script>
+<script nomodule src="https://unpkg.com/@restrella/form-generator@0.0.9/dist/form-generator/form-generator.js"></script>
+</body>
+</html>
