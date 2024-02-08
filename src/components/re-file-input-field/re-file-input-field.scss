@@ -1,0 +1,127 @@
+re-file-input-field {
+  .file-field-container {
+    width: 100%;
+    display: flex;
+
+    .file-dropzone {
+      width: 100%;
+      height: 16rem;
+      border: 1px dashed #E3E8EB;
+      border-radius: 5px;
+      background-color: #FAFAFA;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s, border-color 0.3s;
+
+      &.hover {
+        background-color: #e5e7eb;
+        border-color: #9ca3af;
+    
+        .dropzone-icon,
+        .dropzone-text,
+        .dropzone-subtext {
+          color: #252733;
+        }
+      }
+
+      &:hover {
+        background-color: #f9fafb;
+      }
+
+      &:hover .dropzone-icon {
+        color: #9ca3af;
+      }
+
+      &:hover .dropzone-text,
+      &:hover .dropzone-subtext {
+        color: #6b7280;
+      }
+
+      &.dark {
+        background-color: #374151;
+        border-color: #4b5563;
+
+        &:hover {
+          background-color: #4b5563;
+          border-color: #6b7280;
+        }
+
+        .dropzone-icon,
+        .dropzone-text,
+        .dropzone-subtext {
+          color: #9ca3af;
+        }
+      }
+
+      .dropzone-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding-top: 1.25rem;
+        padding-bottom: 1.5rem;
+        font-weight: normal;
+      }
+
+      .dropzone-icon {
+        width: 2rem;
+        height: 2rem;
+        margin-bottom: 1rem;
+        color: #6b7280;
+        transition: color 0.3s;
+      }
+
+      .dropzone-text {
+        margin-bottom: 0.5rem;
+        color: #6b7280;
+        transition: color 0.3s;
+        display: flex;
+        gap: 8px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        .file-element {
+          display: flex;
+          gap: 8px;
+          color: #252733;
+        }
+
+      }
+
+      .font-bold {
+        font-weight: bold;
+      }
+
+      .dropzone-subtext {
+        font-size: 0.8rem;
+        color: #6b7280;
+        transition: color 0.3s;
+      }
+
+      .remove-file {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #FF6868;
+        color: white;
+        text-align: center;
+        line-height: 20px;
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .file-name {
+        font-weight: bold;
+        max-width: 250px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+    }
+  }
+}

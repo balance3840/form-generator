@@ -1,0 +1,222 @@
+[
+    {
+        "type": "input",
+        "id": "name",
+        "inputType": "text",
+        "inputName": "name",
+        "visible": true,
+        "label": "Channel name",
+        "model": "channelName",
+        "readonly": false,
+        "disabled": false,
+        "placeholder": "# e.g. book-club",
+        "validationType": "string",
+        "validations": [
+            {
+                "name": "required",
+                "params": [
+                    "Channel name is required"
+                ]
+            }
+        ],
+        "layout": {
+            "row": "row1",
+            "cols": 6,
+            "group": "details",
+            "groupTitle": "Details"
+        }
+    },
+    {
+        "type": "input",
+        "id": "type",
+        "inputType": "text",
+        "inputName": "type",
+        "visible": true,
+        "label": "Channel type",
+        "model": "channelType",
+        "readonly": false,
+        "disabled": false,
+        "placeholder": "What is the type?",
+        "validationType": "string",
+        "defaultValue": "sports",
+        "validations": [
+            {
+                "name": "required"
+            }
+        ],
+        "layout": {
+            "row": "row1",
+            "cols": 6,
+            "group": "details"
+        }
+    },
+    {
+        "type": "select",
+        "id": "project",
+        "inputName": "project",
+        "visible": true,
+        "label": "Project",
+        "model": "project",
+        "readonly": false,
+        "disabled": false,
+        "placeholder": "Please select a project...",
+        "defaultValue": "236",
+        "values": [
+            {
+                "value": 234,
+                "display": "Project 1",
+                "group": "Best projects"
+            },
+            {
+                "value": 235,
+                "display": "Project 2",
+                "group": "Best projects"
+            },
+            {
+                "value": 236,
+                "display": "Project 3",
+                "group": "Best projects"
+            },
+            {
+                "value": 237,
+                "display": "Project 4",
+                "group": "Worst projects"
+            }
+        ],
+        "validationType": "number",
+        "validations": [
+            {
+                "name": "required"
+            }
+        ],
+        "layout": {
+            "group": "details"
+        }
+    },
+    {
+        "type": "textarea",
+        "id": "description",
+        "inputName": "last-name",
+        "visible": true,
+        "label": "Channel description",
+        "model": "channelDescription",
+        "readonly": false,
+        "disabled": false,
+        "placeholder": "What is this channel about?",
+        "validationType": "string",
+        "defaultValue": "Text sds",
+        "validations": [
+            {
+                "name": "required"
+            }
+        ],
+        "layout": {
+            "group": "details"
+        }
+    },
+    {
+        "type": "input",
+        "inputType": "date",
+        "id": "birthday",
+        "inputName": "birthday",
+        "visible": true,
+        "label": "Birthday",
+        "model": "birthday",
+        "readonly": false,
+        "disabled": false,
+        "placeholder": "1994-01-01",
+        "validationType": "date",
+        "validations": [
+            {
+                "name": "max",
+                "params": [
+                    "2006-01-01",
+                    "You should be more than 18 years."
+                ]
+            },
+            {
+                "name": "required",
+                "params": [
+                    "Birthday is required"
+                ]
+            }
+        ],
+        "layout": {
+            "group": "details"
+        }
+    },
+    {
+        "type": "toggle",
+        "id": "mandatory",
+        "inputName": "mandatory",
+        "inputWrapperClass": "two-columns",
+        "visible": true,
+        "model": "mandatory",
+        "readonly": false,
+        "disabled": false,
+        "validationType": "number",
+        "defaultValue": 1,
+        "attributes": {
+            "value": 1
+        }
+    },
+    {
+        "type": "input",
+        "inputType": "checkbox",
+        "label": "A simple checkbox",
+        "id": "test",
+        "inputName": "test",
+        "visible": true,
+        "model": "test",
+        "readonly": false,
+        "disabled": false,
+        "validationType": "number",
+        "defaultValue": 1,
+        "validations": [
+            {
+                "name": "required"
+            }
+        ],
+        "attributes": {
+            "value": 1,
+            "checked": true
+        }
+    },
+    {
+        "type": "checkboxGroup",
+        "label": "Fruits group",
+        "id": "fruits-input",
+        "inputName": "fruits",
+        "visible": true,
+        "model": "fruits",
+        "defaultValue": [
+            "apple"
+        ],
+        "items": [
+            {
+                "label": "Apple",
+                "attributes": {
+                    "value": "apple",
+                    "checked": true
+                }
+            },
+            {
+                "label": "Orange",
+                "attributes": {
+                    "value": "orange",
+                    "checked": false
+                }
+            }
+        ],
+        "validationType": "array",
+        "validations": [
+            {
+                "name": "min",
+                "params": [
+                    1,
+                    "Custom error message"
+                ]
+            }
+        ]
+    }
+]
