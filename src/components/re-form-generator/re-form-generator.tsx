@@ -443,6 +443,9 @@ export class ReFormGenerator {
       case 'checkboxGroup':
         modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
         break;
+      case 'toggle':
+        modelValue = this.handleToggleChange(model, e);
+        break;
       default:
         break;
     }
@@ -450,6 +453,12 @@ export class ReFormGenerator {
     this.valueChanged.emit({
       [model]: modelValue
     });
+  }
+
+  public handleToggleChange(model, e) {
+    const modelValue = e.target.checked;
+    this.values[model] = modelValue;
+    return modelValue;
   }
 
   public handleCheckboxGroupChange(modelValue, model, value) {
