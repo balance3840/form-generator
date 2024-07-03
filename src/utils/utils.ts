@@ -6,6 +6,9 @@ export function createYupSchema(fields) {
     fields.map(field => {
       const { model, validationType = 'string', validations = []} = field;
       let validator: any = yup[validationType]();
+      if (validationType === 'string') {
+        validator = yup[validationType]().transform(value => value === '' ? null : value);
+      }
       fieldsRules[model] = validator;
       validations.map(({ name: rule, params = [] }) => {
         validator = validator[rule](...params);
