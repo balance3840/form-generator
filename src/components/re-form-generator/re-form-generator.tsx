@@ -133,6 +133,9 @@ export class ReFormGenerator {
 
         if (field) {
           if (field.inputType !== 'file') {
+            if (typeof this.values[key] === 'undefined') {
+              this.values[key] = null;
+            }
             mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
           } else {
             if (this.values[key]) {
@@ -443,6 +446,9 @@ export class ReFormGenerator {
       case 'checkboxGroup':
         modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
         break;
+      case 'toggle':
+        modelValue = this.handleToggleChange(model, e);
+        break;
       default:
         break;
     }
@@ -450,6 +456,12 @@ export class ReFormGenerator {
     this.valueChanged.emit({
       [model]: modelValue
     });
+  }
+
+  public handleToggleChange(model, e) {
+    const modelValue = e.target.checked;
+    this.values[model] = modelValue;
+    return modelValue;
   }
 
   public handleCheckboxGroupChange(modelValue, model, value) {
