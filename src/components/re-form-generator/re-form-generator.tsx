@@ -133,6 +133,9 @@ export class ReFormGenerator {
 
         if (field) {
           if (field.inputType !== 'file') {
+            if (typeof this.values[key] === 'undefined') {
+              this.values[key] = null;
+            }
             mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
           } else {
             if (this.values[key]) {
