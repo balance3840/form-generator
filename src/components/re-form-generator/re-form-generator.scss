@@ -80,7 +80,14 @@ $tablet-breakpoint: 768px;
     .input-text,
     .input-email,
     .input-date,
+    .input-month,
     .input-number,
+    .input-datetime-local,
+    .input-tel,
+    .input-time,
+    .input-url,
+    .input-week,
+    .input-password,
     .select-input {
         background: #FAFAFA;
         padding: 12px;
