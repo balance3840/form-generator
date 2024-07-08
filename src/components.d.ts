@@ -6,6 +6,10 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface ReAlert {
+        "message": string;
+        "type": 'success' | 'warning' | 'error' | 'info';
+    }
     interface ReCountrySelect {
         "defaultValue": string;
         "disabled": any;
@@ -59,6 +63,12 @@ export interface ReMultiSelectCustomEvent<T> extends CustomEvent<T> {
     target: HTMLReMultiSelectElement;
 }
 declare global {
+    interface HTMLReAlertElement extends Components.ReAlert, HTMLStencilElement {
+    }
+    var HTMLReAlertElement: {
+        prototype: HTMLReAlertElement;
+        new (): HTMLReAlertElement;
+    };
     interface HTMLReCountrySelectElementEventMap {
         "selectedCountryChanged": any;
     }
@@ -131,6 +141,7 @@ declare global {
         new (): HTMLReMultiSelectElement;
     };
     interface HTMLElementTagNameMap {
+        "re-alert": HTMLReAlertElement;
         "re-country-select": HTMLReCountrySelectElement;
         "re-file-input-field": HTMLReFileInputFieldElement;
         "re-form-generator": HTMLReFormGeneratorElement;
@@ -138,6 +149,10 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    interface ReAlert {
+        "message"?: string;
+        "type"?: 'success' | 'warning' | 'error' | 'info';
+    }
     interface ReCountrySelect {
         "defaultValue"?: string;
         "disabled"?: any;
@@ -178,6 +193,7 @@ declare namespace LocalJSX {
         "options"?: Array<{ value: any, label: string }>;
     }
     interface IntrinsicElements {
+        "re-alert": ReAlert;
         "re-country-select": ReCountrySelect;
         "re-file-input-field": ReFileInputField;
         "re-form-generator": ReFormGenerator;
@@ -188,6 +204,7 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "re-alert": LocalJSX.ReAlert & JSXBase.HTMLAttributes<HTMLReAlertElement>;
             "re-country-select": LocalJSX.ReCountrySelect & JSXBase.HTMLAttributes<HTMLReCountrySelectElement>;
             "re-file-input-field": LocalJSX.ReFileInputField & JSXBase.HTMLAttributes<HTMLReFileInputFieldElement>;
             "re-form-generator": LocalJSX.ReFormGenerator & JSXBase.HTMLAttributes<HTMLReFormGeneratorElement>;

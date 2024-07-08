@@ -20,6 +20,8 @@ export class ReFormGenerator {
   @State() processedRows: any = [];
   @State() processedGroups: any = [];
   @State() recaptchaRendered: boolean = false;
+  @State() showSuccessMessage: boolean = false;
+  @State() showErrorMessage: boolean = false;
   @Event() handleSubmit: EventEmitter<any>;
   @Event() submitted: EventEmitter<any>;
   @Event() validationError: EventEmitter<any>;
@@ -231,14 +233,21 @@ export class ReFormGenerator {
               payload,
               actionEndpointResponse: res
             })
+            this.showSuccessMessage = false;
+            this.showErrorMessage = true;
           }
           );
           return;
         }
         response.json();
       })
-      .then(data => data)
+      .then(data => {
+        this.showSuccessMessage = true;
+        return data;
+      })
       .catch(error => {
+        this.showSuccessMessage = false;
+        this.showErrorMessage = true;
         this.triggerWebhook({
           type: "submit.failed",
           payload,
@@ -792,6 +801,12 @@ export class ReFormGenerator {
               {this.apiAction.recaptchaSiteKey ? (
                 <div class="recaptcha-wrapper" id="recaptcha-wrapper">
                 </div>
+              ) : null}
+              {this.showSuccessMessage ? (
+                <re-alert message={this.apiAction.successMessage || 'Success! Form submitted.'} type='success'></re-alert>
+              ) : null}
+              {this.showErrorMessage ? (
+                <re-alert message={this.apiAction.errorMessage || 'Error! There was an error submitting the form.'} type='error'></re-alert>
               ) : null}
               <div class="submit-container">
                 <button type="submit" class="submit-container__button" onClick={() => this.submit()}>{this.apiAction.submitButtonText || 'Submit'}</button>
