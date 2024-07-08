@@ -73,6 +73,7 @@ Type: `Promise<any>`
 - [re-multi-select](../re-multi-select)
 - [re-country-select](../re-country-select)
 - [re-file-input-field](../re-file-input-field)
+- [re-alert](../re-alert)
 
 ### Graph
 ```mermaid
@@ -80,6 +81,7 @@ graph TD;
   re-form-generator --> re-multi-select
   re-form-generator --> re-country-select
   re-form-generator --> re-file-input-field
+  re-form-generator --> re-alert
   style re-form-generator fill:#f9f,stroke:#333,stroke-width:4px
 ```
 
