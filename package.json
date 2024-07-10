@@ -1,6 +1,6 @@
 {
   "name": "@restrella/form-generator",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Form generator using JSON schema",
   "main": "dist/index.cjs.js",
   "module": "dist/index.js",

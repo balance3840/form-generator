@@ -1,7 +1,14 @@
 import * as yup from 'yup';
 
-export function createYupSchema(fields) {
+export function createYupSchema(fields, recaptchaValidation = false) {
     const fieldsRules = {};
+
+    // Recaptcha validator
+
+    if (recaptchaValidation) {
+      const recatpchaValidator = yup.string().required();
+      fieldsRules['g-recaptcha-response'] = recatpchaValidator;
+    }
 
     fields.map(field => {
       const { model, validationType = 'string', validations = []} = field;

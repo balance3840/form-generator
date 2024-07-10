@@ -16,7 +16,8 @@
         "endpoint": "ENDPOINT",
         "bearerToken": "TOKEN",
         "formData": "true",
-        "submitButtonText": "Apply now"
+        "submitButtonText": "Apply now",
+        "recaptchaSiteKey": "MY_SITE_KEY"
       }' schema='[
       {
           "type": "input",
@@ -30,14 +31,6 @@
           "disabled": false,
           "placeholder": "John",
           "validationType": "string",
-          "validations": [
-              {
-                  "name": "required",
-                  "params": [
-                      "First name is a required field"
-                  ]
-              }
-          ],
           "layout": {
               "row": "row1",
               "cols": 6,
@@ -76,5 +69,6 @@
           //console.log({errors});
         };
       </script>
+      <script src="https://www.google.com/recaptcha/api.js"></script>
   </body>
 </html>

@@ -34,8 +34,8 @@ export class ReFormGenerator {
   public dataMapping = null;
 
   componentWillLoad() {
-    this.buildModelSchema();
     this.setApiAction();
+    this.buildModelSchema();
     this.setDataMapping();
     this.setDefaultValues();
   }
@@ -111,7 +111,8 @@ export class ReFormGenerator {
   }
 
   buildValidationSchema(fields) {
-    const validationRules = createYupSchema(fields);
+    const repactchaValidation = this.apiAction?.recaptchaSiteKey ? true : false;
+    const validationRules = createYupSchema(fields, repactchaValidation);
     this.validationSchema = yup.object().shape(validationRules);
   }
 
@@ -164,11 +165,6 @@ export class ReFormGenerator {
           }
         }
       })
-    }
-
-    if (this.apiAction?.recaptchaSiteKey) {
-      const recaptchaResponse = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
-      payload = { ...payload, 'g-recaptcha-response': recaptchaResponse };
     }
 
     let requestOptions: any = {
@@ -286,6 +282,10 @@ export class ReFormGenerator {
 
   @Method()
   async submit() {
+    if (this.apiAction?.recaptchaSiteKey) {
+      const recaptchaResponse = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
+      this.values['g-recaptcha-response'] = recaptchaResponse;
+    }
     return await this.validateForm(this.values)
       .then(async () => {
         this.resetValidationErrors();
