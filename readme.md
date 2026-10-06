@@ -67,7 +67,7 @@ Every change is reported on stderr. In code: `import { migrateV1 } from '@restre
 
 ### Fields
 
-Text inputs also accept `attributes.autocomplete` (e.g. `given-name`, `email`) for browser autofill, `attributes.rows` on `textarea` and `attributes.step` on `number`. Common properties: `type`, `id`, `model` (the key in the submitted data), `label`, `helpText`, `placeholder`, `defaultValue`, `visible`, `disabled`, `readonly`, `validationType`, `validations`, `logic`.
+Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g. `"m²"`). Button and message texts can use `{count:model}` (number of items picked in a field) and `{value:model}` (its answer). Text inputs also accept `attributes.autocomplete` (e.g. `given-name`, `email`) for browser autofill, `attributes.rows` on `textarea` and `attributes.step` on `number`. Common properties: `type`, `id`, `model` (the key in the submitted data), `label`, `helpText`, `placeholder`, `defaultValue`, `visible`, `disabled`, `readonly`, `validationType`, `validations`, `logic`.
 
 | `type` | Notes |
 | --- | --- |
@@ -75,6 +75,8 @@ Text inputs also accept `attributes.autocomplete` (e.g. `given-name`, `email`) f
 | `textarea` | |
 | `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer) |
 | `toggle` | on/off switch (`validationType: "boolean"`) |
+| `address` | address search with short labels ("Street 5, 2200 City"). `config.provider`: `osm` (OpenStreetMap, worldwide, free, no key, light use), `google` (Places API New), `mapbox`, `geoapify`, `dk` (Danish official register, Dataforsyningen) or `custom` (your own `source`, as in `search`). Keyed providers take `config.apiKey` (it is visible in the page: restrict it to your domain). `config.countries` (ISO codes, e.g. `["dk"]`) and `config.city` narrow the search, `config.multiple` allows several picks (use `validationType: "array"`), `config.answer` is what is saved: `text` (default), `id` or `both` (`{ id, label }`). Floors and doors are only available from providers that have them (e.g. `dk`) |
+| `search` | live search against your own endpoint, with removable chips when `config.multiple`. `config.source`: `{ url: "https://…?q={q}", resultsPath, labelKey, labelTemplate, valueKey, minChars, debounce, headers }`. The answer is the `valueKey` of the pick (a list when `multiple`, so use `validationType: "array"`). The endpoint must return JSON and allow requests from your site (CORS). **Step by step search** (street → number → floor/door): add `source.drill: { typeKey: "type", expandTypes: ["vejnavn", "adgangsadresse"] }`. Results of those types open the next level when picked (the box is filled with their text and searched again; a result that equals the box text is the answer), other types are final. `source.extraKey` shows a small note next to a result, `source.labelTemplate` builds a short label from several fields |
 | `countrySelect` | `showDialCode`, `modelValueKey` (`code` by default, or `name` / `dialCode`), `defaultValue` |
 | `file` | `attributes: { accept, multiple }` |
 | `rating` | `config: { max }` |
@@ -167,7 +169,7 @@ Write the form once in its default language, then add translations. Anything not
 - **Which language is shown:** the `language` prop if set (it also hides the switcher); else the visitor's choice in the switcher; else the browser language (`navigator.languages`, `detect` is on by default) when it matches one of `languages` (`pt-BR` matches `pt`); else `defaultLanguage`.
 - **Switcher:** `"none"` (default), `"flags"` or `"dropdown"`: a language selector at the top of the form. Flags are emoji, so on Windows they show as letters.
 - **Keys:** `title`, `description`, `settings.<name>`, and `field.<field id>.<label|helpText|placeholder|content|checkboxLabel|config.minLabel|config.maxLabel|config.unit>`, `field.<id>.option.<option value>`, `field.<id>.validation.<rule name>` (a custom error message). The builder's **Translate** tab lists them all.
-- **Built-in texts** (buttons, step counter, upload text, default error messages, country names) are translated for `en es fr de it pt nl pl ca` and can be overridden per language with `ui.*` / `validation.*` keys (see `BUILT_IN_UI` in `src/utils/i18n.ts`). Other languages use English for these unless you provide them. This works for the default language too, so a single-language form can reword them: `"translations": { "en": { "ui.step": "Stage {current} of {total}" } }`. Country names use the browser's `Intl.DisplayNames`.
+- **Built-in texts** (buttons, step counter, upload text, default error messages, country names) are translated for `en es fr de it pt nl pl ca da` and can be overridden per language with `ui.*` / `validation.*` keys (see `BUILT_IN_UI` in `src/utils/i18n.ts`). Other languages use English for these unless you provide them. This works for the default language too, so a single-language form can reword them: `"translations": { "en": { "ui.step": "Stage {current} of {total}" } }`. Country names use the browser's `Intl.DisplayNames`.
 - `ar`, `he` and `fa` set `dir="rtl"` on the form.
 
 ```html
@@ -178,9 +180,32 @@ Write the form once in its default language, then add translations. Anything not
 </script>
 ```
 
+### Spam protection
+
+`settings.captcha`: `{ "provider": "turnstile", "siteKey": "…", "theme": "auto" }`.
+
+| `provider` | |
+| --- | --- |
+| `honeypot` | a hidden trap field, no account or key. A submission that fills it is silently dropped. Stops simple bots only |
+| `turnstile` | Cloudflare Turnstile (answers get `cf-turnstile-response`) |
+| `hcaptcha` | hCaptcha (`h-captcha-response`) |
+| `recaptcha` | Google reCAPTCHA v2 checkbox (`g-recaptcha-response`) |
+| `recaptcha3` | Google reCAPTCHA v3, invisible (`g-recaptcha-response`) |
+
+The token travels with the answers, **and your server must verify it** with the provider's *secret* key (see the builder's "Show how to check it"). The old `action.recaptchaSiteKey` still works as reCAPTCHA v2. Each provider publishes test site keys that always pass, handy while building.
+
+### Keys and secrets in a front-end form
+
+Everything in a web page is readable by visitors, so treat anything you put in a form as public:
+
+- **Fine to include:** captcha *site* keys, Mapbox public (`pk.`) tokens, and Google / Geoapify browser keys **that you restricted** to your domain and to one API, with a spending limit or quota alert set.
+- **Never include:** captcha *secret* keys, Mapbox `sk.` tokens, unrestricted keys, and `action.bearerToken` values that are not meant to be public (the token is sent from the visitor's browser).
+- **For a key you cannot restrict**, put a small proxy in between: the form calls your address, the proxy adds the key and forwards the request. The builder generates a ready-to-paste Cloudflare Worker for the address providers ("Keep the key off the page") and switches the field to it.
+- Submit the form to **your own server** (`action.endpoint`) and verify captcha tokens there.
+
 ### Settings & action
 
-`settings`: `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`.
+`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`.
 
 `action` (optional): `endpoint httpMethod bearerToken headers formData webhookEndpoint recaptchaSiteKey mapping`. Without an endpoint the form just emits `submitted`.
 

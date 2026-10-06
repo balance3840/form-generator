@@ -5,9 +5,12 @@ import { createYupSchema, getValidationErrors } from '../../utils/utils';
 import { FormDocument, FormField, computeVisibility, flattenFields, isContainer, isLayoutType, rowLayout, sanitizeHtml } from '../../utils/schema';
 import { loadDocument } from '../../utils/migrate';
 import { FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
+import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
+import { CaptchaController, captchaConfig, captchaProvider, hasWidget, mountCaptcha } from '../../utils/captcha';
 import { I18nConfig, availableLanguages, createTranslator, languageInfo, localizeDocument, matchLanguage, resolveLanguage } from '../../utils/i18n';
 
 const DEFAULT_SETTINGS = {
+  autofill: true,
   showTitle: true,
   showProgress: true,
   hideSubmitButton: false,
@@ -57,6 +60,8 @@ export class ReFormGenerator {
   @State() hoverRating: { [model: string]: number } = {};
   /** State of the "Other…" option of radio / checkbox groups, by field model. */
   @State() others: { [model: string]: { on: boolean; text: string } } = {};
+  /** What is picked in each `search` field (value + label), by field model. */
+  @State() searchItems: { [model: string]: Array<{ value: any; label: string }> } = {};
   @State() migrationNotes: string[] = [];
 
   @Event() handleSubmit: EventEmitter<any>;
@@ -71,7 +76,10 @@ export class ReFormGenerator {
   /** The language chosen by the visitor with the switcher / `setLanguage()`; survives schema updates. */
   private userLanguage: string = null;
   private liveValidate = false;
-  private recaptchaRendered = false;
+  private captchaCtrl: CaptchaController = null;
+  private captchaMounting = false;
+  /** The token the visitor got from the captcha widget (empty until solved). */
+  @State() captchaToken: string = '';
   private legacy = false;
 
   componentWillLoad() {
@@ -84,16 +92,48 @@ export class ReFormGenerator {
   }
 
   componentDidRender() {
-    const action = this.getAction();
-    const wrapper = this.el.querySelector('.rfg-recaptcha');
-    if (action.recaptchaSiteKey && wrapper && !this.recaptchaRendered) {
+    this.mountCaptchaIfNeeded();
+  }
+
+  /* ----------------------------------------------------------------- captcha */
+
+  private captchaConf() {
+    return this.designMode ? null : captchaConfig(this.getSettings(), this.getAction());
+  }
+
+  /** The name the provider's token has in the answers (empty for providers without a token). */
+  private captchaField() {
+    const conf = this.captchaConf();
+    const info = conf && captchaProvider(conf.provider);
+    return info && info.token ? info.field : '';
+  }
+
+  private mountCaptchaIfNeeded() {
+    const conf = this.captchaConf();
+    if (!conf || !hasWidget(conf.provider) || this.captchaMounting) return;
+    const container = this.el.querySelector('.rfg-captcha') as HTMLElement;
+    if (!container) return;
+    // the widget lives in foreign DOM: if the page element was re-created, start over with the new one
+    if (this.captchaCtrl && container.childElementCount === 0) this.destroyCaptcha();
+    if (this.captchaCtrl) return;
+    const theme = conf.theme && conf.theme !== 'auto' ? conf.theme : getComputedStyle(this.el.querySelector('.rfg') || this.el).colorScheme === 'dark' ? 'dark' : 'light';
+    this.captchaMounting = true;
+    mountCaptcha(conf, container, { language: this.activeLanguage, theme, onToken: token => (this.captchaToken = token) })
+      .then(controller => (this.captchaCtrl = controller))
+      .catch(error => console.warn('[re-form-generator] captcha is not available', error))
+      .then(() => (this.captchaMounting = false));
+  }
+
+  private destroyCaptcha() {
+    if (this.captchaCtrl) {
       try {
-        (window as any).grecaptcha.render(wrapper, { sitekey: action.recaptchaSiteKey });
-        this.recaptchaRendered = true;
+        this.captchaCtrl.destroy();
       } catch (e) {
-        console.warn('[re-form-generator] reCAPTCHA is not available', e);
+        /* the widget was already removed */
       }
     }
+    this.captchaCtrl = null;
+    this.captchaToken = '';
   }
 
   @Watch('schema')
@@ -159,7 +199,10 @@ export class ReFormGenerator {
     });
     const initial = this.parseJson(this.model, {});
     this.values = resetValues ? { ...defaults, ...initial } : { ...defaults, ...this.values, ...initial };
-    if (resetValues) this.others = {};
+    if (resetValues) {
+      this.others = {};
+      this.searchItems = {};
+    }
     if (this.currentStep >= this.pagesFor(this.values).length) this.currentStep = 0;
     this.ensureFont();
   }
@@ -304,6 +347,7 @@ export class ReFormGenerator {
 
   @Method()
   async reset() {
+    this.destroyCaptcha();
     this.status = 'idle';
     this.validationErrors = {};
     this.currentStep = 0;
@@ -323,11 +367,20 @@ export class ReFormGenerator {
     if (this.designMode || this.status === 'submitting') return;
     const action = this.getAction();
     const fields = this.visibleFields();
-    if (action.recaptchaSiteKey) {
-      const response = (this.el.querySelector('textarea[name="g-recaptcha-response"]') as HTMLTextAreaElement) || (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement);
-      this.values = { ...this.values, 'g-recaptcha-response': response ? response.value : '' };
+    const captcha = this.captchaConf();
+    const captchaField = this.captchaField();
+    if (captcha && captcha.provider === 'honeypot') {
+      const trap = this.el.querySelector('.rfg-hp input') as HTMLInputElement;
+      if (trap && trap.value) {
+        // a bot filled in the hidden field: pretend it worked and send nothing
+        this.status = 'success';
+        return { values: {}, response: null, error: null, blocked: true };
+      }
+    } else if (captchaField) {
+      const token = captcha.provider === 'recaptcha3' && this.captchaCtrl ? await this.captchaCtrl.token() : this.captchaToken;
+      this.values = { ...this.values, [captchaField]: token || '' };
     }
-    const errors = await this.runValidation(fields, !!action.recaptchaSiteKey);
+    const errors = await this.runValidation(fields, captchaField || false);
     this.liveValidate = true;
     this.validationErrors = errors;
     if (Object.keys(errors).length) {
@@ -343,11 +396,13 @@ export class ReFormGenerator {
       result = { ...result, ...outcome };
       if (outcome.error) {
         this.status = 'error';
+        if (this.captchaCtrl) this.captchaCtrl.reset(); // a token can only be used once
         this.submitted.emit(result);
         return result;
       }
     }
     this.status = 'success';
+    this.destroyCaptcha();
     this.submitted.emit(result);
     const { redirectUrl } = this.getSettings();
     if (redirectUrl && typeof window !== 'undefined') {
@@ -358,10 +413,10 @@ export class ReFormGenerator {
 
   /* ---------------------------------------------------------- validation */
 
-  private async runValidation(fields: FormField[], recaptcha = false) {
+  private async runValidation(fields: FormField[], captchaField: string | false = false) {
     const vis = this.visibility();
     const leaves = flattenFields(fields, true);
-    const validator = yup.object().shape(createYupSchema(this.inputFields(leaves.filter(f => vis[f.id])), recaptcha, flattenFields(this.doc.fields, true), this.tr));
+    const validator = yup.object().shape(createYupSchema(this.inputFields(leaves.filter(f => vis[f.id])), captchaField, flattenFields(this.doc.fields, true), this.tr));
     try {
       await validator.validate(this.values, { abortEarly: false });
       return {};
@@ -457,7 +512,8 @@ export class ReFormGenerator {
         }
       });
     }
-    if (action.recaptchaSiteKey) payload = { ...payload, 'g-recaptcha-response': this.values['g-recaptcha-response'] };
+    const captchaField = this.captchaField();
+    if (captchaField && this.values[captchaField]) payload = { ...payload, [captchaField]: this.values[captchaField] };
     return { payload, files };
   }
 
@@ -518,6 +574,19 @@ export class ReFormGenerator {
     this.handleChildValue(event);
   }
 
+  @Listen('searchValueChanged')
+  handleSearchChange(event: CustomEvent) {
+    const model = Object.keys(event.detail)[0];
+    const items: Array<{ value: any; label: string }> = event.detail[model] || [];
+    const field = flattenFields(this.doc.fields, true).find(f => f.model === model);
+    this.searchItems = { ...this.searchItems, [model]: items };
+    const multiple = !!(field && field.config && field.config.multiple);
+    // `config.answer`: what is saved for a pick. Addresses save their text by default, other searches save the id.
+    const answer = (field && field.config && field.config.answer) || (field && field.type === 'address' ? 'text' : 'id');
+    const saved = (item: { value: any; label: string }) => (answer === 'text' ? item.label : answer === 'both' ? { id: item.value, label: item.label } : item.value);
+    this.setValueByModel(model, multiple ? items.map(saved) : items[0] ? saved(items[0]) : '');
+  }
+
   @Listen('selectedFileChanged')
   handleFileSelectChange(event: CustomEvent) {
     this.handleChildValue(event);
@@ -553,12 +622,24 @@ export class ReFormGenerator {
     return (field.options || []).map((o: any) => ({ ...o, label: o.label !== undefined ? o.label : String(o.value) }));
   }
 
+  /**
+   * `settings.autofill: false` (or `attributes.autocomplete: "off"` on one field) stops the browser from offering saved
+   * addresses, cards, etc. Chrome ignores a bare autocomplete="off" on address-looking fields, so the field also gets a
+   * meaningless `name` (Chrome reads names like "postnummer" or "street" to guess what a field is) and the flags
+   * that password managers respect.
+   */
+  private autofillOff(field: FormField) {
+    return this.getSettings().autofill === false || (field.attributes && field.attributes.autocomplete === 'off');
+  }
+
   private commonProps(field: FormField) {
+    const off = this.autofillOff(field);
     return {
       id: field.id,
-      name: field.inputName || field.model,
+      name: off ? field.id : field.inputName || field.model,
       disabled: field.disabled,
       'aria-required': this.isRequired(field) ? 'true' : undefined,
+      ...(off ? { autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other' } : {}),
     };
   }
 
@@ -568,11 +649,15 @@ export class ReFormGenerator {
 
   private renderLabel(field: FormField) {
     if (!field.label) return null;
+    // Search fields get a plain element instead of a <label>: Chrome reads <label> text such as "Address" and then
+    // shows its saved-address list over the results. The input is tied to it with aria-labelledby instead.
+    const Tag: any = field.type === 'search' || field.type === 'address' ? 'div' : 'label';
+    const forProps = Tag === 'label' ? { htmlFor: field.id } : {};
     return (
-      <label class="rfg-label" htmlFor={field.id}>
+      <Tag class="rfg-label" id={`${field.id}-label`} {...forProps}>
         <span innerHTML={sanitizeHtml(field.label)}></span>
         {this.isRequired(field) && <span class="rfg-required" aria-hidden="true">*</span>}
-      </label>
+      </Tag>
     );
   }
 
@@ -617,6 +702,27 @@ export class ReFormGenerator {
             showDialCode={field.showDialCode}
           ></re-country-select>
         );
+
+      case 'search':
+      case 'address': {
+        const config = field.config || {};
+        const attribution = field.type === 'address' ? config.attribution || (ADDRESS_PROVIDERS.find(p => p.id === config.provider) || {}).attribution : undefined;
+        return (
+          <div class="rfg-search-wrap">
+          <re-search-select
+            labelledBy={`${field.id}-label`}
+            modelKey={model}
+            source={field.type === 'address' ? addressSource(config, this.activeLanguage) : config.source}
+            multiple={!!config.multiple}
+            placeholder={field.placeholder}
+            disabled={common.disabled}
+            selected={this.searchItems[model] || []}
+            texts={{ searching: this.tr('ui.searching'), noResults: this.tr('ui.noResults'), error: this.tr('ui.searchFailed'), remove: this.tr('ui.remove') }}
+          ></re-search-select>
+          {attribution && <div class="rfg-attribution">{attribution}</div>}
+          </div>
+        );
+      }
 
       case 'file':
         return (
@@ -719,7 +825,7 @@ export class ReFormGenerator {
             </label>
           );
         }
-        return (
+        const input = (
           <input
             class={`rfg-control rfg-input-${type}`}
             type={type}
@@ -730,6 +836,17 @@ export class ReFormGenerator {
             value={value ?? ''}
             onInput={(e: any) => this.setValue(field, e.target.value)}
           />
+        );
+        // `config.prefix` / `config.suffix`: a fixed text next to the input, e.g. "m²" or "€"
+        const prefix = field.config && field.config.prefix;
+        const suffix = field.config && field.config.suffix;
+        if (!prefix && !suffix) return input;
+        return (
+          <div class="rfg-addon-wrap">
+            {prefix && <span class="rfg-addon rfg-addon-prefix">{prefix}</span>}
+            {input}
+            {suffix && <span class="rfg-addon rfg-addon-suffix">{suffix}</span>}
+          </div>
         );
       }
     }
@@ -873,6 +990,10 @@ export class ReFormGenerator {
   }
 
   private renderField(field: FormField, zIndex: number, hidden: boolean) {
+    // A field hidden by logic is not put in the page at all (its answer is kept in memory). Hidden-but-present fields
+    // still count for the browser: e.g. a hidden street / postal code / city next to a search box makes Chrome treat
+    // the whole thing as an address form and pop up its saved addresses. Uploads stay mounted so a chosen file survives.
+    if (hidden && field.type !== 'file') return null;
     if (field.type === 'heading') {
       const Tag = (field.config && field.config.level) || 'h2';
       return (
@@ -936,6 +1057,7 @@ export class ReFormGenerator {
     const layout = rowLayout(row);
     const vis = this.visibility();
     const empty = !this.designMode && !flattenFields([row], true).some(f => vis[f.id]);
+    if (hidden || empty) return null;
     return (
       <div key={row.id} class={`rfg-row ${hidden || empty ? 'rfg-hidden' : ''}`} style={{ alignItems: layout.alignItems }}>
         {(row.columns || []).map((column, index) => (
@@ -959,6 +1081,15 @@ export class ReFormGenerator {
         {fields.map(field => (field.type === 'pageBreak' ? null : isContainer(field) ? this.renderRow(field, !vis[field.id]) : this.renderField(field, this.zOf(field), !vis[field.id])))}
       </div>
     );
+  }
+
+  /** Fills `{count:model}` (number of picked items) and `{value:model}` (the answer) into a text, e.g. a button label. */
+  private interpolate(text: string): string {
+    return String(text ?? '').replace(/\{(count|value):([\w.-]+)\}/g, (_match, kind, key) => {
+      const v = this.values[key];
+      if (kind === 'count') return String(Array.isArray(v) ? v.length : v === undefined || v === null || v === '' ? 0 : 1);
+      return Array.isArray(v) ? v.join(', ') : v === undefined || v === null ? '' : String(v);
+    });
   }
 
   /** Cover image (edge to edge) and logo, from `theme.cover` / `theme.logo`. */
@@ -1067,6 +1198,7 @@ export class ReFormGenerator {
     const step = Math.min(this.currentStep, Math.max(0, pages.length - 1));
     const isLast = step === pages.length - 1;
     const hasErrors = Object.keys(this.validationErrors).length > 0;
+    const captcha = this.captchaConf();
     const showSubmit = !this.designMode && !settings.hideSubmitButton && !(this.legacy && !Object.keys(action).length);
     const leaves = flattenFields(this.doc.fields, true);
     this.zMap = {};
@@ -1118,12 +1250,25 @@ export class ReFormGenerator {
             </section>
           ))}
 
-          {!this.designMode && hasErrors && <div class="rfg-form-error">{settings.formErrorMessage}</div>}
-          {this.status === 'error' && <re-alert message={settings.errorMessage} type="error"></re-alert>}
+          {!this.designMode && hasErrors && <div key="form-error" class="rfg-form-error">{settings.formErrorMessage}</div>}
+          {this.status === 'error' && <re-alert key="api-error" message={settings.errorMessage} type="error"></re-alert>}
 
           {showSubmit && (
-            <div class="rfg-actions">
-              {action.recaptchaSiteKey && isLast && <div class="rfg-recaptcha"></div>}
+            <div key="actions" class="rfg-actions">
+              {captcha && captcha.provider === 'honeypot' && (
+                <div class="rfg-hp" aria-hidden="true">
+                  <label>
+                    Website
+                    <input type="text" name="website" tabindex={-1} autocomplete="off" />
+                  </label>
+                </div>
+              )}
+              {captcha && hasWidget(captcha.provider) && (
+                <div class={`rfg-captcha-wrap ${isLast ? '' : 'rfg-hidden'}`}>
+                  <div class="rfg-captcha" key="captcha"></div>
+                  {this.captchaField() && this.validationErrors[this.captchaField()] && <div class="rfg-error">{this.validationErrors[this.captchaField()][0]}</div>}
+                </div>
+              )}
               {isSteps && step > 0 && (
                 <button type="button" class="rfg-btn rfg-btn-secondary" onClick={() => this.prevStep()}>
                   {this.tr('ui.back')}
@@ -1135,7 +1280,7 @@ export class ReFormGenerator {
                 </button>
               ) : (
                 <button type="button" class="rfg-btn rfg-btn-primary" disabled={this.status === 'submitting'} onClick={() => this.submit()}>
-                  {this.status === 'submitting' ? this.tr('ui.sending') : settings.submitButtonText}
+                  {this.status === 'submitting' ? this.tr('ui.sending') : this.interpolate(settings.submitButtonText)}
                 </button>
               )}
             </div>

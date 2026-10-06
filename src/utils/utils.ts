@@ -71,15 +71,16 @@ function buildFileValidator(field: FormField, label: string, labelOf: (m: string
  * Builds the Yup shape for `fields`. `allFields` (defaults to `fields`) is only used to resolve
  * labels and to check that rules which point at another field point at one that exists. `t` localizes the default messages.
  */
-export function createYupSchema(fields: FormField[], recaptchaValidation = false, allFields: FormField[] = fields, t: Translate = defaultTranslate) {
+export function createYupSchema(fields: FormField[], captchaField: string | boolean = false, allFields: FormField[] = fields, t: Translate = defaultTranslate) {
   const fieldsRules: { [key: string]: any } = {};
   const labelOf = (model: string) => {
     const target = allFields.find(f => f.model === model);
     return target ? stripTags(target.label || target.checkboxLabel || '') || model : model;
   };
 
-  if (recaptchaValidation) {
-    fieldsRules['g-recaptcha-response'] = yup.string().required(t('validation.captcha'));
+  if (captchaField) {
+    // the captcha token must be there; `true` is the old reCAPTCHA-only behaviour
+    fieldsRules[captchaField === true ? 'g-recaptcha-response' : captchaField] = yup.string().required(t('validation.captcha'));
   }
 
   fields.forEach(field => {
@@ -137,6 +138,11 @@ export function createYupSchema(fields: FormField[], recaptchaValidation = false
       if (rule === 'oneOf' && Array.isArray(args[0])) {
         // empty answers are the job of `required`
         args[0] = [...args[0], null];
+      }
+      if (rule === 'required' && validationType === 'array') {
+        // an empty list counts as unanswered
+        validator = validator.required(args[0]).min(1, args[0]);
+        return;
       }
       if (rule === 'required' && validationType === 'boolean') {
         // A required checkbox means "must be ticked".

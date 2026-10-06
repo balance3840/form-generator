@@ -313,6 +313,51 @@ re-form-generator {
     }
   }
 
+  .rfg-attribution {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--rfg-muted);
+    text-align: right;
+  }
+
+  // Fixed text next to an input (`config.prefix` / `config.suffix`), e.g. "m²".
+  .rfg-addon-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+
+    .rfg-control {
+      flex: 1;
+      min-width: 0;
+    }
+    .rfg-addon {
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--rfg-muted);
+      background: var(--rfg-tint);
+      border: 1px solid var(--rfg-border-strong);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .rfg-addon-prefix {
+      border-right: 0;
+      border-radius: var(--rfg-radius) 0 0 var(--rfg-radius);
+    }
+    .rfg-addon-suffix {
+      border-left: 0;
+      border-radius: 0 var(--rfg-radius) var(--rfg-radius) 0;
+    }
+    .rfg-addon-prefix + .rfg-control {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+    .rfg-control:has(+ .rfg-addon-suffix) {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
   .rfg-select-wrap {
     position: relative;
     &::after {
@@ -592,8 +637,16 @@ re-form-generator {
     gap: 12px;
     margin-top: calc(var(--rfg-gap) * 1.2);
 
-    .rfg-recaptcha {
+// Spam protection: the challenge widget, and the invisible trap field of the basic option.
+    .rfg-captcha-wrap {
       flex-basis: 100%;
+    }
+    .rfg-hp {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
   }
   .rfg-btn {

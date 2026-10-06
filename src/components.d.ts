@@ -5,6 +5,8 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { SearchItem } from "./utils/search";
+export { SearchItem } from "./utils/search";
 export namespace Components {
     interface ReAlert {
         "message": string;
@@ -80,6 +82,37 @@ export namespace Components {
         "modelKey": string;
         "options": Array<{ value: any, label: string }>;
     }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface ReSearchSelect {
+        "disabled": boolean;
+        /**
+          * Id of the element that labels the input (aria-labelledby). A `<label for>` is avoided on purpose: Chrome reads such labels ("Address") and pops up its saved addresses over our list.
+         */
+        "labelledBy": string;
+        "modelKey": string;
+        "multiple": boolean;
+        "placeholder": string;
+        /**
+          * The current selection, owned by the form.
+         */
+        "selected": SearchItem[];
+        "source": any;
+        /**
+          * Localized texts: { searching, noResults, remove }.
+         */
+        "texts": { [key: string]: string };
+    }
 }
 export interface ReCountrySelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -96,6 +129,10 @@ export interface ReFormGeneratorCustomEvent<T> extends CustomEvent<T> {
 export interface ReMultiSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLReMultiSelectElement;
+}
+export interface ReSearchSelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReSearchSelectElement;
 }
 declare global {
     interface HTMLReAlertElement extends Components.ReAlert, HTMLStencilElement {
@@ -176,12 +213,42 @@ declare global {
         prototype: HTMLReMultiSelectElement;
         new (): HTMLReMultiSelectElement;
     };
+    interface HTMLReSearchSelectElementEventMap {
+        "searchValueChanged": { [model: string]: SearchItem[] };
+    }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface HTMLReSearchSelectElement extends Components.ReSearchSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReSearchSelectElementEventMap>(type: K, listener: (this: HTMLReSearchSelectElement, ev: ReSearchSelectCustomEvent<HTMLReSearchSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReSearchSelectElementEventMap>(type: K, listener: (this: HTMLReSearchSelectElement, ev: ReSearchSelectCustomEvent<HTMLReSearchSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReSearchSelectElement: {
+        prototype: HTMLReSearchSelectElement;
+        new (): HTMLReSearchSelectElement;
+    };
     interface HTMLElementTagNameMap {
         "re-alert": HTMLReAlertElement;
         "re-country-select": HTMLReCountrySelectElement;
         "re-file-input-field": HTMLReFileInputFieldElement;
         "re-form-generator": HTMLReFormGeneratorElement;
         "re-multi-select": HTMLReMultiSelectElement;
+        "re-search-select": HTMLReSearchSelectElement;
     }
 }
 declare namespace LocalJSX {
@@ -260,12 +327,45 @@ declare namespace LocalJSX {
         "onMultiSelectValueChanged"?: (event: ReMultiSelectCustomEvent<any>) => void;
         "options"?: Array<{ value: any, label: string }>;
     }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface ReSearchSelect {
+        "disabled"?: boolean;
+        /**
+          * Id of the element that labels the input (aria-labelledby). A `<label for>` is avoided on purpose: Chrome reads such labels ("Address") and pops up its saved addresses over our list.
+         */
+        "labelledBy"?: string;
+        "modelKey"?: string;
+        "multiple"?: boolean;
+        "onSearchValueChanged"?: (event: ReSearchSelectCustomEvent<{ [model: string]: SearchItem[] }>) => void;
+        "placeholder"?: string;
+        /**
+          * The current selection, owned by the form.
+         */
+        "selected"?: SearchItem[];
+        "source"?: any;
+        /**
+          * Localized texts: { searching, noResults, remove }.
+         */
+        "texts"?: { [key: string]: string };
+    }
     interface IntrinsicElements {
         "re-alert": ReAlert;
         "re-country-select": ReCountrySelect;
         "re-file-input-field": ReFileInputField;
         "re-form-generator": ReFormGenerator;
         "re-multi-select": ReMultiSelect;
+        "re-search-select": ReSearchSelect;
     }
 }
 export { LocalJSX as JSX };
@@ -277,6 +377,19 @@ declare module "@stencil/core" {
             "re-file-input-field": LocalJSX.ReFileInputField & JSXBase.HTMLAttributes<HTMLReFileInputFieldElement>;
             "re-form-generator": LocalJSX.ReFormGenerator & JSXBase.HTMLAttributes<HTMLReFormGeneratorElement>;
             "re-multi-select": LocalJSX.ReMultiSelect & JSXBase.HTMLAttributes<HTMLReMultiSelectElement>;
+            /**
+             * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+             * The form passes the endpoint in `source`:
+             *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+             *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+             * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+             * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+             * the others are final. `extraKey` shows a small note next to a result.
+             * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+             * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+             * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+             */
+            "re-search-select": LocalJSX.ReSearchSelect & JSXBase.HTMLAttributes<HTMLReSearchSelectElement>;
         }
     }
 }

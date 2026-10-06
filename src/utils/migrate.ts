@@ -173,6 +173,11 @@ export function migrateV1(input: any, options: MigrationOptions = {}): Migration
       delete rest.webhoookEndpoint;
       notes.push('The misspelled "webhoookEndpoint" action key was renamed to "webhookEndpoint".');
     }
+    if (rest.recaptchaSiteKey) {
+      settings.captcha = { provider: 'recaptcha', siteKey: rest.recaptchaSiteKey };
+      delete rest.recaptchaSiteKey;
+      notes.push('"recaptchaSiteKey" became "settings.captcha": { provider: "recaptcha", siteKey }.');
+    }
     doc.action = rest;
     if (Object.keys(settings).length) doc.settings = settings;
     notes.push('The "action" prop was merged into the document ("action" + "settings").');
