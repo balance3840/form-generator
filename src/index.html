@@ -2,73 +2,51 @@
 <html dir="ltr" lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0" />
-    <title>Form generator</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form generator v2</title>
     <script type="module" src="/build/form-generator.esm.js"></script>
     <script nomodule src="/build/form-generator.js"></script>
+    <style>
+      body { margin: 0; padding: 32px 16px; font-family: system-ui, sans-serif; background: #f3f4f6; }
+      .bar { max-width: 640px; margin: 0 auto 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .bar select { padding: 8px; border-radius: 8px; border: 1px solid #d1d5db; }
+      pre { max-width: 640px; margin: 16px auto; padding: 16px; background: #111827; color: #d1fae5; border-radius: 12px; overflow: auto; font-size: 12px; }
+    </style>
   </head>
   <body>
-
-    <div style="max-width: 99%; margin-right: auto; margin-left: auto;">
-      <re-form-generator action='{
-        "httpMethod": "POST",
-        "endpoint": "ENDPOINT",
-        "bearerToken": "TOKEN",
-        "formData": "true",
-        "submitButtonText": "Apply now",
-        "recaptchaSiteKey": "MY_SITE_KEY"
-      }' schema='[
-      {
-          "type": "input",
-          "id": "first_name",
-          "inputType": "text",
-          "inputName": "first_name",
-          "visible": true,
-          "label": "Fist name",
-          "model": "first_name",
-          "readonly": false,
-          "disabled": false,
-          "placeholder": "John",
-          "validationType": "string",
-          "layout": {
-              "row": "row1",
-              "cols": 6,
-              "group": "applicant",
-              "groupTitle": "Personal info"
-          }
-      }
-  ]' ref="channelForm">
-      
-        <div slot="field-label@mandatory">
-          <label class="input__label">Make channel mandatory</label>
-          <p class="input__description">All the tenants from all the project will be invited by default.</p>
-        </div>
-  
-      </re-form-generator>
+    <div class="bar">
+      <select id="example">
+        <option value="v2/showcase.json">v2 · Showcase</option>
+        <option value="v2/jobApplication.json">v2 · Job application (migrated)</option>
+        <option value="v2/misc.json">v2 · Misc (migrated)</option>
+        <option value="v1/jobApplication.json">v1 · Job application (auto-migrated at runtime)</option>
+      </select>
+      <select id="theme"></select>
     </div>
-      <script>
-        const formGenerator = document.querySelector('re-form-generator');
-        formGenerator.addEventListener('valueChanged', event => { 
-            console.log(event.detail);
-          const field = event.detail;
-          const { birthday } = field;
-          if (birthday) {
-            const parts = birthday.split('-');
-            const [year, month, date] = parts;
-            formGenerator.updateValue('year', year);
-            formGenerator.updateValue('month', month);
-            formGenerator.updateValue('date', date);
-          }
-        });
 
-        async function validateForm() {
-          await customElements.whenDefined('re-form-generator');
-          const formGenerator = document.querySelector('re-form-generator');
-          const errors = await formGenerator.submit();
-          //console.log({errors});
-        };
-      </script>
-      <script src="https://www.google.com/recaptcha/api.js"></script>
+    <re-form-generator id="form"></re-form-generator>
+    <pre id="output" hidden></pre>
+
+    <script type="module">
+      const form = document.getElementById('form');
+      const output = document.getElementById('output');
+      const example = document.getElementById('example');
+      const themeSelect = document.getElementById('theme');
+      const presets = ['indigo', 'minimal', 'soft', 'ocean', 'forest', 'sunset', 'midnight', 'mono'];
+      themeSelect.innerHTML = '<option value="">Theme from schema</option>' + presets.map(p => `<option>${p}</option>`).join('');
+
+      async function load() {
+        output.hidden = true;
+        const res = await fetch(`/examples/${example.value}`);
+        form.schema = await res.json();
+      }
+      example.addEventListener('change', load);
+      themeSelect.addEventListener('change', () => (form.theme = themeSelect.value ? { preset: themeSelect.value } : null));
+      form.addEventListener('submitted', e => {
+        output.hidden = false;
+        output.textContent = JSON.stringify(e.detail.values, null, 2);
+      });
+      load();
+    </script>
   </body>
 </html>

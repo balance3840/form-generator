@@ -1,0 +1,214 @@
+{
+  "version": 2,
+  "title": "Event feedback",
+  "description": "Tell us how it went. It takes less than a minute.",
+  "theme": {
+    "preset": "indigo"
+  },
+  "settings": {
+    "submitButtonText": "Send feedback",
+    "successMessage": "Thanks for the feedback! 🎉"
+  },
+  "fields": [
+    {
+      "type": "columns",
+      "id": "row1",
+      "config": {
+        "align": "start",
+        "justify": "start"
+      },
+      "columns": [
+        {
+          "id": "c1",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "name",
+              "model": "name",
+              "inputType": "text",
+              "label": "Your name",
+              "placeholder": "Jane Doe",
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "email",
+              "model": "email",
+              "inputType": "email",
+              "label": "Email",
+              "placeholder": "jane@email.com",
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required"
+                },
+                {
+                  "name": "email"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "id": "h1",
+      "label": "The event",
+      "helpText": "A few quick questions",
+      "config": {
+        "level": "h2"
+      }
+    },
+    {
+      "type": "rating",
+      "id": "overall",
+      "model": "overall",
+      "label": "Overall experience",
+      "validationType": "number",
+      "config": {
+        "max": 5
+      },
+      "validations": [
+        {
+          "name": "required",
+          "params": [
+            "Please pick a rating"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "scale",
+      "id": "nps",
+      "model": "nps",
+      "label": "How likely are you to recommend us?",
+      "validationType": "number",
+      "config": {
+        "min": 0,
+        "max": 10,
+        "minLabel": "Not likely",
+        "maxLabel": "Very likely"
+      }
+    },
+    {
+      "type": "radioGroup",
+      "id": "attended",
+      "model": "attended",
+      "label": "Did you attend in person?",
+      "validationType": "string",
+      "defaultValue": "yes",
+      "options": [
+        {
+          "label": "Yes, in person",
+          "value": "yes"
+        },
+        {
+          "label": "No, I joined online",
+          "value": "no"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "travel",
+      "model": "travel",
+      "label": "How did you travel?",
+      "placeholder": "Choose one…",
+      "validationType": "string",
+      "options": [
+        {
+          "label": "Car",
+          "value": "car"
+        },
+        {
+          "label": "Public transport",
+          "value": "transit"
+        },
+        {
+          "label": "Walking",
+          "value": "walk"
+        }
+      ],
+      "logic": {
+        "action": "show",
+        "match": "all",
+        "conditions": [
+          {
+            "field": "attended",
+            "operator": "equals",
+            "value": "yes"
+          }
+        ]
+      }
+    },
+    {
+      "type": "checkboxGroup",
+      "id": "liked",
+      "model": "liked",
+      "label": "What did you like?",
+      "validationType": "array",
+      "options": [
+        {
+          "label": "Talks",
+          "value": "talks"
+        },
+        {
+          "label": "Networking",
+          "value": "networking"
+        },
+        {
+          "label": "Food",
+          "value": "food"
+        }
+      ]
+    },
+    {
+      "type": "slider",
+      "id": "budget",
+      "model": "budget",
+      "label": "What would you pay next time?",
+      "validationType": "number",
+      "config": {
+        "min": 0,
+        "max": 200,
+        "step": 10,
+        "unit": " €"
+      }
+    },
+    {
+      "type": "pageBreak",
+      "id": "pb1"
+    },
+    {
+      "type": "textarea",
+      "id": "comments",
+      "model": "comments",
+      "label": "Anything else?",
+      "placeholder": "Tell us more…",
+      "helpText": "Optional, but we read every message.",
+      "validationType": "string"
+    },
+    {
+      "type": "toggle",
+      "id": "contact",
+      "model": "contact",
+      "label": "Can we contact you?",
+      "helpText": "Only about this feedback.",
+      "validationType": "boolean",
+      "defaultValue": false
+    }
+  ]
+}
