@@ -1,7 +1,64 @@
-import { Component, Host, h, Prop, State, Event, EventEmitter, Method, Watch, Fragment, Listen } from '@stencil/core';
+import { Component, Element, Event, EventEmitter, Host, Listen, Method, Prop, State, Watch, h } from '@stencil/core';
 import * as yup from 'yup';
-import { createYupSchema, getValidationErrors } from '../../utils/utils';
 import set from 'lodash/set';
+import { createYupSchema, getValidationErrors } from '../../utils/utils';
+import { clickedInsideSelector } from '../../utils/dom';
+import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, isLayoutType, itemInstances, requiredProgress, rowLayout, sanitizeHtml, setByPath, withDraft } from '../../utils/schema';
+import { loadDocument } from '../../utils/migrate';
+import { ScriptHost, ScriptSandbox } from '../../utils/script-sandbox';
+import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
+import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
+import { defaultPhoneCountry, formatPhone, parsePhone, phoneCountry } from '../../utils/phone';
+import { addDays, dateOf, dayLabel, firstDayOfWeek, isoOf, monthGrid, monthLabel, monthNames, monthTitle, resolveDay, today, weekOf, weekRangeLabel, weekStart, weekdayNames } from '../../utils/calendar';
+import { BLOCK_ICONS, safeColor, safeEmbedUrl, safeIconNode, safeLinkUrl, videoSource } from '../../utils/media';
+import { CaptchaController, captchaConfig, captchaProvider, hasWidget, mountCaptcha } from '../../utils/captcha';
+import { I18nConfig, availableLanguages, createTranslator, languageInfo, localizeDocument, matchLanguage, resolveLanguage } from '../../utils/i18n';
+
+/** What the form knows about a step besides its fields (from the page break that starts it). */
+type StepPage = { id?: string; title?: string; description?: string; image?: string; alt?: string; nextLabel?: string; hideBack?: boolean };
+
+/** Answer paths the form's code may write: names, dots and [n] indexes (never __proto__ and the like). */
+const SAFE_PATH = /^(?!.*(?:__proto__|prototype|constructor))[\w-]+(?:\.[\w-]+|\[\d+\])*$/;
+
+const DEFAULT_SETTINGS = {
+  autofill: true,
+  showTitle: true,
+  showProgress: true,
+  hideSubmitButton: false,
+  allowResubmit: false,
+  redirectUrl: '',
+};
+
+type ModalState = {
+  kind: 'add' | 'edit' | 'block' | 'sign';
+  title: string;
+  /** The fields shown in the dialog (the template: they are instantiated into the draft namespace). */
+  fields: FormField[];
+  confirmLabel: string;
+  cancelLabel: string;
+  /** Where relative names are looked up from: the item the dialog was opened in ("rooms[0]"), or "" for the form. */
+  origin: string;
+  repeater?: string;
+  index?: number;
+  /** For `modal` blocks: what happens on confirm. For `sign`: the model of the signature field. */
+  actions?: any[];
+  target?: string;
+  /** Was the dialog confirmed once with errors (then it validates as you type)? */
+  live?: boolean;
+  /** An "add item" dialog can start from one of the group's presets (a type picker); `presetChoice` is its index, "custom" or "". */
+  presets?: { label: string; description?: string; values?: { [key: string]: any } }[];
+  presetChoice?: string;
+  /** Show only the fields marked `config.dialogOnly` (a short "type + name" dialog for a big item). */
+  onlyMarked?: boolean;
+};
+
+/** Faces for a Likert scale of `count` points, from unhappy to happy (used when a point has no `emoji`). */
+const LIKERT_FACES = ['😡', '😠', '🙁', '😐', '🙂', '😀', '😍'];
+const likertEmoji = (i: number, count: number) => LIKERT_FACES[count > 1 ? Math.round((i * (LIKERT_FACES.length - 1)) / (count - 1)) : 3];
+const STAR = 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8L12 2.5z';
+
+/** The phone country pickers report their choice under this model prefix (see handleCountrySelectChange). */
+const PHONE_PREFIX = '__phone:';
 
 @Component({
   tag: 're-form-generator',
@@ -9,813 +66,4720 @@ import set from 'lodash/set';
   shadow: false,
 })
 export class ReFormGenerator {
+  @Element() el: HTMLElement;
 
+  /** The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string. */
   @Prop() schema: any = [];
   @Prop() formId: string;
+  /** Initial values, keyed by field `model`. */
   @Prop() model: any = {};
+  /** Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`. */
   @Prop() action: any = {};
+  /** v1 compatibility: field mapping. Prefer `action.mapping`. */
   @Prop() mapping: any = null;
-  @State() values: any = null;
-  @State() validationErrors: any = {};
-  @State() processedRows: any = [];
-  @State() processedGroups: any = [];
-  @State() recaptchaRendered: boolean = false;
-  @State() showSuccessMessage: boolean = false;
-  @State() showErrorMessage: boolean = false;
+  /** Theme object (or preset id / JSON string). Overrides `schema.theme`. */
+  @Prop() theme: any = null;
+  /** Used by the builder: shows every field, ignores logic and disables interaction. */
+  @Prop() designMode: boolean = false;
+  /**
+   * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher.
+   * Without it the language is picked from `schema.i18n` (browser language if available, else the default).
+   */
+  @Prop() language: string = null;
+  /**
+   * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are
+   * saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files`
+   * with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+   */
+  @Prop() submitter?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
+  /** Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it. */
+  @Prop() allowScript: boolean = true;
+
+  /** The localized document that is rendered. */
+  @State() doc: FormDocument = { version: 2, fields: [] };
+  /** The document as written (default language). */
+  @State() sourceDoc: FormDocument = { version: 2, fields: [] };
+  @State() activeLanguage: string = 'en';
+  @State() values: { [key: string]: any } = {};
+  @State() validationErrors: { [key: string]: string[] } = {};
+  @State() currentStep: number = 0;
+  @State() status: 'idle' | 'submitting' | 'success' | 'error' = 'idle';
+  @State() schemaError: string = null;
+  @State() hoverRating: { [model: string]: number } = {};
+  /** What the form's code changed: the options a field offers, and fields it hid or showed (by model). */
+  @State() scriptOptions: { [model: string]: any[] } = {};
+  @State() scriptVisible: { [model: string]: boolean } = {};
+  /** Colours the form's code gave a field (`form.style`), by model. */
+  @State() scriptStyles: { [model: string]: { [name: string]: string } } = {};
+  /** Why the form's code stopped the send (shown above the buttons). */
+  @State() scriptError: string = '';
+  /**
+   * The thank-you page: the blocks after a page break with `config.ending` (shown after a successful send, never as a
+   * step). They are taken out of the form's own fields when the document loads.
+   */
+  @State() endingFields: FormField[] = [];
+  /** A redirect the browser did not allow (an embedded form may not move the page it sits in): shown as a button. */
+  @State() pendingRedirect: string = '';
+  /** The country picked in front of each phone number (several countries share +1, so it cannot always be read back from the number). */
+  @State() phoneCountries: { [model: string]: string } = {};
+  /** What was typed in each phone number box, spaces included (the answer only keeps the digits). */
+  @State() phoneTexts: { [model: string]: string } = {};
+  /** The ranking item being dragged. */
+  @State() rankDrag: { model: string; index: number } | null = null;
+  /** The month each calendar field shows ("YYYY-MM"). */
+  @State() calMonths: { [model: string]: string } = {};
+  /** State of the "Other…" option of radio / checkbox groups, by field model. */
+  @State() others: { [model: string]: { on: boolean; text: string } } = {};
+  /** What is picked in each `search` field (value + label), by field model. */
+  @State() searchItems: { [model: string]: Array<{ value: any; label: string }> } = {};
+  @State() migrationNotes: string[] = [];
+  /** Steps the visitor has been on, and whether each is filled in correctly (for the step list), by step id. */
+  @State() visited: { [stepId: string]: boolean } = {};
+  @State() completion: { [stepId: string]: boolean } = {};
+  /** When the draft was last saved (ms), 0 = not yet. */
+  @State() draftSavedAt: number = 0;
+  /** The model of the repeater whose "add" menu is open. */
+  @State() addMenu: string = '';
+  /** Collapsed state of repeater items, by item path (undefined = the repeater's default). */
+  @State() collapsed: { [itemPath: string]: boolean } = {};
+  /** The open dialog (an "add / edit item" form, a `modal` block or the signing box), if any. */
+  @State() modal: ModalState | null = null;
+  /** Items opened as their own page (`itemOpen: "page"`), by repeater model -> item index. */
+  @State() openItems: { [repeaterModel: string]: number } = {};
+  /** The tab shown in each `tabs` block (by block id; the first tab until one is chosen). */
+  @State() activeTabs: { [blockId: string]: string } = {};
+  /** The item whose ⋮ menu is open (its path). */
+  @State() itemMenu: string = '';
+  /** The item a dragged item is over (its path). */
+  @State() dropOver: string = '';
+  /** What was typed in the search box of a choice list, by field model. */
+  @State() filters: { [model: string]: string } = {};
+  /** Choice lists showing all their options (`config.visibleOptions`), by field model. */
+  @State() expandedOptions: { [model: string]: boolean } = {};
+  /** The "?" help opened with a click or tap (its id), and the one closed with Escape while it is hovered or focused. */
+  @State() openTip: string = '';
+  @State() dismissedTip: string = '';
+  /** Now, refreshed every half minute while a "Saved 5 minutes ago" text is on screen. */
+  @State() clock: number = Date.now();
+
   @Event() handleSubmit: EventEmitter<any>;
   @Event() submitted: EventEmitter<any>;
   @Event() validationError: EventEmitter<any>;
   @Event() valueChanged: EventEmitter<any>;
-  public fields: any[] = [];
-  public tag: string = 'input';
-  public validationSchema: any = null;
-  public apiAction: any = null;
-  public shouldUseFormData = false;
-  public dataMapping = null;
+  /** Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop). */
+  @Event() languageChanged: EventEmitter<{ language: string }>;
+  /** Fires when a button runs an `emit` action: `{ name, field, values }`. Use it to hook your own code to a button. */
+  @Event() formAction: EventEmitter<{ name: string; field: string | null; values: any }>;
+  /** Fires when the visitor moves to another step: `{ index, id, title }`. */
+  @Event() stepChanged: EventEmitter<{ index: number; id: string; title: string }>;
+  /** Fires when the draft is saved (`settings.saveDraft`). */
+  @Event() draftSaved: EventEmitter<{ values: any }>;
+  /** Fires when the visitor leaves with "Save and exit" (`settings.exitUrl` is opened afterwards, if set). */
+  @Event() exit: EventEmitter<{ values: any }>;
+
+  /** Translates the built-in texts into the active language. */
+  private tr = createTranslator('en');
+  /** The language chosen by the visitor with the switcher / `setLanguage()`; survives schema updates. */
+  private userLanguage: string = null;
+  private liveValidate = false;
+  private captchaCtrl: CaptchaController = null;
+  private captchaMounting = false;
+  /** The token the visitor got from the captcha widget (empty until solved). */
+  @State() captchaToken: string = '';
+  private legacy = false;
 
   componentWillLoad() {
-    this.setApiAction();
-    this.buildModelSchema();
-    this.setDataMapping();
-    this.setDefaultValues();
+    this.load(true);
   }
 
-  componentWillUpdate() {
-    this.processedRows = [];
-    this.processedGroups = [];
+  componentDidLoad() {
+    this.languageReady = true;
+    this.languageChanged.emit({ language: this.activeLanguage });
+    this.startScript();
+    this.reportHeight();
+  }
+
+  connectedCallback() {
+    // keeps "Saved 5 minutes ago" in the sidebar header current
+    if (!this.clockTimer && typeof window !== 'undefined') {
+      this.clockTimer = setInterval(() => {
+        if (this.draftSavedAt && this.savedTimeShown()) this.clock = Date.now();
+      }, 30000);
+    }
+  }
+
+  disconnectedCallback() {
+    this.removeCustomCss();
+    this.stopScript();
+    if (this.heightObserver) this.heightObserver.disconnect();
+    this.heightObserver = null;
+    clearInterval(this.clockTimer);
+    this.clockTimer = null;
+  }
+
+  private clockTimer: any = null;
+
+  /* ------------------------------------------------------------- in a frame */
+
+  private heightObserver: ResizeObserver = null;
+  private lastHeight = 0;
+
+  private framed() {
+    try {
+      return typeof window !== 'undefined' && window.parent && window.parent !== window;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * Embedded with an <iframe>, the page that holds the frame cannot see how tall the form is (and every step has its own
+   * height). The form tells it: `{ type: 'rfg:height', height }` whenever the page height changes, and `rfg:scroll` when a
+   * new step starts (so the frame can be brought into view). The embed snippet resizes and scrolls the frame.
+   */
+  private reportHeight() {
+    if (this.designMode || !this.framed() || typeof ResizeObserver === 'undefined' || this.heightObserver) return;
+    const send = () => {
+      // where the form ends (not the page's height: pages often stretch to the frame, which would never let it shrink),
+      // plus a little room for shadows and focus rings
+      const height = Math.ceil(this.el.getBoundingClientRect().bottom + window.scrollY + 16);
+      if (height && Math.abs(height - this.lastHeight) > 1) {
+        this.lastHeight = height;
+        window.parent.postMessage({ type: 'rfg:height', height, formId: this.formId || null }, '*');
+      }
+    };
+    this.heightObserver = new ResizeObserver(() => send());
+    this.heightObserver.observe(this.el);
+    send();
+  }
+
+  /* ------------------------------------------------------------ form's code */
+
+  private sandbox: ScriptSandbox = null;
+  private scriptCode = '';
+
+  /** (Re)starts the form's own code when it changed. Never in the builder's canvas. */
+  private startScript() {
+    const code = !this.designMode && this.allowScript !== false && typeof this.sourceDoc.script === 'string' ? this.sourceDoc.script.trim() : '';
+    if (code === this.scriptCode && (this.sandbox || !code)) return;
+    this.stopScript();
+    this.scriptCode = code;
+    if (!code || typeof document === 'undefined') return;
+    const host: ScriptHost = {
+      values: () => this.values,
+      fields: () =>
+        flattenFields(this.doc.fields, true, true)
+          .filter(f => f.model && !isLayoutType(f.type))
+          .map(f => ({ model: f.model, type: f.type, label: String(f.label || f.checkboxLabel || '').replace(/<[^>]*>/g, ''), ...(f.options ? { options: f.options.map((o: any) => ({ label: o.label, value: o.value })) } : {}) })),
+      setValue: (key, value) => SAFE_PATH.test(key) && this.setValueByModel(key, value),
+      setOptions: (model, options) => {
+        const next = { ...this.scriptOptions };
+        if (options) next[model] = options.filter(o => o && typeof o === 'object' && 'value' in o).map(o => ({ label: String(o.label ?? o.value), value: o.value }));
+        else delete next[model];
+        this.scriptOptions = next;
+      },
+      setVisible: (model, visible) => {
+        const next = { ...this.scriptVisible };
+        if (visible === null) delete next[model];
+        else next[model] = visible;
+        this.scriptVisible = next;
+      },
+      goToStep: id => this.goToStepId(id),
+      redirect: url => {
+        const safe = safeLinkUrl(url);
+        if (safe && /^https?:\/\//i.test(safe)) window.location.assign(safe);
+      },
+      alert: message => setTimeout(() => window.alert(message)),
+      setStyle: (model, styles) => {
+        const next = { ...this.scriptStyles };
+        const merged = { ...(styles ? next[model] : {}) };
+        Object.keys(styles || {}).forEach(name => {
+          if (styles[name] === null) delete merged[name];
+          else merged[name] = styles[name];
+        });
+        if (Object.keys(merged).length) next[model] = merged;
+        else delete next[model];
+        this.scriptStyles = next;
+      },
+    };
+    this.sandbox = new ScriptSandbox(code, host, this.el);
+  }
+
+  private stopScript() {
+    if (this.sandbox) this.sandbox.destroy();
+    this.sandbox = null;
+    this.scriptCode = '';
+  }
+
+  /**
+   * The wrapper's inline style: its stacking order, plus the colours from `form.style` as the field's own theme
+   * variables (the derived tints are declared again by `.rfg-script-styled`, so they follow).
+   */
+  private fieldStyle(field: FormField, zIndex: number): { [k: string]: string } {
+    const style: { [k: string]: string } = { zIndex: String(zIndex) };
+    const own = field.model && this.scriptStyles[field.model];
+    if (!own) return style;
+    if (own.background) style['--rfg-bg'] = own.background;
+    if (own.color) style['--rfg-text'] = own.color;
+    if (own.borderColor) {
+      style['--rfg-border-strong'] = own.borderColor;
+      style['--rfg-border'] = own.borderColor;
+    }
+    if (own.accentColor) style['--rfg-primary'] = own.accentColor;
+    if (own.labelColor) style['--rfg-label-color'] = own.labelColor;
+    if (own.highlight) style['--rfg-highlight'] = own.highlight;
+    return style;
+  }
+
+  private styledClass(field: FormField) {
+    const own = field.model && this.scriptStyles[field.model];
+    return own ? `rfg-script-styled ${own.highlight ? 'rfg-script-highlight' : ''}` : '';
+  }
+
+  /** A field as the form's code left it (other options). */
+  private withScript(field: FormField): FormField {
+    const options = field.model && this.scriptOptions[field.model];
+    return options ? { ...field, options } : field;
+  }
+
+  private navStep = '';
+
+  private customSheet: CSSStyleSheet | null = null;
+  private customCssText = '';
+  private customCssRoot: (Document | ShadowRoot) | null = null;
+
+  /**
+   * The form's own CSS (`theme.customCss`) has to win over the form's styles. Those are given to the page, or to the
+   * shadow root the form is shown in (the form builder), as constructable stylesheets, which always come after the
+   * `<style>` elements of the same tree: so a plain `<style>` could never beat them. The custom CSS is adopted the same
+   * way, and last, wherever it is supported; otherwise it falls back to a `<style>` inside the form.
+   */
+  private canAdoptCss(): boolean {
+    const root = this.el.getRootNode() as any;
+    return typeof CSSStyleSheet !== 'undefined' && 'replaceSync' in CSSStyleSheet.prototype && !!root && 'adoptedStyleSheets' in root;
+  }
+
+  private syncCustomCss() {
+    const css = this.getTheme().customCss || '';
+    if (!css || !this.canAdoptCss()) return this.removeCustomCss();
+    const root = this.el.getRootNode() as Document | ShadowRoot;
+    try {
+      if (!this.customSheet) this.customSheet = new CSSStyleSheet();
+      if (this.customCssText !== css) {
+        this.customSheet.replaceSync(css);
+        this.customCssText = css;
+      }
+      // a sheet that is adopted later wins: keep ours at the end, also when other forms or components adopt theirs
+      root.adoptedStyleSheets = [...Array.from(root.adoptedStyleSheets).filter(sheet => sheet !== this.customSheet), this.customSheet];
+      this.customCssRoot = root;
+    } catch (e) {
+      this.removeCustomCss();
+    }
+  }
+
+  private removeCustomCss() {
+    if (this.customSheet && this.customCssRoot) {
+      const root = this.customCssRoot;
+      root.adoptedStyleSheets = Array.from(root.adoptedStyleSheets).filter(sheet => sheet !== this.customSheet);
+    }
+    this.customCssRoot = null;
+    this.customCssText = '';
   }
 
   componentDidRender() {
-    // Render ReCaptcha
-    if (this.apiAction?.recaptchaSiteKey && !this.recaptchaRendered) {
+    this.syncCustomCss();
+    this.mountCaptchaIfNeeded();
+    this.keepCurrentStepInView();
+  }
+
+  /** On narrow screens the step list is a horizontal strip: keep the current step visible inside it (without scrolling the page). */
+  private keepCurrentStepInView() {
+    const current = this.el.querySelector('.rfg-step-item.is-current') as HTMLElement;
+    const strip = current && (current.closest('.rfg-steps') as HTMLElement);
+    if (!current || !strip) return;
+    const key = `${current.textContent}|${strip.clientWidth}`;
+    if (key === this.navStep) return;
+    this.navStep = key;
+    if (strip.scrollWidth > strip.clientWidth + 2) {
+      const item = current.parentElement as HTMLElement;
+      strip.scrollLeft = Math.max(0, item.offsetLeft - strip.clientWidth / 2 + item.offsetWidth / 2);
+    }
+  }
+
+  /* ----------------------------------------------------------------- captcha */
+
+  private captchaConf() {
+    return this.designMode ? null : captchaConfig(this.getSettings(), this.getAction());
+  }
+
+  /** The name the provider's token has in the answers (empty for providers without a token). */
+  private captchaField() {
+    const conf = this.captchaConf();
+    const info = conf && captchaProvider(conf.provider);
+    return info && info.token ? info.field : '';
+  }
+
+  private mountCaptchaIfNeeded() {
+    const conf = this.captchaConf();
+    if (!conf || !hasWidget(conf.provider) || this.captchaMounting) return;
+    const container = this.el.querySelector('.rfg-captcha') as HTMLElement;
+    if (!container) return;
+    // the widget lives in foreign DOM: if the page element was re-created, start over with the new one
+    if (this.captchaCtrl && container.childElementCount === 0) this.destroyCaptcha();
+    if (this.captchaCtrl) return;
+    const theme = conf.theme && conf.theme !== 'auto' ? conf.theme : getComputedStyle(this.el.querySelector('.rfg') || this.el).colorScheme === 'dark' ? 'dark' : 'light';
+    this.captchaMounting = true;
+    mountCaptcha(conf, container, { language: this.activeLanguage, theme, onToken: token => (this.captchaToken = token) })
+      .then(controller => (this.captchaCtrl = controller))
+      .catch(error => console.warn('[re-form-generator] captcha is not available', error))
+      .then(() => (this.captchaMounting = false));
+  }
+
+  private destroyCaptcha() {
+    if (this.captchaCtrl) {
       try {
-        (window as any).grecaptcha.render('recaptcha-wrapper', {
-          'sitekey': this.apiAction.recaptchaSiteKey
-        });
-        this.recaptchaRendered = true;
+        this.captchaCtrl.destroy();
       } catch (e) {
-        console.log(e);
+        /* the widget was already removed */
       }
     }
+    this.captchaCtrl = null;
+    this.captchaToken = '';
   }
 
-  setDataMapping() {
-    if (this.mapping) {
-      if (typeof this.mapping === 'string') {
-        this.dataMapping = JSON.parse(this.mapping);
-      } else {
-        this.dataMapping = this.mapping;
-      }
-    }
+  @Watch('schema')
+  onSchemaChange() {
+    this.status = 'idle';
+    this.validationErrors = {};
+    this.load(this.designMode);
+    this.startScript();
   }
 
-  setApiAction() {
-    if (this.action) {
-      if (typeof this.action === 'string') {
-        this.apiAction = JSON.parse(this.action);
-      } else {
-        this.apiAction = this.action;
-      }
-    }
+  @Watch('model')
+  onModelChange() {
+    this.values = { ...this.values, ...this.parseJson(this.model, {}) };
   }
 
-  setDefaultValues() {
-    const { fields } = this;
-    fields.map(({ defaultValue, model }) => {
-      this.values[model] = defaultValue;
-    });
+  @Watch('theme')
+  onThemeChange() {
+    this.ensureFont();
   }
 
-  buildModelSchema() {
-    if (this.schema) {
-      if (typeof this.schema === 'string') {
-        this.fields = JSON.parse(this.schema);
-      } else {
-        this.fields = this.schema;
-      }
-    }
-    if (this.model) {
-      if (typeof this.model === 'string') {
-        this.values = JSON.parse(this.model);
-      } else {
-        this.values = this.model;
-      }
-    }
-    this.buildValidationSchema(this.fields);
-    for (let index = 0; index < this.fields.length; index++) {
-      const field = this.fields[index];
-      if (field) {
-        this.fields[index].zIndex = (this.fields.length - index) + 1;
-      }
-    }
+  @Watch('allowScript')
+  onScriptMode() {
+    this.startScript();
   }
 
-  buildValidationSchema(fields) {
-    const repactchaValidation = this.apiAction?.recaptchaSiteKey ? true : false;
-    const validationRules = createYupSchema(fields, repactchaValidation);
-    this.validationSchema = yup.object().shape(validationRules);
-  }
-
-  validateForm(values) {
-    return this.validationSchema.validate(values, { abortEarly: false });
+  @Watch('language')
+  onLanguageProp() {
+    this.userLanguage = null;
+    this.applyLanguage(this.pickLanguage());
   }
 
   @Watch('validationErrors')
-  watchErrorsHandler(newValue: any) {
+  onErrors(newValue: any) {
     this.validationError.emit(newValue);
   }
 
-  sendToApi() {
-    let payload = {};
-    const fileInputs = [];
+  /* ---------------------------------------------------------------- loading */
 
-    if (this.dataMapping) {
-      Object.keys(this.dataMapping).map(key => {
-        const mappingKeys = this.dataMapping[key];
-        const field = this.fields.filter(field => field.model === key)[0];
-
-        if (field) {
-          if (field.inputType !== 'file') {
-            if (typeof this.values[key] === 'undefined') {
-              this.values[key] = null;
-            }
-            mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
-          } else {
-            if (this.values[key]) {
-              fileInputs.push({
-                key,
-                value: this.values[key]
-              });
-            }
-          }
-        } else {
-          mappingKeys.map(mappingKey => set(payload, mappingKey, this.values[key]));
-        }
-      });
-    } else {
-      Object.keys(this.values).map(key => {
-        if (!(this.values[key] instanceof FileList)) {
-          payload = { ...payload, [key]: this.values[key] }
-        } else {
-          if (this.values[key]) {
-            fileInputs.push({
-              key,
-              value: this.values[key]
-            });
-          }
-        }
-      })
-    }
-
-    let requestOptions: any = {
-      method: this.apiAction?.httpMethod || 'POST',
-      body: JSON.stringify(payload) as any
-    };
-
-    if (this.apiAction.bearerToken) {
-      const headers = {
-        'Authorization': `Bearer ${this.apiAction.bearerToken}`
-      };
-      requestOptions.headers = headers;
-    }
-
-    let shouldUseFormData = false;
-    if (this.apiAction.formData) {
-      shouldUseFormData = JSON.parse(this.apiAction.formData);
-    }
-
-    if (shouldUseFormData || fileInputs.length) {
-      const body = new FormData();
-
-      Object.keys(payload).map(key => {
-        let payloadKeyValue = payload[key];
-        if (typeof payloadKeyValue === 'object' || Array.isArray(payloadKeyValue)) {
-          payloadKeyValue = JSON.stringify(payloadKeyValue);
-        }
-        body.append(key, payloadKeyValue);
-      });
-
-      fileInputs.map(element => {
-        const files = element.value;
-        let formDataKey = element.key;
-        const field = this.fields.find(field => field.model === formDataKey);
-        if (field) {
-          const { attributes } = field;
-          if (attributes?.multiple) {
-            formDataKey += '[]';
-          }
-        }
-        Array.from(files).map((file: any) => {
-          body.append(formDataKey, file);
-        })
-      })
-
-      requestOptions.body = body;
-    } else {
-      (requestOptions as any).headers = {
-        'Content-Type': 'application/json'
-      };
-      if (this.apiAction.bearerToken) {
-        requestOptions.headers['Authorization'] = `Bearer ${this.apiAction.bearerToken}`;
+  private parseJson(value: any, fallback: any) {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return fallback;
       }
     }
-
-    return fetch(this.apiAction.endpoint, requestOptions)
-      .then(response => {
-        if (!response.ok) {
-          response.text().then(res => {
-            this.triggerWebhook({
-              type: "submit.failed",
-              payload,
-              actionEndpointResponse: res
-            })
-            this.showSuccessMessage = false;
-            this.showErrorMessage = true;
-          }
-          );
-          return;
-        }
-        response.json();
-      })
-      .then(data => {
-        this.showSuccessMessage = true;
-        return data;
-      })
-      .catch(error => {
-        this.showSuccessMessage = false;
-        this.showErrorMessage = true;
-        this.triggerWebhook({
-          type: "submit.failed",
-          payload,
-          actionEndpointResponse: null,
-          exception: error.toString()
-        })
-      });
+    return value || fallback;
   }
 
-  triggerWebhook({ type, payload, actionEndpointResponse, exception = null }) {
-    const webhookApi = this.apiAction.webhoookEndpoint;
+  private load(resetValues: boolean) {
+    try {
+      const { doc, legacy, notes } = loadDocument(this.schema, { action: this.action, mapping: this.mapping });
+      this.sourceDoc = doc;
+      this.doc = doc;
+      this.applyLanguage(this.pickLanguage(doc));
+      this.legacy = legacy;
+      this.migrationNotes = notes;
+      this.schemaError = null;
+    } catch (e) {
+      this.schemaError = e.message || String(e);
+      console.error('[re-form-generator] Invalid schema', e);
+      return;
+    }
+    const defaults = defaultValues(this.doc.fields);
+    const initial = this.parseJson(this.model, {});
+    const draft = resetValues ? this.readDraft() : null;
+    this.values = resetValues ? { ...defaults, ...(draft ? draft.values : {}), ...initial } : { ...defaults, ...this.values, ...initial };
+    if (resetValues) {
+      this.others = {};
+      this.searchItems = {};
+      this.collapsed = {};
+      this.modal = null;
+      this.openItems = {};
+      this.activeTabs = {};
+      this.itemMenu = '';
+      this.visited = {};
+      this.completion = {};
+      this.addMenu = '';
+      this.draftSavedAt = draft ? draft.at || 0 : 0;
+      const restored = draft && draft.step ? this.pagesFor(this.values).findIndex(page => (page as any).id === draft.step) : -1;
+      if (restored >= 0) this.currentStep = restored;
+    }
+    if (this.currentStep >= this.pagesFor(this.values).length) this.currentStep = 0;
+    this.markVisited();
+    // restored answers: the step list shows at once which steps are complete
+    if (this.getSettings().stepProgress) this.scheduleCompletion();
+    this.ensureFont();
+  }
 
-    if (webhookApi) {
-      fetch(webhookApi, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          event: {
-            type,
-            payload,
-            actionEndpointResponse,
-            exception
-          }
-        })
-      });
+  private getAction(): any {
+    const fromProp = this.parseJson(this.action, {});
+    return { ...(this.doc.action || {}), ...fromProp, ...(this.mapping && !fromProp.mapping ? { mapping: this.parseJson(this.mapping, null) } : {}) };
+  }
+
+  private getSettings() {
+    const defaults: { [key: string]: any } = {
+      ...DEFAULT_SETTINGS,
+      submitButtonText: this.tr('ui.submit'),
+      successMessage: this.tr('ui.success'),
+      errorMessage: this.tr('ui.error'),
+      formErrorMessage: this.tr('ui.formError'),
+    };
+    // blank texts (e.g. a cleared input in the builder) mean "use the default"
+    const own = this.doc.settings || {};
+    Object.keys(own).forEach(key => {
+      if (own[key] !== '' && own[key] !== undefined && own[key] !== null) defaults[key] = own[key];
+    });
+    return defaults;
+  }
+
+  /* --------------------------------------------------------------- language */
+
+  /** Forced prop > the visitor's choice > browser detection > default language. */
+  private pickLanguage(doc: FormDocument = this.sourceDoc): string {
+    const i18n = doc.i18n as I18nConfig | undefined;
+    if (this.language) return resolveLanguage(i18n, this.language);
+    if (this.userLanguage) {
+      const match = matchLanguage(this.userLanguage, availableLanguages(i18n));
+      if (match) return match;
+    }
+    return this.designMode ? availableLanguages(i18n)[0] : resolveLanguage(i18n);
+  }
+
+  /** Re-renders the form in `language` without touching the answers. */
+  private applyLanguage(language: string) {
+    const changed = language !== this.activeLanguage;
+    this.activeLanguage = language;
+    this.tr = createTranslator(language, this.sourceDoc.i18n as I18nConfig);
+    const localized = localizeDocument(this.sourceDoc, language);
+    const at = (localized.fields || []).findIndex(f => f.type === 'pageBreak' && f.config && f.config.ending);
+    this.endingFields = at >= 0 ? localized.fields.slice(at + 1) : [];
+    this.doc = at >= 0 ? { ...localized, fields: localized.fields.slice(0, at) } : localized;
+    if (changed && this.languageReady) {
+      this.languageChanged.emit({ language });
+      // error messages on screen should follow the language too
+      if (Object.keys(this.validationErrors).length) {
+        this.runValidation(this.visibleFields()).then(errors => (this.validationErrors = errors));
+      }
     }
   }
 
+  private languageReady = false;
+
+  private switcherMode(): 'none' | 'flags' | 'dropdown' {
+    const i18n = this.sourceDoc.i18n as I18nConfig | undefined;
+    if (this.designMode || this.language || !i18n || availableLanguages(i18n).length < 2) return 'none';
+    return i18n.switcher === 'flags' || i18n.switcher === 'dropdown' ? i18n.switcher : 'none';
+  }
+
+  private getTheme() {
+    return resolveTheme({ ...(this.doc.theme || {}), ...this.parseJson(this.theme, {}) });
+  }
+
+  private ensureFont() {
+    if (typeof document === 'undefined') return;
+    const theme = this.getTheme();
+    [theme.fontFamily, theme.headingFont].forEach(font => {
+      const url = googleFontUrl(font);
+      if (!url || document.head.querySelector(`link[href="${url}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = url;
+      // a font without the 500 / 600 / 700 weights is refused by Google: ask again for the regular weight
+      link.onerror = () => {
+        const plain = googleFontUrl(font, true);
+        if (plain && !document.head.querySelector(`link[href="${plain}"]`)) {
+          const again = document.createElement('link');
+          again.rel = 'stylesheet';
+          again.href = plain;
+          document.head.appendChild(again);
+        }
+      };
+      document.head.appendChild(link);
+    });
+  }
+
+  /* ------------------------------------------------------------- derived data */
+
+  private statesCache: { values: any; doc: FormDocument; ending: FormField[]; design: boolean; modal: ModalState | null; script: { [model: string]: boolean }; value: FieldStates } = null;
+
+  /** Logic result (shown / disabled / required, by field id) for the current answers. Cached until they change. */
+  private states(values = this.values): FieldStates {
+    const cache = this.statesCache;
+    if (cache && cache.values === values && cache.doc === this.doc && cache.ending === this.endingFields && cache.design === this.designMode && cache.modal === this.modal && cache.script === this.scriptVisible) return cache.value;
+    let value: FieldStates;
+    if (this.designMode) {
+      // the builder shows every block and ignores logic
+      const all: { [id: string]: boolean } = {};
+      flattenFields(this.doc.fields, false, true).forEach(f => (all[f.id] = true));
+      value = { visible: all, disabled: {}, required: {} };
+    } else {
+      value = computeStates(this.doc.fields, values);
+      // the fields of an open dialog have their own scope: the dialog's answers (plus the form's)
+      if (this.modal) evaluateStates(draftFields(this.modal.fields), values, { ...values, ...draftObject(values) }, value);
+      // fields the form's code hid or showed
+      const forced = Object.keys(this.scriptVisible);
+      if (forced.length) {
+        value = { ...value, visible: { ...value.visible } };
+        flattenFields(this.doc.fields, true, true).forEach(f => {
+          if (f.model && forced.includes(f.model)) value.visible[f.id] = this.scriptVisible[f.model];
+        });
+      }
+    }
+    // the blocks of the thank-you page have no logic: always shown
+    if (this.endingFields.length) {
+      value = { ...value, visible: { ...value.visible } };
+      flattenFields(this.endingFields, false, true).forEach(f => (value.visible[f.id] = true));
+    }
+    this.statesCache = { values, doc: this.doc, ending: this.endingFields, design: this.designMode, modal: this.modal, script: this.scriptVisible, value };
+    return value;
+  }
+
+  private visibility(values = this.values) {
+    return this.states(values).visible;
+  }
+
+  private visibleFields(values = this.values) {
+    const vis = this.visibility(values);
+    return flattenFields(this.doc.fields, true).filter(f => vis[f.id]);
+  }
+
+  /** The value of a field by model; fields inside a repeater live at paths like `guests[0].email`. */
+  private answerOf(model: string) {
+    return getByPath(this.values, model);
+  }
+
+  /** Every field instance rendered so far, by model. Child components report values by model; this finds the field again. */
+  private registry: { [model: string]: FormField } = {};
+
+  private fieldByModel(model: string): FormField | undefined {
+    return this.registry[model] || flattenFields(this.doc.fields, true, true).find(f => f.model === model);
+  }
+
+  /**
+   * Splits the fields into steps at every `pageBreak`. Hidden fields stay in their page (so they keep their
+   * state), but pages without any visible field are skipped, and so are steps whose page break is hidden by logic.
+   */
+  private pagesFor(values: { [key: string]: any }): Array<FormField[] & StepPage> {
+    type Page = FormField[] & StepPage;
+    const vis = this.visibility(values);
+    const settings = this.doc.settings || {};
+    const newPage = (id: string, title?: string, description?: string, config: any = {}): Page =>
+      Object.assign([] as FormField[], { id, title, description, image: config.image, alt: config.alt, nextLabel: config.nextLabel, hideBack: !!config.hideBack, hiddenStep: false });
+    const pages: Page[] = [newPage('start', settings.firstStepTitle, settings.firstStepDescription, { image: settings.firstStepImage, alt: settings.firstStepImageAlt })];
+    this.doc.fields.forEach(field => {
+      if (field.type === 'pageBreak') {
+        // a page break's label is the title of the step that starts after it (its settings are that step's settings)
+        const last = pages[pages.length - 1];
+        const page = last.length ? newPage(field.id, field.label, field.helpText, field.config || {}) : Object.assign(last, newPage(field.id, field.label || last.title, field.helpText || last.description, field.config || {}));
+        if (page !== pages[pages.length - 1]) pages.push(page);
+        (page as any).hiddenStep = !vis[field.id];
+      } else {
+        pages[pages.length - 1].push(field);
+      }
+    });
+    // a page counts when it has at least one visible field (rows and sections are visible when any of their fields is)
+    const shown = (f: FormField): boolean => (f.type === 'columns' || f.type === 'section' || f.type === 'tabs' ? flattenFields([f], true).some(c => vis[c.id]) && vis[f.id] : vis[f.id]);
+    return pages.filter(page => !(page as any).hiddenStep && page.some(shown));
+  }
+
+  private inputFields(fields: FormField[]) {
+    return flattenFields(fields, true).filter(f => !isLayoutType(f.type) && f.model);
+  }
+
+  /* ------------------------------------------------------------ public API */
+
   @Method()
-  async updateValue(key, value) {
-    this.values = { ...this.values, [key]: value };
+  async updateValue(key: string, value: any) {
+    this.values = setByPath(this.values, key, value);
+  }
+
+  /** Goes to a step by its id (a page break's id, or `start` for the first step). Resolves to false if it could not. */
+  @Method()
+  async goToStep(stepId: string, validate = false) {
+    return this.goToStepId(stepId, validate);
+  }
+
+  /** Switches the form to `language` (must be one of the document's languages, or a built-in one). */
+  @Method()
+  async setLanguage(language: string) {
+    this.userLanguage = language;
+    this.applyLanguage(this.pickLanguage());
   }
 
   @Method()
-  async submit() {
-    if (this.apiAction?.recaptchaSiteKey) {
-      const recaptchaResponse = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
-      this.values['g-recaptcha-response'] = recaptchaResponse;
-    }
-    return await this.validateForm(this.values)
-      .then(async () => {
-        this.resetValidationErrors();
-        if (Object.keys(this.apiAction).length) {
-          const submitResult = {
-            error: null,
-            response: null
-          };
-          try {
-            submitResult.response = await this.sendToApi();
-          } catch (err) {
-            submitResult.error = err;
-            this.triggerWebhook({
-              type: "submit.failed",
-              payload: this.values,
-              actionEndpointResponse: 'null',
-              exception: err.toString()
-            });
-          }
-          return this.submitted.emit(submitResult);
-        }
-        return this.submitted.emit(this.values);
-      }).catch(err => {
-        this.setValidationErrors(err);
-      });
+  async getLanguage() {
+    return this.activeLanguage;
+  }
+
+  @Method()
+  async getValues() {
+    return this.buildPayload().payload;
+  }
+
+  @Method()
+  async reset() {
+    this.clearDraft();
+    this.destroyCaptcha();
+    this.status = 'idle';
+    this.validationErrors = {};
+    this.currentStep = 0;
+    this.liveValidate = false;
+    this.load(true);
   }
 
   @Method()
   async validate() {
-    return this.validateForm(this.values)
-      .then(() => {
-        return [];
-      })
-      .catch(err => {
-        this.setValidationErrors(err);
-        return getValidationErrors(err);
-      });
+    const errors = await this.runValidation(this.visibleFields());
+    this.validationErrors = errors;
+    return errors;
   }
 
-  @Listen('multiSelectValueChanged')
-  handleMultiselect(event: any) {
-    try {
-      const modelKey = Object.keys(event.detail)[0];
-      const value = event.detail[modelKey];
-      this.values = { ...this.values, [modelKey]: value };
-      this.valueChanged.emit({
-        [modelKey]: value
-      });
-    } catch (e) {
-      console.log('multiSelectValueChanged error', e, event.detail);
-    }
-  }
-
-  @Listen('selectedCountryChanged')
-  handleCountrySelectChange(event: any) {
-    try {
-      const modelKey = Object.keys(event.detail)[0];
-      const value = event.detail[modelKey];
-      const field = this.fields.find(field => field.model === modelKey);
-      let modelValueKey = 'code';
-      if (field.modelValueKey) {
-        modelValueKey = field.modelValueKey;
+  @Method()
+  async submit() {
+    if (this.designMode || this.status === 'submitting') return;
+    const action = this.getAction();
+    const fields = this.visibleFields();
+    const captcha = this.captchaConf();
+    const captchaField = this.captchaField();
+    if (captcha && captcha.provider === 'honeypot') {
+      const trap = this.el.querySelector('.rfg-hp input') as HTMLInputElement;
+      if (trap && trap.value) {
+        // a bot filled in the hidden field: pretend it worked and send nothing
+        this.status = 'success';
+        return { values: {}, response: null, error: null, blocked: true };
       }
-      this.values = { ...this.values, [modelKey]: value[modelValueKey] };
-      this.valueChanged.emit({
-        [modelKey]: value[modelValueKey]
-      });
-    } catch (e) {
-      console.log('selectedCountryChanged error', e, event.detail);
+    } else if (captchaField) {
+      // Turnstile solves itself in the background: give it a moment if the visitor was quicker
+      if (captcha.provider === 'turnstile' && !this.captchaToken && this.captchaCtrl) {
+        const started = Date.now();
+        while (!this.captchaToken && Date.now() - started < 6000) await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      const token = captcha.provider === 'recaptcha3' && this.captchaCtrl ? await this.captchaCtrl.token() : this.captchaToken;
+      this.values = { ...this.values, [captchaField]: token || '' };
     }
+    const errors = await this.runValidation(fields, captchaField || false);
+    this.liveValidate = true;
+    this.validationErrors = errors;
+    if (Object.keys(errors).length) {
+      this.goToFirstError(errors);
+      return { errors };
+    }
+    const { payload, files } = this.buildPayload();
+    // the form's code has the last word (e.g. a check against another system)
+    if (this.sandbox) {
+      const verdict = await this.sandbox.ask('beforeSubmit', { values: payload });
+      if (verdict.block) {
+        this.scriptError = verdict.message || this.getSettings().formErrorMessage;
+        return { blocked: true, message: this.scriptError };
+      }
+    }
+    this.scriptError = '';
+    this.handleSubmit.emit(payload);
+    let result: any = { values: payload, response: null, error: null };
+    if (this.submitter || action.endpoint) {
+      this.status = 'submitting';
+      const outcome = this.submitter ? await this.runSubmitter(payload, files) : await this.sendToApi(action, payload, files);
+      result = { ...result, ...outcome };
+      if (outcome.error) {
+        this.status = 'error';
+        if (this.captchaCtrl) this.captchaCtrl.reset(); // a token can only be used once
+        this.submitted.emit(result);
+        return result;
+      }
+    }
+    this.status = 'success';
+    this.clearDraft();
+    this.destroyCaptcha();
+    this.submitted.emit(result);
+    if (this.sandbox) this.sandbox.emit('submitted', { values: result.values });
+    this.redirectAfterSubmit();
+    return result;
   }
 
-  @Listen('selectedFileChanged')
-  handleFileSelectChange(event: any) {
+  /** What happens after a successful send: `settings.afterSubmit` ("message", "page" or "redirect"); old forms: a redirect URL means "redirect". */
+  private afterSubmit(): 'message' | 'page' | 'redirect' {
+    const settings = this.getSettings();
+    const chosen = settings.afterSubmit;
+    if (chosen === 'redirect' || (!chosen && settings.redirectUrl)) return safeLinkUrl(settings.redirectUrl) ? 'redirect' : 'message';
+    if (chosen === 'page' || (!chosen && this.endingFields.length)) return this.endingFields.length ? 'page' : 'message';
+    return 'message';
+  }
+
+  /**
+   * Goes to `settings.redirectUrl`. Embedded in another site (an iframe), `settings.redirectTarget: "top"` (default)
+   * moves the whole page and `"self"` only the frame. Browsers may refuse to move the outer page from a frame: then the
+   * thank-you screen shows a button that does it (a click is always allowed).
+   */
+  private redirectAfterSubmit() {
+    if (this.designMode || typeof window === 'undefined' || this.afterSubmit() !== 'redirect') return;
+    const settings = this.getSettings();
+    const url = safeLinkUrl(settings.redirectUrl) as string;
+    let framed = false;
     try {
-      const modelKey = Object.keys(event.detail)[0];
-      const value = event.detail[modelKey];
-      this.values = { ...this.values, [modelKey]: value };
-      this.valueChanged.emit({
-        [modelKey]: value
-      });
+      framed = window.top !== window.self;
     } catch (e) {
-      console.log('selectedFileChanged error', e, event.detail);
+      framed = true;
     }
+    if (framed && settings.redirectTarget !== 'self') {
+      this.pendingRedirect = url; // the button stays as a fallback; when the page moves, nobody sees it
+      try {
+        window.top!.location.href = url;
+      } catch (e) {
+        /* blocked: the button does it */
+      }
+      return;
+    }
+    window.location.href = url;
   }
 
-  resetValidationErrors() {
-    this.validationErrors = {};
+  /* ---------------------------------------------------------- validation */
+
+  /** A field with the "required" rule added when logic made it required. */
+  private prepareField(field: FormField, states: FieldStates): FormField {
+    if (states.required[field.id] && !(field.validations || []).some(v => v.name === 'required')) {
+      return { ...field, validations: [{ name: 'required', params: [] }, ...(field.validations || [])] };
+    }
+    return field;
   }
 
-  setValidationErrors(err) {
-    this.validationErrors = getValidationErrors(err);
+  /** Fields switched off by a rule are not editable, so they cannot be asked to be valid. */
+  private checkable(field: FormField, states: FieldStates) {
+    return states.visible[field.id] && !(states.disabled[field.id] && !field.disabled);
   }
 
-  handleSubmitHandler(values) {
-    this.validateForm(values)
-      .then(() => {
-        this.resetValidationErrors();
-        this.handleSubmit.emit(values);
-      }).catch(err => {
-        this.setValidationErrors(err);
+  private async runValidation(fields: FormField[], captchaField: string | false = false) {
+    const states = this.states();
+    const leaves = flattenFields(fields, true).filter(f => this.checkable(f, states));
+    const inputs = this.inputFields(leaves).filter(f => f.type !== 'repeater').map(f => this.prepareField(f, states));
+    const validator = yup.object().shape(createYupSchema(inputs, captchaField, flattenFields(this.doc.fields, true), this.tr));
+    let errors: { [key: string]: string[] } = {};
+    try {
+      await validator.validate(this.values, { abortEarly: false });
+    } catch (err) {
+      errors = getValidationErrors(err);
+    }
+    for (const repeater of leaves.filter(f => f.type === 'repeater')) {
+      errors = { ...errors, ...(await this.validateRepeater(repeater, states)) };
+    }
+    return errors;
+  }
+
+  /** Validates the items of a repeater one by one; errors are keyed by the path of the field (`guests[0].email`). */
+  private async validateRepeater(repeater: FormField, states: FieldStates) {
+    let errors: { [key: string]: string[] } = {};
+    const config = repeater.config || {};
+    const items = itemInstances(repeater, this.values);
+    const label = String(repeater.label || repeater.model || '').replace(/<[^>]*>/g, '');
+    const min = Number(config.minItems) || 0;
+    const max = Number(config.maxItems) || 0;
+    if (min && items.length < min) errors[repeater.model] = [this.tr('validation.minItems', { label, 0: min })];
+    else if (max && items.length > max) errors[repeater.model] = [this.tr('validation.maxItems', { label, 0: max })];
+    for (const item of items) {
+      errors = { ...errors, ...(await this.validateScope(item.fields, getByPath(this.values, item.model) || {}, states)) };
+    }
+    return errors;
+  }
+
+  /**
+   * Validates a set of instantiated fields against `scopeValues` (an item's answers, or a dialog's). Rules use the fields'
+   * relative keys; the errors come back keyed by the full path of each field (`guests[0].email`).
+   */
+  private async validateScope(instances: FormField[], scopeValues: { [key: string]: any }, states: FieldStates) {
+    let errors: { [key: string]: string[] } = {};
+    const leaves = flattenFields(instances, true).filter(f => this.checkable(f, states));
+    const plain = this.inputFields(leaves)
+      .filter(f => f.type !== 'repeater')
+      .map(f => ({ ...this.prepareField(f, states), model: f._key as string }));
+    try {
+      await yup.object().shape(createYupSchema(plain, false, plain, this.tr)).validate(scopeValues, { abortEarly: false });
+    } catch (err) {
+      const found = getValidationErrors(err);
+      Object.keys(found).forEach(key => {
+        const instance = leaves.find(f => f._key === key);
+        if (instance) errors[instance.model] = found[key];
       });
+    }
+    for (const nested of leaves.filter(f => f.type === 'repeater')) {
+      errors = { ...errors, ...(await this.validateRepeater(nested, states)) };
+    }
+    return errors;
   }
 
-  fieldHasErrors({ model }) {
-    return this.validationErrors[model] ? true : false;
+  private async revalidateField(field: FormField) {
+    if (!this.liveValidate || !field.model) return;
+    // Validate with the whole form so rules that reference other fields see their (cast) values,
+    // then only take the result for this field (and the fields that compare against it).
+    const dependents = flattenFields(this.doc.fields, true).filter(f => (f.validations || []).some(r => Array.isArray(r.params) && r.params[0] === field.model && /Field$|^sameAs$|^notSameAs$/.test(r.name)));
+    const scope = [field, ...dependents];
+    const all = await this.runValidation(this.visibleFields());
+    const next = { ...this.validationErrors };
+    scope.forEach(f => {
+      if (!f.model) return;
+      if (all[f.model]) next[f.model] = all[f.model];
+      else delete next[f.model];
+    });
+    this.validationErrors = next;
   }
 
-  fieldErrorMessage({ model }, position = 0) {
-    return this.validationErrors[model][position];
+  /** The top level answer keys behind a list of error keys ("guests[0].email" -> "guests"). */
+  private rootsOf(keys: string[]) {
+    return new Set(keys.map(k => k.split('[')[0]));
   }
 
-  public buildProps(field) {
-    const {
-      inputType,
-      id,
-      disabled,
-      readonly,
-      inputName,
-      visible,
-      required,
-      placeholder,
-      selectedWord,
-      defaultOptions,
-      modelValueKey,
-      inputDisplayKey,
-      showDialCode,
-      textTitle,
-      subTitle
-    } = field;
-    return {
-      type: inputType,
-      name: inputName,
-      id, disabled,
-      readonly,
-      hidden: !visible,
-      required,
-      placeholder,
-      selectedWord,
-      defaultOptions,
-      modelValueKey,
-      inputDisplayKey,
-      showDialCode,
-      textTitle,
-      subTitle
+  /** "Show the first one": the first error of the step the visitor is on, else the first error anywhere. */
+  private showFirstError() {
+    const page = (this.pagesFor(this.values)[this.currentStep] || []) as FormField[];
+    const roots = new Set(flattenFields(page, true).map(f => f.model).filter(Boolean) as string[]);
+    const here: { [key: string]: string[] } = {};
+    Object.keys(this.validationErrors).forEach(key => {
+      if (roots.has(key.split('[')[0])) here[key] = this.validationErrors[key];
+    });
+    this.goToFirstError(Object.keys(here).length ? here : this.validationErrors);
+  }
+
+  /** Opens the collapsed items / sections that contain an error, so the error is not hidden inside something folded. */
+  private revealErrors(errors: { [key: string]: string[] }) {
+    const keys = Object.keys(errors);
+    const next = { ...this.collapsed };
+    keys.forEach(key => {
+      // "rooms[0].units[1].defect" -> the items "rooms[0]" and "rooms[0].units[1]"
+      const re = /\[\d+\]/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(key))) next[key.slice(0, m.index + m[0].length)] = false;
+    });
+    const roots = this.rootsOf(keys);
+    flattenFields(this.doc.fields, false)
+      .filter(f => f.type === 'section')
+      .forEach(section => {
+        if (flattenFields([section], true).some(f => f.model && roots.has(f.model))) next[section.id] = false;
+      });
+    this.collapsed = next;
+    // tabs: show the one that has an error
+    const tabs = { ...this.activeTabs };
+    Object.keys(this.tabsRegistry).forEach(id => {
+      const bad = (this.tabsRegistry[id].tabs || []).find(t => this.hasErrorIn(t.fields));
+      if (bad) tabs[id] = bad.id;
+    });
+    this.activeTabs = tabs;
+    // an item that opens as a page: open the first one with an error
+    const first = keys.map(k => k.match(/^([^[]+)\[(\d+)\]/)).find(Boolean);
+    const repeater = first && this.fieldByModel(first[1]);
+    if (first && repeater && this.isCompact(repeater) && this.openMode(repeater) === 'page') this.openItems = { ...this.openItems, [first[1]]: Number(first[2]) };
+  }
+
+  private goToFirstError(errors: { [key: string]: string[] }) {
+    const pages = this.pagesFor(this.values);
+    const roots = this.rootsOf(Object.keys(errors));
+    const pageIndex = pages.findIndex(page => flattenFields(page, true).some(f => f.model && roots.has(f.model)));
+    if (pageIndex >= 0) this.setStep(pageIndex, false);
+    this.revealErrors(errors);
+    // wait for the page switch and the opened items to render, then bring the first error of the step on screen
+    const show = () => {
+      const page = this.el.querySelector('.rfg-page:not(.rfg-hidden)');
+      const target = page && (page.querySelector('.rfg-has-error') as HTMLElement);
+      if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
+    requestAnimationFrame(() => requestAnimationFrame(show));
   }
 
-  public handleInputChange(e, field) {
-    const { model, validationType = 'string', type } = field;
-    const { target: { value } } = e;
-    let modelValue = value;
-    switch (validationType) {
-      case 'number':
-        modelValue = Number(value)
-        break;
-      case 'boolean':
-        modelValue = Boolean(value)
-        break;
-      case 'object':
-        modelValue = JSON.parse(value)
-        break;
-      default:
-        break;
+  /** Shows step `index` (the visitor's position), remembers it was visited, and tells the host. */
+  /** 1 when the visitor went forward, -1 back (the slide transition comes from that side). */
+  private stepDirection = 1;
+
+  private setStep(index: number, scroll = true) {
+    const pages = this.pagesFor(this.values);
+    const next = Math.max(0, Math.min(index, pages.length - 1));
+    const changed = next !== this.currentStep;
+    if (changed) this.stepDirection = next > this.currentStep ? 1 : -1;
+    this.currentStep = next;
+    if (changed) {
+      // an item opened as a page, an open menu or dialog belong to the step that was left
+      this.openItems = {};
+      this.itemMenu = '';
+      if (this.modal) this.closeModal();
     }
-    switch (type) {
-      case 'checkboxGroup':
-        modelValue = this.handleCheckboxGroupChange(modelValue, model, value);
-        break;
-      case 'toggle':
-        modelValue = this.handleToggleChange(model, e);
-        break;
-      default:
-        break;
+    this.markVisited();
+    if (changed) {
+      const page = pages[next] as any;
+      this.stepChanged.emit({ index: next, id: page.id, title: page.title || '' });
+      if (this.sandbox) this.sandbox.emit('step', { index: next, id: page.id, title: page.title || '' });
+      this.saveDraftSoon();
     }
-    this.values = { ...this.values, [model]: modelValue };
-    this.valueChanged.emit({
-      [model]: modelValue
+    this.scheduleCompletion();
+    if (scroll) this.scrollToTop();
+  }
+
+  private markVisited() {
+    const page = this.pagesFor(this.values)[this.currentStep] as any;
+    if (page && !this.visited[page.id]) this.visited = { ...this.visited, [page.id]: true };
+  }
+
+  /** Validates the step the visitor is on. Shows its errors and resolves to true when it is fine. */
+  private async validateCurrentStep(): Promise<boolean> {
+    const pages = this.pagesFor(this.values);
+    const page = pages[this.currentStep] || [];
+    const errors = await this.runValidation(page);
+    this.liveValidate = true;
+    // replace the errors of this step, keep the ones of other steps
+    const own = this.rootsOf(Object.keys(errors).concat(flattenFields(page, true).map(f => f.model).filter(Boolean) as string[]));
+    const kept: { [key: string]: string[] } = {};
+    Object.keys(this.validationErrors).forEach(key => {
+      if (!own.has(key.split('[')[0])) kept[key] = this.validationErrors[key];
+    });
+    this.validationErrors = { ...kept, ...errors };
+    if (Object.keys(errors).length) {
+      this.goToFirstError(errors);
+      return false;
+    }
+    return true;
+  }
+
+  private async nextStep(): Promise<boolean> {
+    if (!(await this.validateCurrentStep())) return false;
+    this.setStep(this.currentStep + 1);
+    return true;
+  }
+
+  private prevStep() {
+    this.setStep(this.currentStep - 1);
+  }
+
+  private async goToStepId(stepId: string, validate = false): Promise<boolean> {
+    const pages = this.pagesFor(this.values);
+    const index = pages.findIndex(page => (page as any).id === stepId);
+    if (index < 0) return false;
+    if (validate && index > this.currentStep && !(await this.validateCurrentStep())) return false;
+    this.setStep(index);
+    return true;
+  }
+
+  /**
+   * A step picked in the step list. Back is always fine. Forward works like Next: the step the visitor is on is checked
+   * first, and a step in between that is not complete stops the jump there (with its errors shown). Only "any order"
+   * (`stepNavigation: free`) lets people move around freely; the answers are then checked when they send.
+   */
+  private async openStep(index: number) {
+    const pages = this.pagesFor(this.values);
+    if (index <= this.currentStep || (this.getSettings().stepNavigation || 'visited') === 'free') {
+      this.setStep(index);
+      return;
+    }
+    if (!(await this.validateCurrentStep())) return;
+    for (let i = this.currentStep + 1; i < index; i++) {
+      const errors = await this.runValidation(pages[i]);
+      if (Object.keys(errors).length) {
+        this.setStep(i);
+        this.liveValidate = true;
+        this.validationErrors = { ...this.validationErrors, ...errors };
+        this.goToFirstError(errors);
+        return;
+      }
+    }
+    this.setStep(index);
+  }
+
+  /** Can the visitor click this step in the step list? (`settings.stepNavigation`: free | visited (default) | locked.) */
+  private canOpenStep(index: number, pages: any[]) {
+    const mode = this.getSettings().stepNavigation || 'visited';
+    if (index === this.currentStep) return true;
+    if (mode === 'free') return true;
+    if (mode === 'locked') return index < this.currentStep;
+    return index < this.currentStep || !!this.visited[pages[index].id];
+  }
+
+  /** Marks which visited steps are filled in correctly (shown as a tick in the step list). */
+  private completionTimer: any = null;
+  private scheduleCompletion() {
+    // every step style shows which steps are complete (a tick only when their answers are valid)
+    if (this.designMode || this.pagesFor(this.values).length < 2) return;
+    clearTimeout(this.completionTimer);
+    this.completionTimer = setTimeout(() => this.refreshCompletion(), 350);
+  }
+
+  private async refreshCompletion() {
+    const pages = this.pagesFor(this.values) as any[];
+    const next: { [id: string]: boolean } = {};
+    // with progress rings every step is checked: a step answered in full (e.g. from a restored draft) turns green too
+    const settings = this.getSettings();
+    const everyStep = settings.stepsLayout === 'sidebar' && !!settings.stepProgress;
+    for (const page of pages) {
+      if (!this.visited[page.id] && !everyStep) continue;
+      next[page.id] = Object.keys(await this.runValidation(page)).length === 0;
+    }
+    const same = Object.keys(next).length === Object.keys(this.completion).length && Object.keys(next).every(k => next[k] === this.completion[k]);
+    if (!same) this.completion = next;
+  }
+
+  /* ------------------------------------------------------------------ draft */
+
+  private draftKey(): string | null {
+    const settings = this.getSettings();
+    if (this.designMode || !settings.saveDraft) return null;
+    return `rfg-draft:${settings.draftKey || this.formId || this.sourceDoc.title || 'form'}`;
+  }
+
+  private readDraft(): { values: any; step?: string; at?: number } | null {
+    const key = this.draftKey();
+    if (!key || typeof localStorage === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private draftTimer: any = null;
+  private saveDraftSoon() {
+    if (!this.draftKey()) return;
+    clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => this.saveDraft(), 600);
+  }
+
+  /** Stores the answers in this browser so the visitor can come back later (files are not kept). */
+  private saveDraft() {
+    const key = this.draftKey();
+    if (!key || typeof localStorage === 'undefined') return;
+    const page = this.pagesFor(this.values)[this.currentStep] as any;
+    const at = Date.now();
+    try {
+      localStorage.setItem(key, JSON.stringify({ values: withDraft(this.values, {}), step: page && page.id, at }, (_k, v) => (typeof FileList !== 'undefined' && v instanceof FileList ? undefined : v)));
+      this.draftSavedAt = at;
+      this.draftSaved.emit({ values: this.values });
+    } catch (e) {
+      /* storage is full or blocked: the form still works */
+    }
+  }
+
+  private clearDraft() {
+    const key = this.draftKey();
+    clearTimeout(this.draftTimer);
+    if (key && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        /* nothing to clear */
+      }
+    }
+  }
+
+  private exitForm() {
+    this.saveDraft();
+    const values = this.buildPayload().payload;
+    this.exit.emit({ values });
+    const url = this.safeUrl(this.getSettings().exitUrl);
+    if (url && typeof window !== 'undefined') window.location.href = url;
+  }
+
+  /** Only web, mail and phone links (and relative ones) can be opened from a form. */
+  private safeUrl(url: any): string {
+    const value = String(url || '').trim();
+    return /^(https?:|mailto:|tel:|\/|#|\.)/i.test(value) || (value && !/^[a-z][a-z0-9+.-]*:/i.test(value)) ? value : '';
+  }
+
+  private scrollToTop() {
+    if (this.framed() && !this.designMode) {
+      // the frame is as tall as the form: the page around it scrolls (the embed snippet does it)
+      window.parent.postMessage({ type: 'rfg:scroll', formId: this.formId || null }, '*');
+      return;
+    }
+    requestAnimationFrame(() => this.el.scrollIntoView && this.el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+
+  /* ------------------------------------------------------------ submitting */
+
+  private buildPayload() {
+    const action = this.getAction();
+    const fields = this.inputFields(this.visibleFields());
+    const files: { key: string; value: FileList; multiple: boolean }[] = [];
+    let payload: { [key: string]: any } = {};
+    const mapping = action.mapping;
+
+    const states = this.states();
+    fields.forEach(field => {
+      const key = field.model;
+      const value = this.values[key];
+      if (field.type === 'file') {
+        if (value && value.length) files.push({ key, value, multiple: !!(field.attributes && field.attributes.multiple) });
+        return;
+      }
+      const normalized = field.type === 'repeater' ? this.itemsPayload(field, files, states) : value === undefined ? null : value;
+      if (mapping && mapping[key]) {
+        mapping[key].forEach((path: string) => set(payload, path, normalized));
+      } else if (!mapping) {
+        payload[key] = normalized;
+      }
+    });
+    if (mapping) {
+      // Mapping entries that do not reference a field are copied as constants (v1 behaviour).
+      Object.keys(mapping).forEach(key => {
+        if (!fields.find(f => f.model === key) && this.values[key] !== undefined) {
+          mapping[key].forEach((path: string) => set(payload, path, this.values[key]));
+        }
+      });
+    }
+    const captchaField = this.captchaField();
+    if (captchaField && this.values[captchaField]) payload = { ...payload, [captchaField]: this.values[captchaField] };
+    return { payload, files };
+  }
+
+  /** The answers of a repeater as a list of plain objects (hidden fields left out; uploads go with the files). */
+  private itemsPayload(repeater: FormField, files: { key: string; value: FileList; multiple: boolean }[], states: FieldStates): any[] {
+    return itemInstances(repeater, this.values).map(item => {
+      const out: { [key: string]: any } = {};
+      flattenFields(item.fields, true)
+        .filter(f => states.visible[f.id] && !isLayoutType(f.type) && f.model)
+        .forEach(f => {
+          const key = f._key as string;
+          const value = this.answerOf(f.model);
+          if (f.type === 'repeater') out[key] = this.itemsPayload(f, files, states);
+          else if (f.type === 'file') {
+            if (value && value.length) files.push({ key: f.model, value, multiple: !!(f.attributes && f.attributes.multiple) });
+          } else out[key] = value === undefined ? null : value;
+        });
+      return out;
     });
   }
 
-  public handleToggleChange(model, e) {
-    const modelValue = e.target.checked;
-    this.values[model] = modelValue;
-    return modelValue;
+  private async runSubmitter(payload: any, files: { key: string; value: FileList; multiple: boolean }[]) {
+    try {
+      const response = await this.submitter!({ values: payload, files });
+      return { response: response === undefined ? null : response, error: null };
+    } catch (e) {
+      return { response: null, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 
-  public handleCheckboxGroupChange(modelValue, model, value) {
-    if (this.values[model]) {
-      if (this.values[model].includes(value)) {
-        modelValue = this.values[model].filter(element => element !== modelValue);
-      } else {
-        modelValue = [...this.values[model], modelValue];
-      }
+  private async sendToApi(action: any, payload: any, files: { key: string; value: FileList; multiple: boolean }[]) {
+    const headers: { [key: string]: string } = { ...(action.headers || {}) };
+    if (action.bearerToken) headers['Authorization'] = `Bearer ${action.bearerToken}`;
+    const useFormData = String(action.formData) === 'true' || files.length > 0;
+    let body: any;
+    if (useFormData) {
+      body = new FormData();
+      Object.keys(payload).forEach(key => {
+        const value = payload[key];
+        body.append(key, value !== null && typeof value === 'object' ? JSON.stringify(value) : value === null ? '' : value);
+      });
+      files.forEach(({ key, value, multiple }) => {
+        Array.from(value).forEach(file => body.append(multiple ? `${key}[]` : key, file));
+      });
     } else {
-      modelValue = [modelValue];
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(payload);
     }
-    return modelValue;
+    try {
+      const response = await fetch(action.endpoint, { method: action.httpMethod || 'POST', headers, body });
+      const text = await response.text();
+      let data: any = text;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        /* not json */
+      }
+      if (!response.ok) {
+        this.triggerWebhook(action, { type: 'submit.failed', payload, actionEndpointResponse: text });
+        return { response: data, error: `HTTP ${response.status}` };
+      }
+      this.triggerWebhook(action, { type: 'submit.succeeded', payload, actionEndpointResponse: text });
+      return { response: data, error: null };
+    } catch (e) {
+      this.triggerWebhook(action, { type: 'submit.failed', payload, actionEndpointResponse: null, exception: String(e) });
+      return { response: null, error: String(e) };
+    }
   }
 
-  public renderField(field) {
-    const { inputType, type, inputWrapperClass, id, label, layout, visible } = field;
-    const cols = layout && layout.cols || 12;
-    let fieldMethod = 'renderInputField';
-    let customType = null;
-    let extraClasses = visible ? '' : 'hidden';
-    extraClasses += this.fieldHasErrors(field) ? 'hasErrors' : '';
-    switch (type) {
-      case 'textarea':
-        fieldMethod = 'renderTextareaField';
-        break;
-      case 'toggle':
-        fieldMethod = 'renderToggleField';
-        break;
-      case 'select':
-        fieldMethod = 'renderSelectField';
-        break;
-      case 'checkboxGroup':
-        fieldMethod = 'renderCheckboxGroup';
-        customType = 'checkboxGroup';
-        break;
-      case 'radioGroup':
-        fieldMethod = 'renderRadioGroup';
-        customType = 'radioGroup';
-        break;
-      case 'multiSelect':
-        fieldMethod = 'renderMultiSelectField';
-        break;
-      case 'countrySelect':
-        fieldMethod = 'renderCountrySelectField';
-        break;
-      case 'file':
-        fieldMethod = 'renderFileField';
-        break;
-      default:
-        fieldMethod = 'renderInputField';
-        break;
+  private triggerWebhook(action: any, event: any) {
+    const url = action.webhookEndpoint || action.webhoookEndpoint;
+    if (!url) return;
+    fetch(url, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ event }) }).catch(() => undefined);
+  }
+
+  /* ------------------------------------------------------ child component events */
+
+  private handleChildValue(event: CustomEvent) {
+    const modelKey = Object.keys(event.detail)[0];
+    this.setValueByModel(modelKey, event.detail[modelKey]);
+  }
+
+  @Listen('multiSelectValueChanged')
+  handleMultiselect(event: CustomEvent) {
+    this.handleChildValue(event);
+  }
+
+  @Listen('searchValueChanged')
+  handleSearchChange(event: CustomEvent) {
+    const model = Object.keys(event.detail)[0];
+    const items: Array<{ value: any; label: string }> = event.detail[model] || [];
+    const field = this.fieldByModel(model);
+    this.searchItems = { ...this.searchItems, [model]: items };
+    const multiple = !!(field && field.config && field.config.multiple);
+    // `config.answer`: what is saved for a pick. Addresses save their text by default, other searches save the id.
+    const answer = (field && field.config && field.config.answer) || (field && field.type === 'address' ? 'text' : 'id');
+    const saved = (item: { value: any; label: string }) => (answer === 'text' ? item.label : answer === 'both' ? { id: item.value, label: item.label } : item.value);
+    this.setValueByModel(model, multiple ? items.map(saved) : items[0] ? saved(items[0]) : '');
+  }
+
+  @Listen('selectedFileChanged')
+  handleFileSelectChange(event: CustomEvent) {
+    this.handleChildValue(event);
+  }
+
+  @Listen('keydown', { target: 'document' })
+  onDocumentKey(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return;
+    if (this.openTip) this.openTip = '';
+    else if (this.modal) this.closeModal();
+    else if (this.itemMenu) this.itemMenu = '';
+    else if (this.addMenu) this.addMenu = '';
+  }
+
+  @Listen('click', { target: 'document' })
+  onDocumentClick(event: MouseEvent) {
+    const inside = (selector: string) => clickedInsideSelector(event, selector);
+    if (this.addMenu && !inside('.rfg-add')) this.addMenu = '';
+    if (this.itemMenu && !inside('.rfg-menu-wrap')) this.itemMenu = '';
+    if (this.openTip && !inside('.rfg-tipwrap')) this.openTip = '';
+  }
+
+  @Listen('signatureChanged')
+  handleSignatureChange(event: CustomEvent) {
+    this.handleChildValue(event);
+  }
+
+  @Listen('selectedCountryChanged')
+  handleCountrySelectChange(event: CustomEvent) {
+    const modelKey = Object.keys(event.detail)[0];
+    const country = event.detail[modelKey];
+    if (modelKey.startsWith(PHONE_PREFIX)) {
+      const model = modelKey.slice(PHONE_PREFIX.length);
+      if (!country) return;
+      this.phoneCountries = { ...this.phoneCountries, [model]: country.code };
+      const { number } = parsePhone(this.answerOf(model), country.code);
+      this.setValueByModel(model, formatPhone(phoneCountry(country.code), number));
+      return;
     }
-    return (
-      <Fragment>
-        {
-          <div class={`input-group col-${cols} input-${customType || inputType || type}-container ${inputWrapperClass || ''} ${extraClasses}`}>
-            {label && <label class="input__label" htmlFor={id} innerHTML={label}></label>}
-            <slot name={`field-label@${id}`} />
-            {this[fieldMethod](field)}
-            {this.fieldHasErrors(field) && <span class="error-message">{this.fieldErrorMessage(field)}</span>}
-          </div>
+    const field = this.fieldByModel(modelKey);
+    const key = (field && field.modelValueKey) || 'code';
+    this.setValueByModel(modelKey, country ? country[key] : null);
+  }
+
+  private setValueByModel(model: string, value: any) {
+    if (getByPath(this.values, model) === value) return;
+    this.values = setByPath(this.values, model, value);
+    if (model.startsWith(`${DRAFT}.`)) {
+      // typing in a dialog: not an answer of the form yet
+      if (this.modal && this.modal.live) this.revalidateModal();
+      return;
+    }
+    this.valueChanged.emit({ [model]: value });
+    if (this.sandbox) this.sandbox.emit('change', { key: model, value });
+    const field = this.fieldByModel(model);
+    if (field) this.revalidateField(field);
+    this.afterChange();
+  }
+
+  /** Housekeeping after any answer changed: keep the draft and the step ticks up to date. */
+  private afterChange() {
+    this.saveDraftSoon();
+    this.scheduleCompletion();
+  }
+
+  private setValue(field: FormField, raw: any) {
+    const { validationType = 'string' } = field;
+    let value = raw;
+    if (validationType === 'number') value = raw === '' || raw === null || raw === undefined ? '' : Number(raw);
+    this.setValueByModel(field.model, value);
+  }
+
+  /* -------------------------------------------------------------- rendering */
+
+  private optionsOf(field: FormField): { label: string; value: any; group?: string }[] {
+    // `config.optionsFrom: { field, labelKey, groupKey? }`: the choices are the items of another group (e.g. the units of this room).
+    // `field: "rooms.units"` takes the units of every room; `groupKey: "name"` lists them under their room's name.
+    const from = field.config && field.config.optionsFrom;
+    if (from && from.field) {
+      const [head, ...inner] = String(from.field).split('.');
+      const rows: { item: any; parent: any }[] = [];
+      (this.listFor(head, field) || []).forEach((parent: any) => {
+        if (!inner.length) rows.push({ item: parent, parent: null });
+        else ((parent && parent[inner[0]]) || []).forEach((item: any) => rows.push({ item, parent }));
+      });
+      const key = from.labelKey || 'name';
+      const seen: { [value: string]: boolean } = {};
+      const options: { label: string; value: any; group?: string }[] = [];
+      rows.forEach(({ item, parent }) => {
+        const v = item && item[key];
+        const text = v === undefined || v === null ? '' : String(v);
+        const group = from.groupKey && parent && parent[from.groupKey] ? String(parent[from.groupKey]) : undefined;
+        const value = group ? `${group} – ${text}` : text;
+        if (text && !seen[value]) {
+          seen[value] = true;
+          options.push({ label: text, value, ...(group ? { group } : {}) });
         }
-      </Fragment>
-    )
+      });
+      return options;
+    }
+    return (field.options || []).map((o: any) => ({ ...o, label: o.label !== undefined ? o.label : String(o.value) }));
   }
 
-  public renderCheckboxGroup(field) {
-    field.inputType = 'checkbox';
-    const { inputType, items } = field;
-    const props = this.buildProps(field);
+  /**
+   * `settings.autofill: false` (or `attributes.autocomplete: "off"` on one field) stops the browser from offering saved
+   * addresses, cards, etc. Chrome ignores a bare autocomplete="off" on address-looking fields, so the field also gets a
+   * meaningless `name` (Chrome reads names like "postnummer" or "street" to guess what a field is) and the flags
+   * that password managers respect.
+   */
+  private autofillOff(field: FormField) {
+    return this.getSettings().autofill === false || (field.attributes && field.attributes.autocomplete === 'off');
+  }
+
+  private commonProps(field: FormField) {
+    const off = this.autofillOff(field);
+    return {
+      id: field.id,
+      name: off ? field.id : field.inputName || field.model,
+      disabled: this.states().disabled[field.id] || field.disabled,
+      'aria-required': this.isRequired(field) ? 'true' : undefined,
+      'aria-label': field._bare ? String(field.label || '').replace(/<[^>]*>/g, '') : undefined,
+      ...(off ? { autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other' } : {}),
+    };
+  }
+
+  private isRequired(field: FormField) {
+    return (field.validations || []).some(v => v.name === 'required') || !!this.states().required[field.id];
+  }
+
+  private renderLabel(field: FormField) {
+    if (!field.label) return null;
+    // Search fields get a plain element instead of a <label>: Chrome reads <label> text such as "Address" and then
+    // shows its saved-address list over the results. The input is tied to it with aria-labelledby instead.
+    const Tag: any = field.type === 'search' || field.type === 'address' ? 'div' : 'label';
+    const forProps = Tag === 'label' ? { htmlFor: field.id } : {};
+    const label = (
+      <Tag class="rfg-label" id={`${field.id}-label`} {...forProps}>
+        <span innerHTML={sanitizeHtml(field.label)}></span>
+        {this.isRequired(field) && <span class="rfg-required" aria-hidden="true">*</span>}
+      </Tag>
+    );
+    // `tooltip`: a "?" after the label (outside the <label>, so it does not become part of the input's name)
+    if (typeof field.tooltip !== 'string' || !field.tooltip.trim()) return label;
     return (
-      <div class="checkboxGroup">
-        {items.map(({ label, attributes }) => {
-          return (
-            <div class="checkboxGroup-element">
-              <input class={`input-${inputType}`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}></input>
-              <span class="label">{label}</span>
-            </div>
-          )
-        })}
+      <div class="rfg-label-row">
+        {label}
+        {this.renderTip(field.id, field.tooltip)}
       </div>
-    )
-  }
-
-  public renderRadioGroup(field) {
-    field.inputType = 'radio';
-    const { inputType, items } = field;
-    const props = this.buildProps(field);
-    return (
-      <div class="radioGroup">
-        {items.map(({ label, attributes }) => {
-          return (
-            <div class="radioGroup-element">
-              <input class={`input-${inputType}`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}></input>
-              <span class="label">{label}</span>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
-  public renderSelectField(field) {
-    const { attributes, model, values: optionValues = [] } = field;
-    const { values } = this;
-    const props = this.buildProps(field);
-    const placeholder = props.placeholder || '';
-    const defaultOption = values[model];
-    const showPlaceholder = !defaultOption && placeholder;
-    const processedOptGroups = [];
-    delete props.placeholder;
-    return (
-      <Fragment>
-        <select class={`select-input`} {...props} {...attributes} onChange={(e) => this.handleInputChange(e, field)}>
-          {showPlaceholder && <option value="" disabled selected hidden>{placeholder}</option>}
-          {optionValues.map(({ value: optionValue, display = optionValue, group }) => {
-            if (group) {
-              if (!processedOptGroups.includes(group)) {
-                processedOptGroups.push(group);
-                return (
-                  <Fragment>
-                    <optgroup label={group}>
-                      {this.getOptGroup(group, optionValues).map(option => (
-                        <option value={typeof option.value === 'object' ? JSON.stringify(option.value) : option.value} selected={defaultOption === option.value}>{option.display}</option>
-                      ))}
-                    </optgroup>
-                  </Fragment>
-                )
-              } else {
-                <Fragment>
-                  <option value={optionValue} selected={defaultOption === optionValue}>{display}</option>
-                </Fragment>
-              }
-            }
-          })}
-        </select>
-      </Fragment>
-    )
-  }
-
-  public renderMultiSelectField(field) {
-    const { values: optionValues = [] } = field;
-    const props = this.buildProps(field);
-    const placeholder = props.placeholder || '';
-    const selectedWord = props.selectedWord || '';
-    const defaultOptions = props.defaultOptions || [];
-    const disabled = props.disabled;
-
-    const multiSelectOptions = optionValues.map((option) => { return { value: option.value, label: option.display } });
-    return (
-      <Fragment>
-        <re-multi-select
-          options={multiSelectOptions}
-          inputOptions={
-            {
-              placeholder,
-              selectedWord,
-            }
-          }
-          defaultOptions={
-            defaultOptions
-          }
-          disabled={disabled}
-          modelKey={field.model}
-        ></re-multi-select>
-      </Fragment>
-    )
-  }
-
-  public renderCountrySelectField(field) {
-    const { model, zIndex } = field;
-    const { values } = this;
-    const props = this.buildProps(field);
-    const placeholder = props.placeholder || '';
-    const defaultValue = values[model];
-    const disabled = props.disabled;
-
-    return (
-      <Fragment>
-        <re-country-select
-          inputOptions={
-            {
-              placeholder
-            }
-          }
-          disabled={disabled}
-          modelKey={field.model}
-          defaultValue={defaultValue}
-          zIndex={zIndex}
-          inputDisplayKey={props.inputDisplayKey}
-          showDialCode={props.showDialCode}
-        ></re-country-select>
-      </Fragment>
-    )
-  }
-
-  public renderTextareaField(field) {
-    const { attributes, model } = field;
-    const { values } = this;
-    const props = this.buildProps(field);
-    return <textarea class="textarea-input" {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></textarea>
-  }
-
-  public renderFileField(field) {
-    const { attributes, model } = field;
-    const props = this.buildProps(field);
-    return (
-      <re-file-input-field
-        inputAttributes={attributes}
-        inputProps={props}
-        textTitle={props.textTitle}
-        placeholder={props.placeholder}
-        subTitle={props.subTitle}
-        modelKey={model}
-      >
-      </re-file-input-field>
-    )
-  }
-
-  public renderInputField(field) {
-    const { attributes, model, inputType } = field;
-    const { values } = this;
-    const props = this.buildProps(field);
-    return <input class={`input-${inputType}`} {...props} {...attributes} defaultValue={values[model]} onChange={(e) => this.handleInputChange(e, field)}></input>;
-  }
-
-  public renderToggleField(field) {
-    const { attributes, model, defaultValue } = field;
-    const { values } = this;
-    const props = this.buildProps(field);
-    const inputProps = { ...props, type: 'checkbox' };
-    return (
-      <label class="switch">
-        <input class="toggle-input" {...inputProps} {...attributes} defaultValue={values[model]} checked={defaultValue} onChange={(e) => this.handleInputChange(e, field)}></input>
-        <span class="slider round"></span>
-      </label>
     );
   }
 
-  public getOptGroup(group: string, options = []) {
-    return options.filter(option => option.group === group);
-  }
-
-  public isRowProcessed(rowName: string) {
-    return this.processedRows.includes(rowName);
-  }
-
-  public isGroupProcessed(groupName: string) {
-    return this.processedGroups.includes(groupName);
-  }
-
-  public renderRow(rowName: string) {
-    if (this.isRowProcessed(rowName)) return;
-    const rowFields = this.fields.filter(field => field.layout && field.layout.row === rowName);
-    this.processedRows.push(rowName);
+  /**
+   * A small round "?" that shows `text` on hover, on keyboard focus and on click / tap (touch screens). The text is tied to the
+   * button with aria-describedby, so screen readers read it as well. Escape closes it. Inside a choice it never picks the option.
+   */
+  private renderTip(id: string, text: string) {
+    const tipId = `${id}-tip`;
+    const open = this.openTip === id;
     return (
-      <div class={`row-container row-${rowName}-container`}>
-        {rowFields.map(field => {
-          return (
-            <Fragment>
-              {this.renderField(field)}
-            </Fragment>
-          )
-        })}
-      </div>
-    )
+      <span class={`rfg-tipwrap ${open ? 'is-open' : ''}`}>
+        <button
+          type="button"
+          class={`rfg-tip-btn ${this.dismissedTip === id ? 'is-dismissed' : ''}`}
+          aria-label={this.tr('ui.help')}
+          aria-describedby={tipId}
+          aria-expanded={open ? 'true' : 'false'}
+          onClick={(e: Event) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // closing with a click also hides it while the pointer is still on it
+            this.dismissedTip = open ? id : '';
+            this.openTip = open ? '' : id;
+          }}
+          onKeyDown={(e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.stopPropagation();
+            this.openTip = '';
+            this.dismissedTip = id;
+          }}
+          onBlur={() => {
+            if (this.openTip === id) this.openTip = '';
+            if (this.dismissedTip === id) this.dismissedTip = '';
+          }}
+          onMouseLeave={() => {
+            if (this.dismissedTip === id) this.dismissedTip = '';
+          }}
+        >
+          <span aria-hidden="true">?</span>
+        </button>
+        <span role="tooltip" id={tipId} class="rfg-tip-pop">
+          {text}
+        </span>
+      </span>
+    );
   }
 
-  renderGroup(groupName: string) {
-    if (this.isGroupProcessed(groupName)) return;
-    const groupFields = this.fields.filter(field => field.layout && field.layout.group === groupName);
-    const groupTitle = groupFields[0] && groupFields[0].layout && groupFields[0].layout.groupTitle;
-    this.processedGroups.push(groupName);
+  private renderControl(field: FormField, zIndex: number) {
+    const { model } = field;
+    const value = this.answerOf(model);
+    const common = this.commonProps(field);
+    const attributes = field.attributes || {};
+
+    switch (field.type) {
+      case 'textarea':
+        return <textarea class="rfg-control" {...common} readOnly={field.readonly} placeholder={field.placeholder} rows={4} {...attributes} value={value ?? ''} onInput={(e: any) => this.setValue(field, e.target.value)}></textarea>;
+
+      case 'select':
+        return this.renderSelect(field, common, value);
+
+      case 'multiSelect':
+        return (
+          <re-multi-select
+            key={`${field.id}-${this.activeLanguage}`}
+            options={this.optionsOf(field).map(o => ({ value: o.value, label: o.label }))}
+            inputOptions={{ placeholder: field.placeholder || this.tr('ui.multiPlaceholder'), selectedWord: (field.config && field.config.selectedWord) || this.tr('ui.selectedWord') }}
+            defaultOptions={this.optionsOf(field)
+              .map((o, i) => (Array.isArray(value) && value.some(v => String(v) === String(o.value)) ? i : -1))
+              .filter(i => i >= 0)}
+            disabled={common.disabled}
+            modelKey={model}
+          ></re-multi-select>
+        );
+
+      case 'countrySelect':
+        return (
+          <re-country-select
+            key={`${field.id}-${this.activeLanguage}`}
+            language={this.activeLanguage}
+            inputOptions={{ placeholder: field.placeholder || this.tr('ui.searchCountry') }}
+            disabled={common.disabled}
+            modelKey={model}
+            defaultValue={value}
+            zIndex={String(zIndex)}
+            noResultsText={this.tr('ui.noResults')}
+            inputDisplayKey={field.inputDisplayKey}
+            showDialCode={field.showDialCode}
+          ></re-country-select>
+        );
+
+      case 'phone':
+        return this.renderPhone(field, common, value, zIndex);
+
+      case 'likert':
+        return this.renderLikert(field, common, value);
+
+      case 'ranking':
+        return this.renderRanking(field, common, value);
+
+      case 'dates':
+      case 'dateRange':
+        return this.renderCalendar(field, common, value);
+
+      case 'month':
+      case 'week':
+      case 'year':
+        return this.renderPeriod(field, common, value);
+
+      case 'yesNo':
+        return this.renderYesNo(field, common, value);
+
+      case 'pictureChoice':
+        return this.renderPictureChoice(field, common, value);
+
+      case 'search':
+      case 'address': {
+        const config = field.config || {};
+        const attribution = field.type === 'address' ? config.attribution || (ADDRESS_PROVIDERS.find(p => p.id === config.provider) || {}).attribution : undefined;
+        return (
+          <div class="rfg-search-wrap">
+          <re-search-select
+            labelledBy={`${field.id}-label`}
+            modelKey={model}
+            source={field.type === 'address' ? addressSource(config, this.activeLanguage) : config.source}
+            multiple={!!config.multiple}
+            placeholder={field.placeholder}
+            disabled={common.disabled}
+            selected={this.searchItems[model] || []}
+            texts={{ searching: this.tr('ui.searching'), noResults: this.tr('ui.noResults'), error: this.tr('ui.searchFailed'), remove: this.tr('ui.remove') }}
+          ></re-search-select>
+          {attribution && <div class="rfg-attribution">{attribution}</div>}
+          </div>
+        );
+      }
+
+      case 'file':
+        return (
+          <re-file-input-field
+            inputAttributes={attributes}
+            inputProps={{ type: 'file', name: common.name, id: field.id, disabled: common.disabled }}
+            key={field.id}
+            textTitle={(field.config && field.config.title) || field.textTitle || this.tr('ui.clickToUpload')}
+            subTitle={(field.config && field.config.subTitle) || field.subTitle || this.tr('ui.orDragDrop')}
+            placeholder={field.placeholder || this.tr('ui.anyFile')}
+            modelKey={model}
+            preview={!!(field.config && field.config.preview)}
+            compact={!!(field.config && (field.config.compact || field.config.fileStyle === 'block'))}
+            block={!!(field.config && field.config.fileStyle === 'block')}
+          ></re-file-input-field>
+        );
+
+      case 'signature': {
+        const config = field.config || {};
+        if (config.mode === 'dialog') {
+          // a grey box with a button; the signing happens in a dialog and the box then shows the signature
+          const open = () =>
+            this.openModal(
+              { kind: 'sign', title: config.signTitle || field.label || this.tr('ui.sign'), fields: [], confirmLabel: this.tr('ui.save'), cancelLabel: this.tr('ui.cancel'), origin: this.scopePrefix(field), target: model },
+              { signature: value || '' },
+            );
+          return (
+            <div class="rfg-sign-box">
+              {value ? <img class="rfg-sign-img" src={value} alt={field.label || ''} /> : null}
+              <div class="rfg-sign-actions">
+                <button type="button" class="rfg-btn rfg-btn-secondary rfg-btn-sm" disabled={common.disabled} onClick={open}>
+                  {value ? this.tr('ui.edit') : config.signLabel || this.tr('ui.sign')}
+                </button>
+                {value && !common.disabled && (
+                  <button type="button" class="rfg-link" onClick={() => this.setValueByModel(model, '')}>
+                    {this.tr('ui.clearSignature')}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <re-signature-pad
+            key={field.id}
+            modelKey={model}
+            value={value || ''}
+            disabled={common.disabled}
+            height={Number(config.height) || 160}
+            texts={{ hint: config.hint || this.tr('ui.signHere'), clear: this.tr('ui.clearSignature') }}
+          ></re-signature-pad>
+        );
+      }
+
+      case 'toggle':
+        return (
+          <label class="rfg-switch">
+            <input type="checkbox" {...common} checked={!!value} onChange={(e: any) => this.setValueByModel(model, e.target.checked)} />
+            <span class="rfg-slider"></span>
+          </label>
+        );
+
+      case 'checkboxGroup': {
+        const config = field.config || {};
+        const all = this.optionsOf(field);
+        const query = (this.filters[model] || '').trim().toLowerCase();
+        const shown = query ? all.filter(o => String(o.label).toLowerCase().includes(query) || String(o.group || '').toLowerCase().includes(query)) : all;
+        const picked = Array.isArray(value) ? value : [];
+        const isPicked = (option: { value: any }) => picked.some(v => String(v) === String(option.value));
+        // `config.visibleOptions`: the first few choices until "Show more options" (not while searching)
+        const limited = query ? { shown, button: null } : this.limitOptions(field, shown, isPicked);
+        const renderOption = (option: { label: string; value: any }, i: number) => {
+          const checked = isPicked(option);
+          const rich = this.isRichOption(field, option);
+          return (
+            <label key={String(option.value)} class={`rfg-option ${this.cardsOf(field) ? 'rfg-option-card' : ''} ${this.chipsOf(field) ? 'rfg-option-chip' : ''} ${checked ? 'is-checked' : ''} ${rich ? 'rfg-option-rich' : ''}`}>
+              <input
+                type="checkbox"
+                name={common.name}
+                id={i === 0 ? field.id : undefined}
+                disabled={common.disabled}
+                checked={checked}
+                {...this.optionAria(field, option, all.indexOf(option))}
+                onChange={(e: any) => this.setValueByModel(model, e.target.checked ? [...picked, option.value] : picked.filter(v => String(v) !== String(option.value)))}
+              />
+              {this.renderOptionText(field, option, all.indexOf(option))}
+            </label>
+          );
+        };
+        // choices can come in groups (the units of each room under the room's name)
+        const groups: string[] = [];
+        const visible = limited.shown;
+        visible.forEach(o => o.group && !groups.includes(o.group) && groups.push(o.group));
+        const body = groups.length
+          ? [
+              ...visible.filter(o => !o.group).map(renderOption),
+              ...groups.map(group => (
+                <div key={`group-${group}`} class="rfg-option-group">
+                  <div class="rfg-option-group-title">{group}</div>
+                  <div class="rfg-options-list">{visible.filter(o => o.group === group).map(renderOption)}</div>
+                </div>
+              )),
+            ]
+          : visible.map(renderOption);
+        return (
+          <div class="rfg-choice-wrap">
+            {config.searchable && (
+              <div class="rfg-search-box">
+                <input class="rfg-control" type="search" autocomplete="off" aria-label={this.tr('ui.search')} placeholder={this.tr('ui.search')} value={this.filters[model] || ''} onInput={(e: any) => (this.filters = { ...this.filters, [model]: e.target.value })} />
+              </div>
+            )}
+            <div
+              id={limited.button ? `${field.id}-options` : undefined}
+              class={`rfg-options ${this.cardsOf(field) ? 'rfg-options-cards' : ''} ${this.chipsOf(field) ? 'rfg-options-chips' : ''} ${config.optionStyle === 'plain' ? 'rfg-options-plain' : ''} ${groups.length ? 'rfg-options-grouped' : ''} ${this.richCards(field, all) ? 'rfg-options-rich' : ''}`}
+              role="group"
+              style={{ '--rfg-opt-cols': String(config.optionColumns || 1) }}
+            >
+              {body}
+              {!all.length && config.optionsFrom && <div class="rfg-empty">{this.tr('ui.noItems')}</div>}
+              {this.renderOther(field, 'checkbox')}
+            </div>
+            {limited.button}
+            {config.searchable && <div class="rfg-choice-count">{this.tr('ui.selectedCount', { n: picked.length })}</div>}
+          </div>
+        );
+      }
+
+      case 'radioGroup': {
+        const all = this.optionsOf(field);
+        const isPicked = (option: { value: any }) => !(this.others[model] && this.others[model].on) && value !== undefined && value !== null && String(value) === String(option.value);
+        // `config.visibleOptions`: the first few choices until "Show more options" (the picked one is always shown)
+        const limited = this.limitOptions(field, all, isPicked);
+        const group = (
+          <div
+            id={limited.button ? `${field.id}-options` : undefined}
+            class={`rfg-options ${this.cardsOf(field) ? 'rfg-options-cards' : ''} ${this.chipsOf(field) ? 'rfg-options-chips' : ''} ${field.config && field.config.optionStyle === 'plain' ? 'rfg-options-plain' : ''} ${this.richCards(field, all) ? 'rfg-options-rich' : ''}`}
+            role="radiogroup"
+            style={{ '--rfg-opt-cols': String((field.config && field.config.optionColumns) || 1) }}
+          >
+            {limited.shown.map((option, i) => {
+              const checked = isPicked(option);
+              const rich = this.isRichOption(field, option);
+              return (
+                <label key={String(option.value)} class={`rfg-option ${this.cardsOf(field) ? 'rfg-option-card' : ''} ${this.chipsOf(field) ? 'rfg-option-chip' : ''} ${checked ? 'is-checked' : ''} ${rich ? 'rfg-option-rich' : ''}`}>
+                  <input
+                    type="radio"
+                    name={`${this.formId || 'rfg'}-${common.name}`}
+                    id={i === 0 ? field.id : undefined}
+                    disabled={common.disabled}
+                    checked={checked}
+                    {...this.optionAria(field, option, all.indexOf(option))}
+                    onChange={() => {
+                      this.clearOther(model);
+                      this.setValueByModel(model, option.value);
+                      // `config.autoAdvance`: picking an answer moves on to the next step (like a choice screen)
+                      if (field.config && field.config.autoAdvance) setTimeout(() => this.nextStep(), 160);
+                    }}
+                  />
+                  {this.renderOptionText(field, option, all.indexOf(option))}
+                </label>
+              );
+            })}
+            {this.renderOther(field, 'radio')}
+          </div>
+        );
+        if (!limited.button) return group;
+        return (
+          <div class="rfg-choice-wrap">
+            {group}
+            {limited.button}
+          </div>
+        );
+      }
+
+      case 'rating':
+        return this.renderRating(field, value);
+
+      case 'scale':
+        return this.renderScale(field, value);
+
+      case 'slider': {
+        const { min = 0, max = 100, step = 1, unit = '' } = field.config || {};
+        return (
+          <div class="rfg-slider-wrap">
+            <input class="rfg-range" type="range" {...common} min={min} max={max} step={step} value={value ?? min} onInput={(e: any) => this.setValue({ ...field, validationType: 'number' }, e.target.value)} />
+            <output class="rfg-range-value">
+              {value ?? min}
+              {unit}
+            </output>
+          </div>
+        );
+      }
+
+      default: {
+        const type = field.inputType || 'text';
+        if (type === 'checkbox') {
+          return (
+            <label class="rfg-option rfg-single-check">
+              <input type="checkbox" {...common} checked={!!value} onChange={(e: any) => this.setValueByModel(model, e.target.checked)} />
+              <span innerHTML={sanitizeHtml(field.checkboxLabel || field.placeholder || '')}></span>
+            </label>
+          );
+        }
+        // `config.plain`: show the answer as plain text (e.g. the name of a unit in a checklist)
+        if (field.config && field.config.plain && field._prefix !== DRAFT) {
+          // no answer yet (always the case in the builder): the placeholder, greyed, so the field does not look missing
+          const empty = value === undefined || value === null || value === '';
+          return <div class={`rfg-plain ${empty ? 'is-empty' : ''}`}>{empty ? field.placeholder || '—' : String(value)}</div>;
+        }
+        const input = (
+          <input
+            class={`rfg-control rfg-input-${type} ${field.readonly ? 'rfg-readonly' : ''}`}
+            type={type}
+            {...common}
+            readOnly={field.readonly}
+            placeholder={field.placeholder}
+            {...attributes}
+            value={value ?? ''}
+            onInput={(e: any) => this.setValue(field, e.target.value)}
+          />
+        );
+        // `config.prefix` / `config.suffix`: a fixed text next to the input, e.g. "m²" or "€"
+        const prefix = field.config && field.config.prefix;
+        // `config.suffixBy: { field, values }`: the text after the box depends on another answer (the unit of a meter: kWh, m³…)
+        const by = field.config && field.config.suffixBy;
+        let suffix = field.config && field.config.suffix;
+        if (by && by.field) {
+          // the other answer sits next to this one: in the same item, or in the same dialog
+          const owner = (field._prefix as string) || '';
+          const other = getByPath(this.values, owner ? `${owner}.${by.field}` : by.field);
+          suffix = (by.values && other !== undefined && by.values[String(other)]) || suffix;
+        }
+        // `config.prefixIcon` / `config.suffixIcon`: an icon (its shapes, as in the icon block) before the text
+        const prefixIcon = safeIconNode(field.config && field.config.prefixIcon);
+        const suffixIcon = safeIconNode(field.config && field.config.suffixIcon);
+        const addonIcon = (node: any[]) =>
+          node.length ? (
+            <svg class="rfg-addon-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              {node.map(([Tag, attrs]: [any, any], i: number) => <Tag key={i} {...attrs} />)}
+            </svg>
+          ) : null;
+        if (!prefix && !suffix && !prefixIcon.length && !suffixIcon.length) return input;
+        return (
+          <div class="rfg-addon-wrap">
+            {(prefix || prefixIcon.length > 0) && (
+              <span class="rfg-addon rfg-addon-prefix">
+                {addonIcon(prefixIcon)}
+                {prefix}
+              </span>
+            )}
+            {input}
+            {(suffix || suffixIcon.length > 0) && (
+              <span class="rfg-addon rfg-addon-suffix">
+                {addonIcon(suffixIcon)}
+                {suffix}
+              </span>
+            )}
+          </div>
+        );
+      }
+    }
+  }
+
+  /** `config.optionStyle: "cards"` shows each choice as a card with a title and an optional description. */
+  private cardsOf(field: FormField) {
+    return !!(field.config && field.config.optionStyle === 'cards');
+  }
+
+  /** `config.optionStyle: "chips"`: the choices are small pills you switch on and off (e.g. the units a defect is about). */
+  private chipsOf(field: FormField) {
+    return !!(field.config && field.config.optionStyle === 'chips');
+  }
+
+  /** A choice's "Read more" link: http(s) only. */
+  private optionLink(option: any): { url: string; label: string } | null {
+    const link = option && option.link;
+    const url = link && typeof link.url === 'string' ? link.url.trim() : '';
+    if (!/^https?:\/\/[^\s]+$/i.test(url)) return null;
+    return { url, label: (typeof link.label === 'string' && link.label.trim()) || url };
+  }
+
+  /** Does a choice show more than its title (a badge, a logo, a link, help, or a description outside cards)? Chips never do. */
+  private isRichOption(field: FormField, option: any) {
+    if (this.chipsOf(field) || !option) return false;
+    return !!(option.badge || safeImageUrl(option.image) || this.optionLink(option) || option.help || (option.description && !this.cardsOf(field)));
+  }
+
+  /** Cards whose choices have badges, logos, links or help get the roomier "provider list" look: the radio / tick on the left. */
+  private richCards(field: FormField, options: any[]) {
+    return this.cardsOf(field) && options.some(o => o && (o.badge || safeImageUrl(o.image) || this.optionLink(o) || o.help));
+  }
+
+  /** A rich choice names its input after its title (and badge) only, and describes it with its second line and help. */
+  private optionAria(field: FormField, option: any, index: number) {
+    if (!this.isRichOption(field, option)) return {};
+    const base = `${field.id}-opt-${index}`;
+    const describedBy = [option.description ? `${base}-desc` : '', option.help ? `${base}-tip` : ''].filter(Boolean).join(' ');
+    return { 'aria-labelledby': `${base}-label${option.badge ? ` ${base}-badge` : ''}`, ...(describedBy ? { 'aria-describedby': describedBy } : {}) };
+  }
+
+  private renderOptionText(field: FormField, option: any, index = 0) {
+    if (this.isRichOption(field, option)) {
+      const base = `${field.id}-opt-${index}`;
+      const image = safeImageUrl(option.image);
+      const link = this.optionLink(option);
+      // `config.imagePosition`: before the title (default), right after it, or on a line of its own above / below
+      const position = ['right', 'top', 'bottom'].includes(field.config && field.config.imagePosition) ? field.config!.imagePosition : 'left';
+      const logo = image && <img class={`rfg-option-img rfg-option-img-${position}`} src={image} alt={typeof option.imageAlt === 'string' ? option.imageAlt : ''} loading="lazy" />;
+      return (
+        <span class="rfg-option-text">
+          {position === 'top' && logo}
+          <span class="rfg-option-head">
+            {position === 'left' && logo}
+            <span class="rfg-option-title" id={`${base}-label`}>
+              {option.label}
+            </span>
+            {position === 'right' && logo}
+            {option.badge && (
+              <span class="rfg-option-badge" id={`${base}-badge`}>
+                {String(option.badge)}
+              </span>
+            )}
+            {option.help && this.renderTip(base, String(option.help))}
+          </span>
+          {option.description && (
+            <span class="rfg-option-desc" id={`${base}-desc`}>
+              {option.description}
+            </span>
+          )}
+          {link && (
+            // a link inside the choice's <label> does not pick the choice; it opens in a new tab
+            <a class="rfg-option-link" href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e: Event) => e.stopPropagation()}>
+              {link.label}
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+              </svg>
+            </a>
+          )}
+          {position === 'bottom' && logo}
+        </span>
+      );
+    }
+    if (!this.cardsOf(field)) return <span>{option.label}</span>;
     return (
-      <div class={`group-container group-${groupName}-container`}>
-        {groupTitle && <div class='group-title' innerHTML={groupTitle}></div>}
-        {groupFields.map(field => {
-          const { layout } = field;
-          const row = layout && layout.row ? layout.row : '';
-          return (
-            <Fragment>
-              {row ? this.renderRow(row) : this.renderField(field)}
-            </Fragment>
-          )
-        })}
-      </div>
-    )
+      <span class="rfg-option-text">
+        <span class="rfg-option-title">{option.label}</span>
+        {option.description && <span class="rfg-option-desc">{option.description}</span>}
+      </span>
+    );
   }
 
-  public buildRenderWrapper(field) {
-    const row = field.layout && field.layout.row ? field.layout.row : '';
-    const group = field.layout && field.layout.group ? field.layout.group : '';
+  /**
+   * `config.visibleOptions: N`: only the first N choices, then a "Show more options" button (and "Show fewer options" once open).
+   * A picked choice that would be folded away is shown anyway.
+   */
+  private limitOptions<T extends { value: any }>(field: FormField, options: T[], isPicked: (option: any) => boolean): { shown: T[]; button: any } {
+    const limit = Math.floor(Number(field.config && field.config.visibleOptions));
+    if (!limit || limit < 1 || options.length <= limit) return { shown: options, button: null };
+    const open = !!this.expandedOptions[field.model];
+    const shown = open ? options : options.filter((option, i) => i < limit || isPicked(option));
+    if (!open && shown.length === options.length) return { shown, button: null };
+    const button = (
+      <button
+        key="more-options"
+        type="button"
+        class="rfg-more-options"
+        aria-expanded={open ? 'true' : 'false'}
+        aria-controls={`${field.id}-options`}
+        onClick={() => (this.expandedOptions = { ...this.expandedOptions, [field.model]: !open })}
+      >
+        <span>{this.tr(open ? 'ui.showFewerOptions' : 'ui.showMoreOptions')}</span>
+        <svg class={`rfg-more-chevron ${open ? 'is-open' : ''}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    );
+    return { shown, button };
+  }
 
-    if (group) {
-      return this.renderGroup(group);
+  /* ---------------------------------------------- "Other…" option (radio / checkbox groups) */
+
+  /** Turns the "Other" choice off (a regular option was picked). */
+  private clearOther(model: string) {
+    if (this.others[model] && this.others[model].on) this.others = { ...this.others, [model]: { ...this.others[model], on: false } };
+  }
+
+  /**
+   * Updates the "Other" state and the stored answer. Radio: the answer is the typed text. Checkbox: the typed text
+   * is added to the list of ticked options (and replaced as it is edited).
+   */
+  private setOther(field: FormField, kind: 'radio' | 'checkbox', patch: { on?: boolean; text?: string }) {
+    const model = field.model;
+    const prev = this.others[model] || { on: false, text: '' };
+    const next = { ...prev, ...patch };
+    this.others = { ...this.others, [model]: next };
+    if (kind === 'radio') {
+      this.setValueByModel(model, next.on ? next.text : this.answerOf(model));
+      return;
+    }
+    const current: any[] = Array.isArray(this.answerOf(model)) ? this.answerOf(model) : [];
+    const base = prev.on && prev.text ? current.filter(v => String(v) !== prev.text) : current;
+    this.setValueByModel(model, next.on && next.text ? [...base, next.text] : base);
+  }
+
+  private renderOther(field: FormField, kind: 'radio' | 'checkbox') {
+    if (!(field.config && field.config.allowOther)) return null;
+    const model = field.model;
+    const other = this.others[model] || { on: false, text: '' };
+    const label = field.config.otherLabel || this.tr('ui.other');
+    return (
+      <div class="rfg-other">
+        <label class={`rfg-option ${other.on ? 'is-checked' : ''}`}>
+          <input
+            type={kind}
+            name={kind === 'radio' ? `${this.formId || 'rfg'}-${field.inputName || model}` : undefined}
+            disabled={field.disabled}
+            checked={other.on}
+            onChange={(e: any) => this.setOther(field, kind, { on: kind === 'radio' ? true : e.target.checked })}
+          />
+          <span>{label}</span>
+        </label>
+        {other.on && (
+          <input
+            class="rfg-control rfg-other-input"
+            type="text"
+            aria-label={label}
+            placeholder={this.tr('ui.otherPlaceholder')}
+            value={other.text}
+            onInput={(e: any) => this.setOther(field, kind, { text: e.target.value })}
+          />
+        )}
+      </div>
+    );
+  }
+
+  private renderSelect(field: FormField, common: any, value: any) {
+    const options = this.optionsOf(field);
+    const placeholder = field.placeholder;
+    const groups: string[] = [];
+    options.forEach(o => o.group && !groups.includes(o.group) && groups.push(o.group));
+    const renderOption = (o: any) => (
+      <option value={String(o.value)} selected={value !== undefined && value !== null && String(value) === String(o.value)}>
+        {o.label}
+      </option>
+    );
+    const hasValue = value !== undefined && value !== null && value !== '';
+    return (
+      <div class={`rfg-select-wrap ${field.config && field.config.selectStyle === 'pill' ? 'rfg-select-pill' : ''}`}>
+        <select
+          class="rfg-control rfg-select"
+          {...common}
+          onChange={(e: any) => {
+            const chosen = options.find(o => String(o.value) === e.target.value);
+            this.setValueByModel(field.model, chosen ? chosen.value : '');
+          }}
+        >
+          <option value="" disabled selected={!hasValue} hidden={!!placeholder}>
+            {placeholder || this.tr('ui.selectOption')}
+          </option>
+          {options.filter(o => !o.group).map(renderOption)}
+          {groups.map(group => (
+            <optgroup label={group}>{options.filter(o => o.group === group).map(renderOption)}</optgroup>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  /**
+   * `type: "phone"`: a country picker (flag and dial code) and the number. The answer is "+45 12345678".
+   * `config.defaultCountry` ("dk") is where it starts (else the form language's country); the `phoneCountries` rule (or
+   * `config.countries`) limits the list. `config.phoneStyle`: `"inline"` (default, the flag inside the box) or `"separate"`.
+   */
+  private renderPhone(field: FormField, common: any, value: any, zIndex: number) {
+    const model = field.model;
+    const config = field.config || {};
+    const picked = this.phoneCountries[model];
+    const parsed = parsePhone(value, picked);
+    const browser = typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : [];
+    // the picker only offers the countries of the "Only from these countries" rule (or `config.countries`)
+    const rule = (field.validations || []).find(r => r.name === 'phoneCountries');
+    const allowed: string[] = ((config.countries || (rule && Array.isArray(rule.params && rule.params[0]) ? rule.params![0] : [])) as string[]).map(c => String(c).toLowerCase());
+    // the visitor's own region first when it fits the form language (en-US -> USA, not the UK)
+    const base = String(this.activeLanguage || '').split('-')[0];
+    const regional = browser.filter(l => l && l.toLowerCase().split('-')[0] === base && l.includes('-'));
+    let code = (parsed.country && parsed.country.code) || picked || defaultPhoneCountry(config.defaultCountry, [...regional, this.activeLanguage, ...browser]);
+    if (allowed.length && (!code || !allowed.includes(code))) code = allowed[0];
+    const country = phoneCountry(code);
+    const typed = this.phoneTexts[model];
+    // the box shows what was typed (spaces, a leading 0) as long as it still means the stored answer
+    const shown = typed !== undefined && formatPhone(country, typed) === (value || '') ? typed : parsed.number;
+    const onInput = (e: any) => {
+      const raw: string = e.target.value;
+      // a pasted international number ("+46 70 123 45 67") also sets the country
+      if (raw.trim().startsWith('+')) {
+        const pasted = parsePhone(raw);
+        if (pasted.country && (!allowed.length || allowed.includes(pasted.country.code))) {
+          this.phoneCountries = { ...this.phoneCountries, [model]: pasted.country.code };
+          this.phoneTexts = { ...this.phoneTexts, [model]: pasted.number };
+          this.setValueByModel(model, formatPhone(pasted.country, pasted.number));
+          return;
+        }
+      }
+      this.phoneTexts = { ...this.phoneTexts, [model]: raw };
+      this.setValueByModel(model, formatPhone(country, raw));
+    };
+    // one box with the flag and dial code inside it on the left (like Stripe or intl-tel-input); `phoneStyle: "separate"` puts the picker next to it
+    const inline = config.phoneStyle !== 'separate';
+    return (
+      <div class={inline ? 'rfg-phone rfg-phone-inline rfg-control' : 'rfg-phone'}>
+        <re-country-select
+          class="rfg-phone-country"
+          key={`${field.id}-${this.activeLanguage}-${code || ''}-${allowed.join(',')}`}
+          compact={true}
+          language={this.activeLanguage}
+          inputOptions={{ placeholder: '' }}
+          disabled={common.disabled}
+          modelKey={`${PHONE_PREFIX}${model}`}
+          defaultValue={code}
+          inputDisplayKey="dialCode"
+          showDialCode={true}
+          only={allowed}
+          zIndex={String(zIndex)}
+          noResultsText={this.tr('ui.noResults')}
+          ariaLabelText={this.tr('ui.countryCode')}
+        ></re-country-select>
+        <input
+          class={inline ? 'rfg-phone-number' : 'rfg-control rfg-phone-number'}
+          type="tel"
+          inputMode="tel"
+          autocomplete="tel-national"
+          {...common}
+          readOnly={field.readonly}
+          placeholder={field.placeholder}
+          value={shown}
+          onInput={onInput}
+        />
+      </div>
+    );
+  }
+
+  /**
+   * `type: "likert"`: agree / disagree style answers. The points are `options` (e.g. 1-5 "Strongly disagree" … "Strongly agree").
+   * Without `config.rows` it is one question (the answer is a point); with rows it is a table of statements and the answer
+   * is `{ [row value]: point }`. `config.showNumbers` puts 1, 2, 3… above the points. Small screens stack the table.
+   * Looks (the answer never changes): `config.style` is `dots` (default), `buttons` (numbered), `emoji` (`options[].emoji`,
+   * faces by default) or `images` (`options[].image`). `config.colorMode: "gradient"` tints the points red → green,
+   * `options[].color` sets one point's color, `config.accent` the color of the picked point. `config.labels` (one question):
+   * `all` (default), `ends` (only the first and last point's text) or `none`.
+   */
+  private renderLikert(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const options = this.optionsOf(field) as any[];
+    const config = field.config || {};
+    const rows: { label: string; value: any }[] = config.rows || [];
+    const style: string = ['buttons', 'emoji', 'images'].indexOf(config.style) >= 0 ? config.style : 'dots';
+    const labels: string = config.labels === 'ends' || config.labels === 'none' ? config.labels : 'all';
+    const numbers = !!config.showNumbers && style !== 'buttons';
+    const count = options.length;
+    const groupName = `${this.formId || 'rfg'}-${common.name}`;
+    // the accent replaces the theme color for this question only
+    const accent = typeof config.accent === 'string' && /^#[0-9a-f]{3,8}$/i.test(config.accent) ? config.accent : '';
+    const look: any = accent
+      ? { '--rfg-primary': accent, '--rfg-primary-soft': `color-mix(in srgb, ${accent} 12%, var(--rfg-bg))`, '--rfg-focus': `color-mix(in srgb, ${accent} 28%, transparent)` }
+      : {};
+    const tintOf = (option: any, i: number): string | undefined => {
+      if (typeof option.color === 'string' && /^#[0-9a-f]{3,8}$/i.test(option.color)) return option.color;
+      if (config.colorMode === 'gradient') return `hsl(${count > 1 ? Math.round((i * 120) / (count - 1)) : 60} 68% 44%)`;
+      return undefined;
+    };
+    const visual = (option: any, i: number) => {
+      if (style === 'emoji') return <span class="rfg-likert-emoji" aria-hidden="true">{option.emoji || likertEmoji(i, count)}</span>;
+      if (style === 'images') {
+        const src = safeImageUrl(option.image);
+        return <span class="rfg-likert-img" aria-hidden="true">{src ? <img src={src} alt="" loading="lazy" /> : <span class="rfg-likert-blank"></span>}</span>;
+      }
+      if (style === 'buttons') return <span class="rfg-likert-chip" aria-hidden="true">{i + 1}</span>;
+      return <span class="rfg-likert-dot" aria-hidden="true"></span>;
+    };
+    const point = (option: any, i: number, checked: boolean, onPick: () => void, props: any = {}) => {
+      const tint = tintOf(option, i);
+      return (
+        <label class={`rfg-likert-point is-${style} ${checked ? 'is-checked' : ''}`} style={tint ? { '--rfg-likert-c': tint } : undefined} title={option.label}>
+          <input type="radio" disabled={common.disabled} checked={checked} onChange={onPick} aria-label={option.label} {...props} />
+          {visual(option, i)}
+          {numbers && <span class="rfg-likert-num">{i + 1}</span>}
+          <span class="rfg-likert-text">{option.label}</span>
+        </label>
+      );
+    };
+    if (!rows.length) {
+      return (
+        <div class={`rfg-likert-block labels-${labels}`}>
+          <div class={`rfg-likert-single is-${style}`} role="radiogroup" style={{ '--rfg-likert-count': String(options.length || 1), ...look }}>
+            {options.map((option, i) =>
+              point(option, i, value !== undefined && value !== null && value !== '' && String(value) === String(option.value), () => this.setValueByModel(model, option.value), { name: groupName, id: i === 0 ? field.id : undefined }),
+            )}
+          </div>
+          {labels !== 'none' && count > 1 && (
+            <div class="rfg-likert-ends" aria-hidden="true">
+              <span>{options[0].label}</span>
+              <span>{options[count - 1].label}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+    const answers = value && typeof value === 'object' ? value : {};
+    return (
+      <div class="rfg-likert-wrap">
+        <table class={`rfg-likert is-${style}`} style={{ '--rfg-likert-count': String(options.length || 1), ...look }}>
+          <thead>
+            <tr>
+              <th class="rfg-likert-corner"></th>
+              {options.map((option, i) => (
+                <th scope="col" key={String(option.value)}>
+                  {numbers && <span class="rfg-likert-num">{i + 1}</span>}
+                  <span>{option.label}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, r) => {
+              const key = String(row.value);
+              const current = answers[key];
+              return (
+                <tr key={key} class={current !== undefined && current !== null && current !== '' ? 'is-answered' : ''} role="radiogroup" aria-labelledby={`${field.id}-row-${r}`}>
+                  <th scope="row" id={`${field.id}-row-${r}`}>{row.label}</th>
+                  {options.map((option, i) => (
+                    <td key={String(option.value)}>
+                      {point(option, i, current !== undefined && current !== null && String(current) === String(option.value), () => {
+                        // read the answer now: several rows can be clicked before the next render
+                        const latest = this.answerOf(model);
+                        this.setValueByModel(model, { ...(latest && typeof latest === 'object' ? latest : {}), [key]: option.value });
+                      }, {
+                        name: `${groupName}-${key}`,
+                        id: r === 0 && i === 0 ? field.id : undefined,
+                        'aria-label': option.label,
+                      })}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  /**
+   * `type: "ranking"`: people put the `options` in order. Clicking an option gives it the next place; placed options
+   * can be moved (drag, or the arrows) or taken out again. `config.rankLimit` asks only for a top N. The answer is the
+   * list of option values, best first.
+   */
+  private renderRanking(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const options = this.optionsOf(field);
+    const limit = Math.min(options.length, Number(field.config && field.config.rankLimit) || options.length);
+    const rankedOf = (current: any): any[] => (Array.isArray(current) ? current : []).filter(v => options.some(o => String(o.value) === String(v)));
+    const ranked = rankedOf(value);
+    const rest = options.filter(o => !ranked.some(v => String(v) === String(o.value)));
+    const labelOf = (v: any) => (options.find(o => String(o.value) === String(v)) || { label: String(v) }).label;
+    const set = (next: any[]) => this.setValueByModel(model, next.length ? next : undefined);
+    // each change starts from the stored answer (not from this render), so quick clicks add up
+    const now = () => rankedOf(this.answerOf(model));
+    const move = (from: number, to: number) => {
+      const next = now();
+      if (to < 0 || to >= next.length || from === to) return;
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      set(next);
+    };
+    const full = ranked.length >= limit;
+    return (
+      <div class="rfg-ranking" role="group">
+        <div class="rfg-ranking-hint">
+          <span>{this.tr('ui.rankHint')}</span>
+          {ranked.length > 0 && !common.disabled && (
+            <button type="button" class="rfg-link" onClick={() => set([])}>
+              {this.tr('ui.rankReset')}
+            </button>
+          )}
+        </div>
+        <ol class="rfg-ranking-list">
+          {ranked.map((v, i) => (
+            <li
+              key={String(v)}
+              class={`rfg-rank-item is-ranked ${this.rankDrag && this.rankDrag.model === model && this.rankDrag.index === i ? 'is-dragging' : ''}`}
+              draggable={!common.disabled}
+              onDragStart={(e: DragEvent) => {
+                this.rankDrag = { model, index: i };
+                if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e: DragEvent) => this.rankDrag && this.rankDrag.model === model && e.preventDefault()}
+              onDrop={(e: DragEvent) => {
+                e.preventDefault();
+                if (this.rankDrag && this.rankDrag.model === model) move(this.rankDrag.index, i);
+                this.rankDrag = null;
+              }}
+              onDragEnd={() => (this.rankDrag = null)}
+            >
+              <span class="rfg-rank-grip" aria-hidden="true" title={this.tr('ui.dragToReorder')}></span>
+              <span class="rfg-rank-num">{i + 1}</span>
+              <span class="rfg-rank-label">{labelOf(v)}</span>
+              {!common.disabled && (
+                <span class="rfg-rank-actions">
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveUp')}: ${labelOf(v)}`} disabled={i === 0} onClick={() => move(i, i - 1)}>
+                    ↑
+                  </button>
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveDown')}: ${labelOf(v)}`} disabled={i === ranked.length - 1} onClick={() => move(i, i + 1)}>
+                    ↓
+                  </button>
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.remove')}: ${labelOf(v)}`} onClick={() => set(now().filter((_, j) => j !== i))}>
+                    ×
+                  </button>
+                </span>
+              )}
+            </li>
+          ))}
+          {rest.map((option, i) => (
+            <li key={String(option.value)} class="rfg-rank-item">
+              <button type="button" class="rfg-rank-pick" id={i === 0 && !ranked.length ? field.id : undefined} disabled={common.disabled || full} onClick={() => {
+                const current = now();
+                if (current.length < limit && !current.some(v => String(v) === String(option.value))) set([...current, option.value]);
+              }}>
+                <span class="rfg-rank-num is-empty" aria-hidden="true"></span>
+                <span class="rfg-rank-label">{option.label}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
+
+  /**
+   * Calendar fields. `type: "dates"`: people tap several days (e.g. when they are available); the answer is a list of
+   * "YYYY-MM-DD", or with `config.slots` ([{ label, value }], e.g. morning / afternoon) a list of `{ date, slots }`.
+   * `type: "dateRange"`: a first and a last day; the answer is `{ start, end }`. `config.minDate` / `maxDate`: "today",
+   * "+60" (days from today) or a date. `config.disabledWeekdays`: [0…6] (0 is Sunday). `config.maxDays`: how many days at most.
+   */
+  /**
+   * A month (`2026-10`), an ISO week (`2026-W42`) or a year (`2026`), one or several (`config.multiple`). The earliest and
+   * latest day (`config.minDate` / `maxDate`, like the calendar fields) grey out what is entirely outside them.
+   */
+  private renderPeriod(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const config = field.config || {};
+    const lang = this.activeLanguage || 'en';
+    const kind = field.type as 'month' | 'week' | 'year';
+    const multiple = !!config.multiple;
+    const min = resolveDay(config.minDate);
+    const max = resolveDay(config.maxDate);
+    const chosen = (current: any): string[] => (Array.isArray(current) ? current : current ? [current] : []).filter((v: any) => typeof v === 'string');
+    const picked = chosen(value);
+
+    // the first and last day of a period, to compare with the limits
+    const bounds = (id: string): [string, string] => {
+      if (kind === 'year') return [`${id}-01-01`, `${id}-12-31`];
+      if (kind === 'month') {
+        const [y, m] = id.split('-').map(Number);
+        return [`${id}-01`, isoOf(new Date(y, m, 0))];
+      }
+      const start = weekStart(id);
+      return [start, addDays(start, 6)];
+    };
+    const disabled = (id: string) => {
+      if (common.disabled) return true;
+      const [first, last] = bounds(id);
+      return (!!min && last < min) || (!!max && first > max);
+    };
+    const pick = (id: string) => {
+      if (disabled(id)) return;
+      if (!multiple) {
+        this.setValueByModel(model, chosen(this.answerOf(model))[0] === id ? undefined : id);
+        return;
+      }
+      const cur = chosen(this.answerOf(model));
+      const next = cur.includes(id) ? cur.filter(v => v !== id) : [...cur, id].sort();
+      this.setValueByModel(model, next.length ? next : undefined);
+    };
+
+    const now = today();
+    const anchor = picked[0] || (min && min > now ? (kind === 'week' ? weekOf(min) : min.slice(0, kind === 'year' ? 4 : 7)) : '');
+    const arrow = (d: string) => (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
+    const head = (title: string, prevLabel: string, nextLabel: string, go: (delta: number) => void, canPrev: boolean, canNext: boolean) => (
+      <div class="rfg-cal-head">
+        <button type="button" class="rfg-icon-btn" aria-label={prevLabel} disabled={!canPrev} onClick={() => go(-1)}>
+          {arrow('M15 6l-6 6 6 6')}
+        </button>
+        <div class="rfg-cal-title" aria-live="polite">
+          {title}
+        </div>
+        <button type="button" class="rfg-icon-btn" aria-label={nextLabel} disabled={!canNext} onClick={() => go(1)}>
+          {arrow('M9 6l6 6-6 6')}
+        </button>
+      </div>
+    );
+    const cell = (id: string, label: string, extra = '') => (
+      <button
+        type="button"
+        class={`rfg-period ${picked.includes(id) ? 'is-picked' : ''} ${extra}`}
+        disabled={disabled(id)}
+        aria-pressed={picked.includes(id)}
+        onClick={() => pick(id)}
+      >
+        {label}
+      </button>
+    );
+    // the dates of a week are not visible once the calendar moves on; a single month or year is (no need to repeat it)
+    const summary = picked.length && (kind === 'week' || multiple) ? (
+      <div class="rfg-cal-summary">
+        {picked.map(id => (kind === 'week' ? `${this.tr('ui.weekN', { n: Number(id.slice(6)) })} · ${weekRangeLabel(lang, id)}` : kind === 'month' ? monthLabel(lang, id) : id)).join(', ')}
+      </div>
+    ) : null;
+
+    let body: any;
+    if (kind === 'year') {
+      // 12 years at a time, the chosen (or current) year in the middle row
+      const first = Number(this.calMonths[model] || Number((anchor || now).slice(0, 4)) - 6);
+      const go = (delta: number) => (this.calMonths = { ...this.calMonths, [model]: String(first + delta * 12) });
+      const years = Array.from({ length: 12 }, (_, i) => String(first + i));
+      body = [
+        head(`${first} – ${first + 11}`, this.tr('ui.prevYears'), this.tr('ui.nextYears'), go, !min || `${first - 1}-12-31` >= min, !max || `${first + 12}-01-01` <= max),
+        <div class="rfg-period-grid">{years.map(y => cell(y, y, y === now.slice(0, 4) ? 'is-now' : ''))}</div>,
+      ];
+    } else if (kind === 'month') {
+      const year = Number(this.calMonths[model] || (anchor || now).slice(0, 4));
+      const go = (delta: number) => (this.calMonths = { ...this.calMonths, [model]: String(year + delta) });
+      const names = monthNames(lang);
+      body = [
+        head(String(year), this.tr('ui.prevYear'), this.tr('ui.nextYear'), go, !min || `${year - 1}-12-31` >= min, !max || `${year + 1}-01-01` <= max),
+        <div class="rfg-period-grid">
+          {names.map((name, m) => {
+            const id = `${year}-${String(m + 1).padStart(2, '0')}`;
+            return cell(id, name, id === now.slice(0, 7) ? 'is-now' : '');
+          })}
+        </div>,
+      ];
+    } else {
+      // weeks start on Monday (ISO), so a row is exactly one week
+      const focusMonth = this.calMonths[model] || (anchor ? weekStart(anchor) || anchor : now).slice(0, 7);
+      const [year, month] = focusMonth.split('-').map(Number);
+      const go = (delta: number) => (this.calMonths = { ...this.calMonths, [model]: isoOf(new Date(year, month - 1 + delta, 1)).slice(0, 7) });
+      const rows = monthGrid(year, month - 1, 1);
+      body = [
+        head(monthTitle(lang, year, month - 1), this.tr('ui.prevMonth'), this.tr('ui.nextMonth'), go, !min || isoOf(new Date(year, month - 1, 0)) >= min, !max || isoOf(new Date(year, month, 1)) <= max),
+        <div class="rfg-week-grid" role="grid">
+          <div class="rfg-cal-wd rfg-week-no" aria-hidden="true">#</div>
+          {weekdayNames(lang, 1).map(name => (
+            <div class="rfg-cal-wd" role="columnheader">
+              {name}
+            </div>
+          ))}
+          {rows.map(row => {
+            const day = row.find(Boolean) as string;
+            const id = weekOf(day);
+            const pickedRow = picked.includes(id);
+            return (
+              <button
+                type="button"
+                class={`rfg-week-row ${pickedRow ? 'is-picked' : ''} ${id === weekOf(now) ? 'is-now' : ''}`}
+                disabled={disabled(id)}
+                aria-pressed={pickedRow}
+                aria-label={`${this.tr('ui.weekN', { n: Number(id.slice(6)) })} · ${weekRangeLabel(lang, id)}`}
+                onClick={() => pick(id)}
+              >
+                <span class="rfg-week-no">{Number(id.slice(6))}</span>
+                {row.map((iso, i) => (
+                  <span key={i} class={`rfg-week-day ${iso ? '' : 'is-out'}`}>
+                    {iso ? Number(iso.slice(8)) : Number(addDays(day, i - row.indexOf(day)).slice(8))}
+                  </span>
+                ))}
+              </button>
+            );
+          })}
+        </div>,
+      ];
     }
 
-    if (row) {
-      return this.renderRow(row)
-    }
+    return (
+      <div class="rfg-calendar-wrap">
+        <div class={`rfg-calendar rfg-period-${kind}`} role="group" aria-labelledby={`${field.id}-label`}>
+          {body}
+        </div>
+        {summary}
+      </div>
+    );
+  }
+
+  private renderCalendar(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const config = field.config || {};
+    const lang = this.activeLanguage || 'en';
+    const range = field.type === 'dateRange';
+    const slots: { label: string; value: any }[] = (!range && Array.isArray(config.slots) && config.slots) || [];
+    const min = resolveDay(config.minDate);
+    const max = resolveDay(config.maxDate);
+    const offDays: number[] = Array.isArray(config.disabledWeekdays) ? config.disabledWeekdays : [];
+    const maxDays = Number(config.maxDays) || 0;
+
+    // the chosen days (read again at every click: several clicks can come before the next render)
+    const daysOf = (current: any): { date: string; slots: any[] }[] =>
+      (Array.isArray(current) ? current : []).map((v: any) => (typeof v === 'string' ? { date: v, slots: [] } : { date: v && v.date, slots: (v && v.slots) || [] })).filter((v: any) => v.date);
+    const picked = range ? [] : daysOf(value);
+    const now0 = () => daysOf(this.answerOf(model));
+    const start: string = range && value && value.start ? value.start : '';
+    const end: string = range && value && value.end ? value.end : '';
+    const isPicked = (iso: string) => (range ? iso === start || iso === end : picked.some(p => p.date === iso));
+    const inRange = (iso: string) => range && start && end && iso > start && iso < end;
+    const disabled = (iso: string) => !!common.disabled || (min && iso < min) || (max && iso > max) || offDays.includes(dateOf(iso).getDay());
+
+    const write = (days: { date: string; slots: any[] }[]) => {
+      const sorted = [...days].sort((a, b) => (a.date < b.date ? -1 : 1));
+      this.setValueByModel(model, sorted.length ? (slots.length ? sorted : sorted.map(d => d.date)) : undefined);
+    };
+    const pick = (iso: string) => {
+      if (disabled(iso)) return;
+      if (range) {
+        const cur = this.answerOf(model) || {};
+        if (!cur.start || cur.end) this.setValueByModel(model, { start: iso, end: '' });
+        else this.setValueByModel(model, iso < cur.start ? { start: iso, end: cur.start } : { start: cur.start, end: iso });
+        return;
+      }
+      const cur = now0();
+      if (cur.some(p => p.date === iso)) write(cur.filter(p => p.date !== iso));
+      else if (!maxDays || cur.length < maxDays) write([...cur, { date: iso, slots: [] }]);
+    };
+
+    const focusMonth = this.calMonths[model] || (start || (picked[0] && picked[0].date) || (min && min > today() ? min : today())).slice(0, 7);
+    const [year, month] = focusMonth.split('-').map(Number);
+    const go = (delta: number) => {
+      const d = new Date(year, month - 1 + delta, 1);
+      this.calMonths = { ...this.calMonths, [model]: isoOf(d).slice(0, 7) };
+    };
+    const firstDay = firstDayOfWeek(lang);
+    const weeks = monthGrid(year, month - 1, firstDay);
+    const canPrev = !min || isoOf(new Date(year, month - 1, 0)) >= min;
+    const canNext = !max || isoOf(new Date(year, month, 1)) <= max;
+    const now = today();
+    const arrow = (d: string) => (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
 
     return (
-      <Fragment>
-        {this.renderField(field)}
-      </Fragment>
-    )
+      <div class={`rfg-calendar-wrap ${range ? 'is-range' : ''}`}>
+        <div class="rfg-calendar" role="group" aria-labelledby={`${field.id}-label`}>
+          <div class="rfg-cal-head">
+            <button type="button" class="rfg-icon-btn" aria-label={this.tr('ui.prevMonth')} disabled={!canPrev} onClick={() => go(-1)}>
+              {arrow('M15 6l-6 6 6 6')}
+            </button>
+            <div class="rfg-cal-title" aria-live="polite">
+              {monthTitle(lang, year, month - 1)}
+            </div>
+            <button type="button" class="rfg-icon-btn" aria-label={this.tr('ui.nextMonth')} disabled={!canNext} onClick={() => go(1)}>
+              {arrow('M9 6l6 6-6 6')}
+            </button>
+          </div>
+          <div class="rfg-cal-grid" role="grid">
+            {weekdayNames(lang, firstDay).map(name => (
+              <div class="rfg-cal-wd" role="columnheader">
+                {name}
+              </div>
+            ))}
+            {weeks.map(week =>
+              week.map((iso, i) =>
+                iso ? (
+                  <button
+                    type="button"
+                    key={iso}
+                    id={iso === weeks[0].find(Boolean) ? field.id : undefined}
+                    class={`rfg-cal-day ${isPicked(iso) ? 'is-picked' : ''} ${inRange(iso) ? 'in-range' : ''} ${range && iso === start ? 'range-start' : ''} ${range && iso === end ? 'range-end' : ''} ${iso === now ? 'is-today' : ''}`}
+                    aria-pressed={isPicked(iso) ? 'true' : 'false'}
+                    aria-label={dayLabel(lang, iso, true)}
+                    disabled={!!disabled(iso)}
+                    onClick={() => pick(iso)}
+                  >
+                    {Number(iso.slice(8))}
+                  </button>
+                ) : (
+                  <span key={`e-${i}`} class="rfg-cal-empty"></span>
+                ),
+              ),
+            )}
+          </div>
+        </div>
+        {range ? (
+          <div class="rfg-cal-summary">
+            {start ? (
+              <span>
+                {dayLabel(lang, start)} – {end ? dayLabel(lang, end) : this.tr('ui.pickLastDay')}
+                {end && <small> · {this.tr('ui.daysCount', { n: Math.round((dateOf(end).getTime() - dateOf(start).getTime()) / 864e5) + 1 })}</small>}
+              </span>
+            ) : (
+              <span class="rfg-muted">{this.tr('ui.pickFirstDay')}</span>
+            )}
+          </div>
+        ) : (
+          picked.length > 0 && (
+            <div class="rfg-cal-picked">
+              {picked.map(p => (
+                <div key={p.date} class="rfg-cal-pick">
+                  <span class="rfg-cal-pick-day">{dayLabel(lang, p.date)}</span>
+                  {slots.length > 0 && (
+                    <span class="rfg-cal-slots">
+                      {slots.map(s => {
+                        const on = p.slots.some((x: any) => String(x) === String(s.value));
+                        return (
+                          <button
+                            type="button"
+                            class={`rfg-chip ${on ? 'is-on' : ''}`}
+                            aria-pressed={on ? 'true' : 'false'}
+                            disabled={common.disabled}
+                            onClick={() =>
+                              write(
+                                now0().map(x => {
+                                  if (x.date !== p.date) return x;
+                                  const has = x.slots.some((y: any) => String(y) === String(s.value));
+                                  return { ...x, slots: has ? x.slots.filter((y: any) => String(y) !== String(s.value)) : [...x.slots, s.value] };
+                                }),
+                              )
+                            }
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </span>
+                  )}
+                  {!common.disabled && (
+                    <button type="button" class="rfg-icon-btn rfg-cal-remove" aria-label={`${this.tr('ui.remove')}: ${dayLabel(lang, p.date)}`} onClick={() => write(now0().filter(x => x.date !== p.date))}>
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    );
+  }
+
+  /** `type: "yesNo"`: two big buttons. The answer is "yes" or "no"; `config.yesLabel` / `noLabel` rename them. */
+  private renderYesNo(field: FormField, common: any, value: any) {
+    const config = field.config || {};
+    const choice = (v: 'yes' | 'no', label: string, path: string) => (
+      <button
+        type="button"
+        id={v === 'yes' ? field.id : undefined}
+        class={`rfg-yesno-btn ${value === v ? 'is-checked' : ''}`}
+        aria-pressed={value === v ? 'true' : 'false'}
+        disabled={common.disabled}
+        onClick={() => {
+          this.setValueByModel(field.model, value === v ? undefined : v);
+          if (config.autoAdvance && value !== v) setTimeout(() => this.nextStep(), 160);
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d={path} />
+        </svg>
+        {label}
+      </button>
+    );
+    return (
+      <div class="rfg-yesno" role="group" aria-labelledby={`${field.id}-label`}>
+        {choice('yes', config.yesLabel || this.tr('ui.yes'), 'M5 13l4 4L19 7')}
+        {choice('no', config.noLabel || this.tr('ui.no'), 'M6 6l12 12M18 6L6 18')}
+      </div>
+    );
+  }
+
+  /**
+   * `type: "pictureChoice"`: options shown as pictures (`options[].image`). `config.multiple`: several can be picked
+   * (the answer is a list). `config.columns`: 2, 3 (default) or 4 per row; narrow screens show 2.
+   */
+  private renderPictureChoice(field: FormField, common: any, value: any) {
+    const config = field.config || {};
+    const multiple = !!config.multiple;
+    const picked: any[] = multiple ? (Array.isArray(value) ? value : []) : value !== undefined && value !== null && value !== '' ? [value] : [];
+    const options = this.optionsOf(field);
+    return (
+      <div class="rfg-pictures" role={multiple ? 'group' : 'radiogroup'} aria-labelledby={`${field.id}-label`} style={{ '--rfg-pic-cols': String([2, 3, 4].includes(Number(config.columns)) ? config.columns : 3) }}>
+        {options.map((option: any, i: number) => {
+          const on = picked.some(v => String(v) === String(option.value));
+          const src = safeImageUrl(option.image);
+          return (
+            <button
+              type="button"
+              key={String(option.value)}
+              id={i === 0 ? field.id : undefined}
+              class={`rfg-picture ${on ? 'is-checked' : ''}`}
+              role={multiple ? 'checkbox' : 'radio'}
+              aria-checked={on ? 'true' : 'false'}
+              disabled={common.disabled}
+              onClick={() => {
+                if (multiple) this.setValueByModel(field.model, on ? picked.filter(v => String(v) !== String(option.value)) : [...picked, option.value]);
+                else {
+                  this.setValueByModel(field.model, on ? undefined : option.value);
+                  if (config.autoAdvance && !on) setTimeout(() => this.nextStep(), 160);
+                }
+              }}
+            >
+              <span class="rfg-picture-img">{src ? <img src={src} alt="" loading="lazy" /> : <span class="rfg-picture-blank" aria-hidden="true"></span>}</span>
+              <span class="rfg-picture-label">
+                <span class="rfg-picture-mark" aria-hidden="true"></span>
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  private renderRating(field: FormField, value: any) {
+    const max = (field.config && field.config.max) || 5;
+    const hover = this.hoverRating[field.model];
+    const shown = hover !== undefined ? hover : Number(value) || 0;
+    return (
+      <div class="rfg-rating" role="radiogroup" onMouseLeave={() => (this.hoverRating = { ...this.hoverRating, [field.model]: undefined })}>
+        {Array.from({ length: max }, (_, i) => i + 1).map(n => (
+          <button
+            type="button"
+            class={`rfg-star ${n <= shown ? 'is-active' : ''}`}
+            id={n === 1 ? field.id : undefined}
+            aria-label={this.tr('ui.ratingOf', { n, max })}
+            disabled={field.disabled}
+            onMouseEnter={() => (this.hoverRating = { ...this.hoverRating, [field.model]: n })}
+            onClick={() => this.setValueByModel(field.model, Number(value) === n ? '' : n)}
+          >
+            <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+              <path d={STAR} stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+            </svg>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  private renderScale(field: FormField, value: any) {
+    const { min = 1, max = 10, minLabel, maxLabel } = field.config || {};
+    // `config.nps`: a Net Promoter Score question (0-10), the numbers tinted as detractors, passives and promoters
+    const nps = !!(field.config && field.config.nps);
+    const tinted = nps && field.config!.nps !== 'plain';
+    const numbers: number[] = [];
+    for (let n = min; n <= max; n++) numbers.push(n);
+    return (
+      <div class="rfg-scale-wrap">
+        <div class={`rfg-scale ${nps ? 'rfg-scale-nps' : ''}`} role="radiogroup" style={{ '--rfg-scale-count': String(numbers.length) }}>
+          {numbers.map(n => (
+            <button type="button" class={`rfg-scale-btn ${tinted ? `rfg-nps-${n <= 6 ? 'low' : n <= 8 ? 'mid' : 'high'}` : ''} ${Number(value) === n && value !== '' ? 'is-active' : ''}`} id={n === min ? field.id : undefined} disabled={field.disabled} onClick={() => this.setValueByModel(field.model, Number(value) === n ? '' : n)}>
+              {n}
+            </button>
+          ))}
+        </div>
+        {(minLabel || maxLabel) && (
+          <div class="rfg-scale-labels">
+            <span>{minLabel}</span>
+            <span>{maxLabel}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  private renderField(field: FormField, zIndex: number, hidden: boolean, bare = false) {
+    // A field hidden by logic is not put in the page at all (its answer is kept in memory). Hidden-but-present fields
+    // still count for the browser: e.g. a hidden street / postal code / city next to a search box makes Chrome treat
+    // the whole thing as an address form and pop up its saved addresses. Uploads stay mounted so a chosen file survives.
+    if (hidden && field.type !== 'file') return null;
+    this.registry[field.model || ''] = field;
+    if (field.type === 'heading') {
+      const Tag = (field.config && field.config.level) || 'h2';
+      return (
+        <div key={field.id} class={`rfg-field rfg-block rfg-heading ${hidden ? 'rfg-hidden' : ''}`}>
+          <Tag innerHTML={sanitizeHtml(field.label || '')}></Tag>
+          {field.helpText && <p>{field.helpText}</p>}
+        </div>
+      );
+    }
+    if (field.type === 'paragraph') {
+      return (
+        <div key={field.id} class={`rfg-field rfg-block rfg-paragraph ${hidden ? 'rfg-hidden' : ''}`}>
+          <p innerHTML={sanitizeHtml(field.content || '')}></p>
+        </div>
+      );
+    }
+    if (field.type === 'divider') {
+      return (
+        <div key={field.id} class={`rfg-field rfg-block ${hidden ? 'rfg-hidden' : ''}`}>
+          <hr class="rfg-divider" />
+        </div>
+      );
+    }
+    if (field.type === 'callout') return this.renderCallout(field);
+    if (field.type === 'button') return this.renderButton(field);
+    if (field.type === 'image' || field.type === 'video' || field.type === 'link' || field.type === 'icon' || field.type === 'embed') return this.renderContent(field, hidden);
+
+    const errors = field.model ? this.validationErrors[field.model] : null;
+    if (bare) {
+      // a table cell: just the control, the column header says what it is
+      const cell = { ...field, _bare: true };
+      return (
+        <div key={field.id} data-field-id={field.id} class={`rfg-field rfg-type-${field.type} rfg-bare ${errors ? 'rfg-has-error' : ''} ${this.styledClass(field)}`} style={this.fieldStyle(field, zIndex)}>
+          {this.renderControl(cell, zIndex)}
+          {errors && <div class="rfg-error" role="alert">{errors[0]}</div>}
+        </div>
+      );
+    }
+    const isInlineLabel = field.type === 'toggle';
+    const isSingleCheck = field.type === 'input' && field.inputType === 'checkbox';
+    return (
+      <div
+        key={field.id}
+        data-field-id={field.id}
+        class={`rfg-field rfg-type-${field.type} ${field.inputType ? `rfg-itype-${field.inputType}` : ''} ${field.inputWrapperClass || ''} ${hidden ? 'rfg-hidden' : ''} ${errors ? 'rfg-has-error' : ''} ${this.styledClass(field)}`}
+        style={this.fieldStyle(field, zIndex)}
+      >
+        {isInlineLabel ? (
+          <div class="rfg-inline">
+            <div class="rfg-inline-text">
+              {this.renderLabel(field)}
+              {field.helpText && <div class="rfg-help">{field.helpText}</div>}
+            </div>
+            {this.renderControl(field, zIndex)}
+          </div>
+        ) : (
+          <div class="rfg-stack">
+            {!isSingleCheck && this.renderLabel(field)}
+            {field.helpText && !isSingleCheck && <div class="rfg-help">{field.helpText}</div>}
+            <slot name={`field-label@${field.id}`} />
+            {isSingleCheck ? (
+              <div>
+                {this.renderControl(field, zIndex)}
+                {field.helpText && <div class="rfg-help rfg-help-check">{field.helpText}</div>}
+              </div>
+            ) : (
+              this.renderControl(field, zIndex)
+            )}
+          </div>
+        )}
+        {errors && <div class="rfg-error" role="alert">{errors[0]}</div>}
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------- callout, button, section */
+
+  /**
+   * Blocks that show something. `image`: `config.src`, `alt`, `caption`, `width` (`small` / `medium` / `full`), `align`,
+   * `link`. `video`: `config.url` (YouTube, Vimeo, Loom or a video file), `caption`. `link`: `label`, `config.url`,
+   * `style` (`button` / `text`), `newTab`. `icon`: `config.emoji` or `config.icon` (a BLOCK_ICONS name), `size`, `align`,
+   * with `label` / `helpText` under it. `embed`: `config.url` (https: a map, a booking calendar, a PDF), `height`.
+   */
+  private renderContent(field: FormField, hidden: boolean) {
+    const config = field.config || {};
+    const align = ['left', 'center', 'right'].includes(config.align) ? config.align : field.type === 'icon' ? 'center' : 'left';
+    const wrap = (body: any, extra = '') => (
+      <div key={field.id} data-field-id={field.id} class={`rfg-field rfg-block rfg-content rfg-${field.type} rfg-align-${align} ${extra} ${hidden ? 'rfg-hidden' : ''}`}>
+        {body}
+      </div>
+    );
+    const caption = config.caption ? <div class="rfg-caption">{config.caption}</div> : null;
+
+    if (field.type === 'image') {
+      const src = safeImageUrl(config.src);
+      if (!src) return this.designMode ? wrap(<div class="rfg-media-empty">{config.src ? '⚠' : ''}</div>) : null;
+      const img = <img src={src} alt={config.alt || ''} loading="lazy" />;
+      const link = safeLinkUrl(config.link);
+      return wrap(
+        <figure class={`rfg-image-figure rfg-w-${['small', 'medium'].includes(config.width) ? config.width : 'full'} ${config.rounded === false ? '' : 'rfg-rounded'}`}>
+          {link ? (
+            <a href={link} target="_blank" rel="noopener">
+              {img}
+            </a>
+          ) : (
+            img
+          )}
+          {caption && <figcaption>{config.caption}</figcaption>}
+        </figure>,
+      );
+    }
+
+    if (field.type === 'video') {
+      // `config.file`: an uploaded video, played as a file whatever its address looks like
+      const source = config.file && /^https:\/\//i.test(String(config.url || '')) ? { kind: 'file' as const, src: String(config.url) } : videoSource(config.url);
+      if (!source) return this.designMode ? wrap(<div class="rfg-media-empty rfg-ratio"></div>) : null;
+      // in the builder a light placeholder instead of the player (nothing loads from the video site while editing)
+      if (this.designMode)
+        return wrap(
+          <figure class="rfg-video-figure">
+            <div class="rfg-media-empty rfg-ratio">
+              <div class="rfg-play">
+                <span>▶</span>
+                <span>{config.url}</span>
+              </div>
+            </div>
+            {caption && <figcaption>{config.caption}</figcaption>}
+          </figure>,
+        );
+      return wrap(
+        <figure class="rfg-video-figure">
+          <div class="rfg-ratio">
+            {source.kind === 'iframe' ? (
+              <iframe src={source.src} title={config.caption || field.label || 'Video'} loading="lazy" allow="fullscreen; picture-in-picture; encrypted-media" allowFullScreen></iframe>
+            ) : (
+              <video src={source.src} controls preload="metadata"></video>
+            )}
+          </div>
+          {caption && <figcaption>{config.caption}</figcaption>}
+        </figure>,
+      );
+    }
+
+    if (field.type === 'link') {
+      const href = safeLinkUrl(config.url);
+      const text = field.label || config.url || '';
+      const newTab = config.newTab !== false && /^https?:/i.test(href || '');
+      const props = href ? { href, ...(newTab ? { target: '_blank', rel: 'noopener' } : { target: '_top' }) } : {};
+      return wrap(
+        config.style === 'text' ? (
+          <a class="rfg-text-link" {...props}>
+            {text}
+          </a>
+        ) : (
+          <a class={`rfg-btn ${config.variant === 'secondary' ? 'rfg-btn-secondary' : 'rfg-btn-primary'} rfg-link-btn`} {...props}>
+            {text}
+          </a>
+        ),
+      );
+    }
+
+    if (field.type === 'icon') {
+      const size = ['small', 'medium', 'large'].includes(config.size) ? config.size : 'medium';
+      // `config.iconNode`: the shapes of a library icon (stored in the form); `config.icon` alone: a built-in BLOCK_ICONS name
+      const node = safeIconNode(config.iconNode);
+      const path = !node.length && config.icon && BLOCK_ICONS[config.icon];
+      const color = safeColor(config.color);
+      return wrap(
+        <div class="rfg-icon-block">
+          {config.emoji ? (
+            <span class={`rfg-emoji rfg-size-${size}`} role="img" aria-label={field.label || ''}>
+              {String(config.emoji).slice(0, 16)}
+            </span>
+          ) : node.length || path ? (
+            <span class={`rfg-icon-badge rfg-size-${size}`} aria-hidden="true" style={color ? { '--rfg-icon-color': color } : {}}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                {node.length ? node.map(([Tag, attrs]: [any, any], i: number) => <Tag key={i} {...attrs} />) : <path d={path as string} />}
+              </svg>
+            </span>
+          ) : null}
+          {field.label && <div class="rfg-icon-title" innerHTML={sanitizeHtml(field.label)}></div>}
+          {field.helpText && <div class="rfg-icon-text">{field.helpText}</div>}
+        </div>,
+      );
+    }
+
+    // embed
+    const src = safeEmbedUrl(config.url);
+    if (!src) return this.designMode ? wrap(<div class="rfg-media-empty" style={{ height: '160px' }}></div>) : null;
+    const height = Math.max(120, Math.min(1200, Number(config.height) || 420));
+    return wrap(
+      <figure class="rfg-embed-figure">
+        {this.designMode ? (
+          <div class="rfg-media-empty" style={{ height: `${height}px` }}>
+            {src}
+          </div>
+        ) : (
+          <iframe src={src} title={config.caption || field.label || 'Embedded content'} loading="lazy" style={{ height: `${height}px` }} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" referrerPolicy="strict-origin-when-cross-origin"></iframe>
+        )}
+        {caption && <figcaption>{config.caption}</figcaption>}
+      </figure>,
+    );
+  }
+
+  private renderCallout(field: FormField) {
+    const tone = (field.config && field.config.tone) || 'info';
+    const icons: { [tone: string]: string } = {
+      info: 'M12 8v.01M11 12h1v4h1M12 21a9 9 0 100-18 9 9 0 000 18z',
+      success: 'M8 12.5l2.5 2.5L16 9.5M12 21a9 9 0 100-18 9 9 0 000 18z',
+      warning: 'M12 9v4m0 4v.01M10.3 4.2L2.8 17.5A2 2 0 004.5 20.5h15a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z',
+      danger: 'M12 8v5m0 3v.01M12 21a9 9 0 100-18 9 9 0 000 18z',
+    };
+    return (
+      <div key={field.id} data-field-id={field.id} class={`rfg-field rfg-block rfg-callout rfg-callout-${tone}`} role="note">
+        <svg class="rfg-callout-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d={icons[tone] || icons.info} />
+        </svg>
+        <div class="rfg-callout-body">
+          {field.label && <div class="rfg-callout-title" innerHTML={sanitizeHtml(field.label)}></div>}
+          {field.content && <div class="rfg-callout-text" innerHTML={sanitizeHtml(field.content)}></div>}
+        </div>
+      </div>
+    );
+  }
+
+  private renderButton(field: FormField) {
+    const config = field.config || {};
+    const variant = ['primary', 'secondary', 'outline', 'ghost', 'danger'].includes(config.variant) ? config.variant : 'primary';
+    const disabled = !!this.states().disabled[field.id] || this.status === 'submitting';
+    const icon = (name: string) =>
+      name === 'arrow-right' ? 'M5 12h14M13 6l6 6-6 6' : name === 'arrow-left' ? 'M19 12H5M11 6l-6 6 6 6' : name === 'plus' ? 'M12 5v14M5 12h14' : name === 'check' ? 'M5 13l4 4L19 7' : name === 'download' ? 'M12 4v11m0 0l-4-4m4 4l4-4M5 20h14' : '';
+    const svg = (name: string) => (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d={icon(name)} />
+      </svg>
+    );
+    const side = config.iconSide === 'left' || config.icon === 'arrow-left' || config.icon === 'plus' ? 'left' : 'right';
+    return (
+      <div key={field.id} data-field-id={field.id} class={`rfg-field rfg-block rfg-button-block rfg-ba-${config.align || 'start'}`}>
+        <button
+          type="button"
+          id={field.id}
+          class={`rfg-btn rfg-bv-${variant} ${variant === 'primary' ? 'rfg-btn-primary' : variant === 'secondary' ? 'rfg-btn-secondary' : ''} ${config.size === 'large' ? 'rfg-btn-lg' : ''}`}
+          disabled={disabled}
+          onClick={() => this.runActions(config.actions || [], field)}
+        >
+          {config.icon && icon(config.icon) && side === 'left' && svg(config.icon)}
+          <span class={config.iconOnly ? 'rfg-sr-only' : ''}>{this.interpolate(field.label || '')}</span>
+          {config.icon && icon(config.icon) && side === 'right' && svg(config.icon)}
+        </button>
+        {field.helpText && <div class="rfg-help">{field.helpText}</div>}
+      </div>
+    );
+  }
+
+  /** The prefixes names are looked up under, nearest first: "rooms[0].units[1]" -> "rooms[0].units" -> "rooms[0]" -> "rooms" -> "". */
+  private prefixChain(prefix: string): string[] {
+    const out: string[] = [];
+    let p = prefix || '';
+    for (let guard = 0; guard < 16 && p; guard++) {
+      out.push(p);
+      p = /\[\d+\]$/.test(p) ? p.replace(/\[\d+\]$/, '') : p.replace(/(^|\.)[^.[\]]+$/, '');
+    }
+    out.push('');
+    return out;
+  }
+
+  /** The item (or dialog) a block sits in, as a prefix: fields of a dialog look from where the dialog was opened. */
+  private scopePrefix(source?: FormField): string {
+    const p = (source && (source._prefix as string)) || '';
+    return p === DRAFT ? (this.modal ? this.modal.origin : '') : p;
+  }
+
+  /** Finds the model of a field by its key, looking inside the item first and then outward ("units" in a room -> this room's units). */
+  private resolveModel(key: string, source?: FormField): string {
+    for (const p of this.prefixChain(this.scopePrefix(source))) {
+      const model = p ? `${p}.${key}` : key;
+      if (this.fieldByModel(model) || getByPath(this.values, model) !== undefined) return model;
+    }
+    return key;
+  }
+
+  /** The list that `key` names for `field` (an item's own list first, then outward). */
+  private listFor(key: string, field: FormField): any[] | null {
+    for (const p of this.prefixChain(this.scopePrefix(field))) {
+      const value = getByPath(this.values, p ? `${p}.${key}` : key);
+      if (Array.isArray(value)) return value;
+    }
+    return null;
+  }
+
+  /** Fills `{key}` (an answer of the item the button is in) and `{draft:key}` (what was typed in a dialog) into action values. */
+  private fillValue(value: any, ctx: { item: { [key: string]: any }; draft: { [key: string]: any } }): any {
+    if (typeof value === 'string') {
+      const whole = value.match(/^\{(draft:)?([\w.-]+)\}$/);
+      if (whole) {
+        const v = (whole[1] ? ctx.draft : ctx.item)[whole[2]];
+        return v === undefined ? '' : deepClone(v);
+      }
+      return value.replace(/\{(draft:)?([\w.-]+)\}/g, (_m, draft, key) => {
+        const v = (draft ? ctx.draft : ctx.item)[key];
+        return v === undefined || v === null || typeof v === 'object' ? '' : String(v);
+      });
+    }
+    if (Array.isArray(value)) return value.map(v => this.fillValue(v, ctx));
+    if (value && typeof value === 'object') {
+      const out: { [key: string]: any } = {};
+      Object.keys(value).forEach(k => (out[k] = this.fillValue(value[k], ctx)));
+      return out;
+    }
+    return value;
+  }
+
+  /**
+   * What a button does when clicked: its `config.actions` run in order, and the chain stops at the first one that cannot
+   * continue (a step with errors, a failed submit). Names are looked up from the item the button is in outward
+   * (a button in a room's unit row that adds to "defects" means this room's defects).
+   */
+  private async runActions(actions: any[], source?: FormField, context: { draft?: { [key: string]: any } } = {}) {
+    if (this.designMode) return;
+    const prefix = this.scopePrefix(source);
+    const ctx = { item: (prefix ? getByPath(this.values, prefix) : withDraft(this.values, {})) || {}, draft: context.draft || draftObject(this.values) };
+    for (const action of actions || []) {
+      switch (action && action.type) {
+        case 'next':
+          if (!(await this.nextStep())) return;
+          break;
+        case 'back':
+          this.prevStep();
+          break;
+        case 'goto':
+          if (!(await this.goToStepId(action.step, !!action.validate))) return;
+          break;
+        case 'submit': {
+          const result: any = await this.submit();
+          if (!result || result.errors || result.error) return;
+          break;
+        }
+        case 'reset':
+          await this.reset();
+          break;
+        case 'set':
+          if (action.field) this.setValueByModel(this.resolveModel(action.field, source), action.value === undefined ? '' : this.fillValue(action.value, ctx));
+          break;
+        case 'setAll': {
+          // set one answer of every item of a group, e.g. the condition of every unit in a room
+          // `field: "rooms.units"` reaches into the items of every room
+          const [head, ...inner] = String(action.field || '').split('.');
+          const model = this.resolveModel(head, source);
+          const list = this.answerOf(model);
+          if (Array.isArray(list) && action.key) {
+            const value = this.fillValue(action.value, ctx);
+            const apply = (items: any[], path: string[]): any[] =>
+              items.map((item: any) => (path.length ? { ...item, [path[0]]: apply(Array.isArray(item && item[path[0]]) ? item[path[0]] : [], path.slice(1)) } : { ...item, [action.key]: value }));
+            this.setValueByModel(model, apply(list, inner));
+          }
+          break;
+        }
+        case 'closeItem':
+          // leaves an item that is open as a page (back to the list)
+          this.openItems = {};
+          requestAnimationFrame(() => this.el.scrollIntoView && this.el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+          break;
+        case 'add': {
+          const repeater = this.fieldByModel(this.resolveModel(action.field, source));
+          if (repeater) this.startAdd(repeater, this.fillValue(action.values || {}, ctx));
+          break;
+        }
+        case 'openModal': {
+          const block = this.findModalBlock(action.modal);
+          if (block) {
+            const config = block.config || {};
+            this.openModal(
+              {
+                kind: 'block',
+                title: block.label || '',
+                fields: block.fields || [],
+                confirmLabel: config.confirmLabel || this.tr('ui.confirm'),
+                cancelLabel: config.cancelLabel || this.tr('ui.cancel'),
+                origin: prefix,
+                actions: config.confirmActions || [],
+              },
+              { ...defaultValues(block.fields || []), ...this.fillValue(action.values || {}, ctx) },
+            );
+          }
+          break;
+        }
+        case 'link': {
+          const url = this.safeUrl(action.url);
+          if (url && typeof window !== 'undefined') {
+            if (action.newTab) window.open(url, '_blank', 'noopener');
+            else window.location.href = url;
+          }
+          break;
+        }
+        case 'emit':
+          this.formAction.emit({ name: action.name || '', field: source ? source.id : '', values: this.buildPayload().payload });
+          break;
+        case 'saveDraft':
+          this.saveDraft();
+          break;
+        case 'exit':
+          this.exitForm();
+          break;
+      }
+    }
+  }
+
+  private renderSection(section: FormField, hidden: boolean) {
+    const vis = this.visibility();
+    const hasFields = flattenFields([section], true).length > 0;
+    if (hidden || (!this.designMode && hasFields && !flattenFields([section], true).some(f => vis[f.id]))) return null;
+    const config = section.config || {};
+    const collapsible = !!config.collapsible;
+    const closed = collapsible && (this.collapsed[section.id] !== undefined ? this.collapsed[section.id] : !!config.startCollapsed);
+    // a section switched off by a rule is shown greyed out and cannot be used (e.g. step 3 until step 2 is done)
+    const locked = !this.designMode && !!this.states().disabled[section.id] && !section.disabled;
+    const badge = config.badge !== undefined && config.badge !== null && config.badge !== '' ? String(config.badge) : '';
+    const head = (section.label || section.helpText || badge) && (
+      <header class={`rfg-section-head ${collapsible ? 'is-clickable' : ''}`} onClick={collapsible ? () => (this.collapsed = { ...this.collapsed, [section.id]: !closed }) : undefined}>
+        {badge && (
+          <span class="rfg-badge" aria-hidden="true">
+            {badge}
+          </span>
+        )}
+        <div class="rfg-section-titles">
+          {section.label && (
+            <h3 class="rfg-section-title">
+              <span innerHTML={sanitizeHtml(section.label)}></span>
+              {config.tooltip && (
+                <span class="rfg-tip" tabindex={0} role="img" aria-label={config.tooltip} data-tip={config.tooltip}>
+                  ?
+                </span>
+              )}
+            </h3>
+          )}
+          {section.helpText && <p class="rfg-section-desc">{section.helpText}</p>}
+        </div>
+        {collapsible && <span class={`rfg-chevron ${closed ? '' : 'is-open'}`} aria-hidden="true"></span>}
+      </header>
+    );
+    return (
+      <section key={section.id} data-field-id={section.id} class={`rfg-section rfg-section-${config.style === 'plain' ? 'plain' : 'card'} ${closed ? 'is-closed' : ''} ${locked ? 'is-locked' : ''}`} {...(locked ? ({ inert: '' } as any) : {})}>
+        {head}
+        {hasFields && (
+          <div class={`rfg-section-body ${closed ? 'rfg-hidden' : ''}`}>
+            <div class="rfg-grid">{this.renderBlocks(section.fields || [])}</div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  /* -------------------------------------------------------------------- tabs */
+
+  private tabsRegistry: { [id: string]: FormField } = {};
+
+  /** Does any field of `fields` (a tab, say) have an error on screen? */
+  private hasErrorIn(fields: FormField[]): boolean {
+    const keys = Object.keys(this.validationErrors);
+    if (!keys.length) return false;
+    const models = flattenFields(fields, true)
+      .map(f => f.model)
+      .filter(Boolean) as string[];
+    return keys.some(k => models.some(m => k === m || k.startsWith(`${m}[`) || k.startsWith(`${m}.`)));
+  }
+
+  private renderTabs(field: FormField, hidden: boolean) {
+    if (hidden) return null;
+    this.tabsRegistry[field.id] = field;
+    const tabs = field.tabs || [];
+    if (!tabs.length) return null;
+    if (!this.designMode && !this.insideItem && Object.keys(this.openItems).length && this.containsOpen(field)) {
+      // an item is open as a page: show its tab's content without the tab strip
+      const holder = tabs.find(t => t.fields.some(f => this.containsOpen(f))) || tabs[0];
+      return (
+        <div key={field.id} data-field-id={field.id} class="rfg-tabs rfg-tabs-open">
+          <div class="rfg-tabpanel">
+            <div class="rfg-grid">{this.renderBlocks(holder.fields || [])}</div>
+          </div>
+        </div>
+      );
+    }
+    const chosen = this.activeTabs[field.id];
+    // the tab the visitor picked, else the first one with an error (so a failed step shows its problem), else the first tab
+    const active = (tabs.find(t => t.id === chosen) || tabs.find(t => this.hasErrorIn(t.fields)) || tabs[0]).id;
+    return (
+      <div key={field.id} data-field-id={field.id} class={`rfg-tabs rfg-tabs-${(field.config && field.config.style) === 'pills' ? 'pills' : 'line'}`}>
+        <div class="rfg-tablist" role="tablist">
+          {tabs.map(tab => (
+            <button type="button" role="tab" key={tab.id} aria-selected={tab.id === active ? 'true' : 'false'} class={`rfg-tab ${tab.id === active ? 'is-active' : ''}`} onClick={() => (this.activeTabs = { ...this.activeTabs, [field.id]: tab.id })}>
+              <span>{tab.label}</span>
+              {this.hasErrorIn(tab.fields) && <span class="rfg-item-flag">!</span>}
+            </button>
+          ))}
+        </div>
+        {tabs.map(tab => (
+          <div key={tab.id} role="tabpanel" class={`rfg-tabpanel ${tab.id === active ? '' : 'rfg-hidden'}`}>
+            <div class="rfg-grid">{this.renderBlocks(tab.fields || [])}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------- dialogs */
+
+  private findModalBlock(id: string): FormField | undefined {
+    return flattenFields(this.doc.fields, false, true).find(f => f.type === 'modal' && f.id === id);
+  }
+
+  private openModal(modal: ModalState, draft: { [key: string]: any }) {
+    this.addMenu = '';
+    this.itemMenu = '';
+    this.values = withDraft(this.values, draft);
+    this.modal = modal;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const first = this.el.querySelector('.rfg-modal input:not([type=hidden]):not([readonly]):not([type=radio]), .rfg-modal select, .rfg-modal textarea') as HTMLElement;
+        if (first && first.focus) first.focus();
+      }),
+    );
+  }
+
+  private dropDraftErrors() {
+    const kept: { [key: string]: string[] } = {};
+    Object.keys(this.validationErrors).forEach(key => {
+      if (!key.startsWith(`${DRAFT}.`)) kept[key] = this.validationErrors[key];
+    });
+    return kept;
+  }
+
+  private closeModal() {
+    if (!this.modal) return;
+    this.values = withDraft(this.values, {});
+    this.modal = null;
+    this.validationErrors = this.dropDraftErrors();
+  }
+
+  /** The fields of the open dialog that are shown (all of them, or only the ones marked "dialog only"). */
+  private modalInstances(modal: ModalState): FormField[] {
+    const all = draftFields(modal.fields);
+    return modal.onlyMarked ? all.filter(f => f.config && f.config.dialogOnly) : all;
+  }
+
+  private async revalidateModal() {
+    const modal = this.modal;
+    if (!modal || modal.kind === 'sign') return;
+    const errors = await this.validateScope(this.modalInstances(modal), draftObject(this.values), this.states());
+    this.validationErrors = { ...this.dropDraftErrors(), ...errors };
+  }
+
+  private async confirmModal() {
+    const modal = this.modal;
+    if (!modal) return;
+    if (modal.kind !== 'sign') {
+      const errors = await this.validateScope(this.modalInstances(modal), draftObject(this.values), this.states());
+      if (Object.keys(errors).length) {
+        this.validationErrors = { ...this.dropDraftErrors(), ...errors };
+        this.modal = { ...modal, live: true };
+        requestAnimationFrame(() => {
+          const target = this.el.querySelector('.rfg-modal .rfg-has-error') as HTMLElement;
+          if (target && target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+        return;
+      }
+    }
+    const draft = draftObject(this.values);
+    this.closeModal();
+    if (modal.kind === 'add' || modal.kind === 'edit') {
+      const current = this.answerOf(modal.repeater);
+      const list = Array.isArray(current) ? current : [];
+      this.forgetItemState(modal.repeater);
+      const repeater = this.fieldByModel(modal.repeater);
+      const uniqueKey = repeater && repeater.config && repeater.config.uniqueKey;
+      if (uniqueKey && draft[uniqueKey]) draft[uniqueKey] = this.uniqueValue(repeater, draft[uniqueKey], modal.kind === 'edit' ? modal.index : -1);
+      this.setValueByModel(modal.repeater, modal.kind === 'add' ? [...list, draft] : list.map((item: any, i: number) => (i === modal.index ? draft : item)));
+    } else if (modal.kind === 'sign') {
+      this.setValueByModel(modal.target, draft.signature || '');
+    } else {
+      await this.runActions(modal.actions || [], { _prefix: modal.origin } as any, { draft });
+    }
+  }
+
+  /** The type picker at the top of an add dialog: the group's presets, plus an entry for a custom one. */
+  private renderPresetPicker(modal: ModalState) {
+    if (!modal.presets || modal.kind !== 'add') return null;
+    const repeater = modal.repeater ? this.fieldByModel(modal.repeater) : undefined;
+    const config = (repeater && repeater.config) || {};
+    const custom = config.presetCustom !== false;
+    return (
+      <div key="preset-picker" class="rfg-field rfg-preset-pick">
+        <div class="rfg-stack">
+          <label class="rfg-label" htmlFor="rfg-preset-select">
+            {config.presetLabel || this.tr('ui.type')}
+          </label>
+          <div class="rfg-select-wrap">
+            <select id="rfg-preset-select" class="rfg-control rfg-select" onChange={(e: any) => this.applyPreset(e.target.value)}>
+              <option value="" disabled selected={modal.presetChoice === ''}>
+                {this.tr('ui.selectOption')}
+              </option>
+              {modal.presets.map((p, i) => (
+                <option value={String(i)} selected={modal.presetChoice === String(i)}>
+                  {p.label}
+                </option>
+              ))}
+              {custom && (
+                <option value="custom" selected={modal.presetChoice === 'custom'}>
+                  {config.presetCustomLabel || this.tr('ui.other')}
+                </option>
+              )}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  private renderModal() {
+    const modal = this.modal;
+    if (!modal) return null;
+    const sign = modal.kind === 'sign';
+    const draft = draftObject(this.values);
+    const body = sign ? (
+      <re-signature-pad
+        key="sign"
+        modelKey={`${DRAFT}.signature`}
+        value={draft.signature || ''}
+        height={220}
+        texts={{ hint: this.tr('ui.signHere'), clear: this.tr('ui.clearSignature') }}
+      ></re-signature-pad>
+    ) : (
+      <div class="rfg-grid">
+        {this.renderPresetPicker(modal)}
+        {this.renderBlocks(this.modalInstances(modal), false, true)}
+      </div>
+    );
+    return (
+      <div key="modal" class="rfg-modal-backdrop" onMouseDown={(e: any) => e.target === e.currentTarget && this.closeModal()}>
+        <div class="rfg-modal" role="dialog" aria-modal="true" aria-label={modal.title}>
+          <header class="rfg-modal-head">
+            <h2 class="rfg-modal-title">{modal.title}</h2>
+            <button type="button" class="rfg-icon-btn" aria-label={this.tr('ui.close')} onClick={() => this.closeModal()}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </header>
+          <div class="rfg-modal-body">{body}</div>
+          <footer class="rfg-modal-foot">
+            <button type="button" class="rfg-btn rfg-bv-ghost" onClick={() => this.closeModal()}>
+              {modal.cancelLabel}
+            </button>
+            <button type="button" class="rfg-btn rfg-btn-primary" disabled={sign && !draft.signature} onClick={() => this.confirmModal()}>
+              {modal.confirmLabel}
+            </button>
+          </footer>
+        </div>
+      </div>
+    );
+  }
+
+  /* --------------------------------------------------------------- repeaters */
+
+  /**
+   * Fills `{n}` (1, 2, 3…), `{key}` (an answer of the item) and `{count:key}` (how many items a nested group has) into a template.
+   * `{count:key|none|one|many}` picks a text by that number (`#` is the number): `{count:defects|No defects|1 defect|# defects}`.
+   */
+  private fillItem(template: string, item: { model: string }, n: number) {
+    const values = getByPath(this.values, item.model) || {};
+    return template
+      .replace(/\{n\}/g, String(n))
+      .replace(/\{count:([\w.-]+)(?:\|([^|}]*)\|([^|}]*)\|([^}]*))?\}/g, (_m, key, none, one, many) => {
+        const count = Array.isArray(values[key]) ? values[key].length : 0;
+        if (none === undefined) return String(count);
+        return (count === 0 ? none : count === 1 ? one : many).replace(/#/g, String(count));
+      })
+      .replace(/\{([\w.-]+)\}/g, (_m, key) => {
+        const v = values[key];
+        if (Array.isArray(v)) return v.filter(x => x !== null && typeof x !== 'object').join(', ');
+        return v === undefined || v === null || typeof v === 'object' ? '' : String(v);
+      })
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /** The title of an item: `config.itemLabel` filled in, or "Item 3". */
+  private itemTitle(repeater: FormField, item: { model: string }, n: number) {
+    // a template like "{type} ({name})" must not leave "()" behind when the name is empty
+    const filled = this.fillItem(String((repeater.config && repeater.config.itemLabel) || ''), item, n)
+      .replace(/\(\s*\)|\[\s*\]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[\s,;:·–-]+|[\s,;:·–-]+$/g, '')
+      .trim();
+    return filled || this.tr('ui.itemTitle', { n });
+  }
+
+  /** Items shown as small cards (a grid, or a list) that open in a dialog or as a page, instead of as a form. */
+  private isCompact(repeater: FormField) {
+    const c = repeater.config || {};
+    return c.layout === 'grid' || (c.layout !== 'table' && (c.itemOpen === 'page' || c.itemOpen === 'modal'));
+  }
+
+  private openMode(repeater: FormField): 'inline' | 'modal' | 'page' {
+    const c = repeater.config || {};
+    if (c.itemOpen === 'page' || c.itemOpen === 'modal' || c.itemOpen === 'inline') return c.itemOpen;
+    return c.layout === 'grid' ? 'modal' : 'inline';
+  }
+
+  private menuKeys(repeater: FormField): string[] | null {
+    const c = repeater.config || {};
+    if (Array.isArray(c.itemMenu)) return c.itemMenu;
+    return this.isCompact(repeater) ? ['edit', 'duplicate', 'up', 'down', 'remove'] : null;
+  }
+
+  /** The state kept per item (errors, folded, "other" texts…) is keyed by position: forget it when positions change. */
+  private forgetItemState(repeaterModel: string) {
+    const prefix = `${repeaterModel}[`;
+    const drop = <T,>(map: { [key: string]: T }) => {
+      const next: { [key: string]: T } = {};
+      Object.keys(map).forEach(key => {
+        if (!key.startsWith(prefix)) next[key] = map[key];
+      });
+      return next;
+    };
+    this.validationErrors = drop(this.validationErrors);
+    this.collapsed = drop(this.collapsed);
+    this.others = drop(this.others);
+    this.searchItems = drop(this.searchItems);
+    if (this.openItems[repeaterModel] !== undefined) {
+      const next = { ...this.openItems };
+      delete next[repeaterModel];
+      this.openItems = next;
+    }
+  }
+
+  private listOf(repeater: FormField): any[] {
+    const current = this.answerOf(repeater.model);
+    return Array.isArray(current) ? current : [];
+  }
+
+  private addItem(repeater: FormField, extra: { [key: string]: any } = {}) {
+    const list = this.listOf(repeater);
+    const max = Number(repeater.config && repeater.config.maxItems) || 0;
+    this.addMenu = '';
+    if (max && list.length >= max) return;
+    const item = blankItem(repeater, extra);
+    const uniqueKey = repeater.config && repeater.config.uniqueKey;
+    if (uniqueKey && item[uniqueKey]) item[uniqueKey] = this.uniqueValue(repeater, item[uniqueKey]);
+    this.setValueByModel(repeater.model, [...list, item]);
+    requestAnimationFrame(() => {
+      const items = this.el.querySelectorAll(`[data-repeater="${repeater.id}"] > .rfg-items > .rfg-item, [data-repeater="${repeater.id}"] .rfg-table-row-wrap`);
+      const last = items[items.length - 1];
+      const input = last && (last.querySelector('input:not([type=hidden]):not([readonly]), select, textarea') as HTMLElement);
+      if (input && input.focus) input.focus({ preventScroll: false });
+    });
+  }
+
+  /** `config.uniqueKey` (e.g. "name"): a second "Bathroom" becomes "Bathroom 2". */
+  private uniqueValue(repeater: FormField, value: any, ignore = -1) {
+    const key = repeater.config && repeater.config.uniqueKey;
+    if (!key || typeof value !== 'string' || !value) return value;
+    const taken = this.listOf(repeater)
+      .filter((_item: any, i: number) => i !== ignore)
+      .map((item: any) => String(item && item[key]));
+    let candidate = value;
+    for (let n = 2; taken.includes(candidate) && n < 200; n++) candidate = `${value} ${n}`;
+    return candidate;
+  }
+
+  /** Picking a type in an add dialog fills in that preset (a name, a checklist…). A name the person typed themselves is kept. */
+  private applyPreset(choice: string) {
+    const modal = this.modal;
+    const repeater = modal && modal.repeater ? this.fieldByModel(modal.repeater) : undefined;
+    if (!modal || !repeater || !modal.presets) return;
+    const config = repeater.config || {};
+    const nameKey = config.presetNameKey || config.uniqueKey || 'name';
+    const draft = draftObject(this.values);
+    const previous = modal.presetChoice !== '' && modal.presetChoice !== 'custom' ? modal.presets[Number(modal.presetChoice)] : null;
+    const preset = choice !== 'custom' && choice !== '' ? modal.presets[Number(choice)] : null;
+    const next = blankItem(repeater, preset ? preset.values || {} : {});
+    const typed = draft[nameKey];
+    const wasPresetName = previous && previous.values && previous.values[nameKey] === typed;
+    if (typed && !wasPresetName) next[nameKey] = typed; // keep what the person wrote
+    else if (preset && next[nameKey] !== undefined) next[nameKey] = this.uniqueValue(repeater, next[nameKey]);
+    else if (!preset && wasPresetName) next[nameKey] = '';
+    this.values = withDraft(this.values, next);
+    this.modal = { ...modal, presetChoice: choice };
+  }
+
+  /** "Add": straight into the list, or through a dialog (`config.addMode: "modal"`). */
+  private startAdd(repeater: FormField, extra: { [key: string]: any } = {}) {
+    const config = repeater.config || {};
+    const max = Number(config.maxItems) || 0;
+    if (max && this.listOf(repeater).length >= max) return;
+    if (config.addMode !== 'modal') return this.addItem(repeater, extra);
+    const presets = Array.isArray(config.presets) && config.presets.length ? config.presets : undefined;
+    this.openModal(
+      {
+        kind: 'add',
+        title: config.addTitle || config.addLabel || this.tr('ui.addItem'),
+        fields: repeater.fields || [],
+        confirmLabel: config.confirmLabel || this.tr('ui.addItem'),
+        cancelLabel: config.cancelLabel || this.tr('ui.cancel'),
+        origin: (repeater._prefix as string) || '',
+        repeater: repeater.model,
+        presets,
+        presetChoice: '',
+        onlyMarked: config.dialogContent === 'marked',
+      },
+      blankItem(repeater, extra),
+    );
+  }
+
+  private openEdit(repeater: FormField, index: number) {
+    const config = repeater.config || {};
+    const item = this.listOf(repeater)[index];
+    if (!item) return;
+    this.openModal(
+      {
+        kind: 'edit',
+        title: config.editTitle || this.itemTitle(repeater, { model: `${repeater.model}[${index}]` }, index + 1),
+        fields: repeater.fields || [],
+        confirmLabel: config.confirmLabel || this.tr('ui.save'),
+        cancelLabel: config.cancelLabel || this.tr('ui.cancel'),
+        origin: (repeater._prefix as string) || '',
+        repeater: repeater.model,
+        index,
+        onlyMarked: config.dialogContent === 'marked',
+      },
+      deepClone(item),
+    );
+  }
+
+  /** Clicking an item card: open it in a dialog or as a page. */
+  private openItem(repeater: FormField, index: number) {
+    if (this.openMode(repeater) === 'page') {
+      this.openItems = { ...this.openItems, [repeater.model]: index };
+      this.itemMenu = '';
+      requestAnimationFrame(() => this.el.scrollIntoView && this.el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    } else this.openEdit(repeater, index);
+  }
+
+  private closeItemPage(repeater: FormField) {
+    const next = { ...this.openItems };
+    delete next[repeater.model];
+    this.openItems = next;
+  }
+
+  private moveItem(repeater: FormField, from: number, to: number) {
+    const list = [...this.listOf(repeater)];
+    if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return;
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    this.forgetItemState(repeater.model);
+    this.setValueByModel(repeater.model, list);
+  }
+
+  private itemAction(repeater: FormField, index: number, action: string) {
+    const list = this.listOf(repeater);
+    if (action === 'edit') this.openEdit(repeater, index);
+    else if (action === 'up') this.moveItem(repeater, index, index - 1);
+    else if (action === 'down') this.moveItem(repeater, index, index + 1);
+    else if (action === 'remove') this.removeItem(repeater, index);
+    else if (action === 'duplicate') {
+      const max = Number(repeater.config && repeater.config.maxItems) || 0;
+      if (max && list.length >= max) return;
+      this.forgetItemState(repeater.model);
+      const copy = deepClone(list[index]);
+      const uniqueKey = repeater.config && repeater.config.uniqueKey;
+      if (uniqueKey && copy[uniqueKey]) copy[uniqueKey] = this.uniqueValue(repeater, copy[uniqueKey]);
+      this.setValueByModel(repeater.model, [...list.slice(0, index + 1), copy, ...list.slice(index + 1)]);
+    }
+  }
+
+  private removeItem(repeater: FormField, index: number) {
+    const list = this.listOf(repeater);
+    // the state of the items that come after shifts by one: start clean for this repeater
+    this.forgetItemState(repeater.model);
+    this.setValueByModel(repeater.model, list.filter((_item: any, i: number) => i !== index));
+  }
+
+  private renderRepeater(field: FormField, hidden: boolean) {
+    if (hidden) return null;
+    this.registry[field.model] = field;
+    const config = field.config || {};
+    const states = this.states();
+    let items = itemInstances(field, this.values);
+    // the builder shows one sample item so the layout can be judged
+    if (this.designMode && !items.length) items = itemInstances(field, setByPath(this.values, field.model, [blankItem(field)]));
+    const table = config.layout === 'table';
+    const compact = this.isCompact(field);
+    const min = Number(config.minItems) || 0;
+    const max = Number(config.maxItems) || 0;
+    const locked = !!states.disabled[field.id];
+    const canAdd = config.allowAdd !== false && !locked && (!max || items.length < max);
+    const canRemove = config.allowRemove !== false && !locked && items.length > min;
+    const errors = this.validationErrors[field.model];
+    // an item opened as a page replaces the list until "Back"
+    const open = this.openItems[field.model];
+    if (!this.designMode && compact && this.openMode(field) === 'page' && open !== undefined && items[open]) return this.renderItemPage(field, items[open], open);
+    const dashedInGrid = compact && canAdd && config.addStyle === 'dashed';
+    return (
+      <div key={field.id} data-field-id={field.id} data-repeater={field.id} class={`rfg-field rfg-repeater rfg-repeater-${table ? 'table' : compact ? 'grid' : 'cards'} ${errors ? 'rfg-has-error' : ''}`}>
+        {(field.label || field.helpText) && (
+          <div class="rfg-repeater-head">
+            {field.label && <div class="rfg-label" innerHTML={sanitizeHtml(field.label)}></div>}
+            {field.helpText && <div class="rfg-help">{field.helpText}</div>}
+          </div>
+        )}
+        <div class={`rfg-items ${compact ? 'rfg-items-grid' : ''}`} style={compact ? { '--rfg-cols': String(Number(config.columns) || (config.layout === 'grid' ? 2 : 1)) } : undefined}>
+          {table ? (items.length ? this.renderTable(field, items, canRemove) : null) : compact ? items.map((item, i) => this.renderCompact(field, item, i, canRemove, items.length)) : items.map((item, i) => this.renderItem(field, item, i, canRemove, items.length))}
+          {dashedInGrid && <div class="rfg-grid-add">{this.renderAdd(field)}</div>}
+          {!items.length && config.emptyText && !dashedInGrid && <div class="rfg-empty">{config.emptyText}</div>}
+        </div>
+        {errors && <div class="rfg-error" role="alert">{errors[0]}</div>}
+        {canAdd && !dashedInGrid && this.renderAdd(field)}
+      </div>
+    );
+  }
+
+  private renderAdd(field: FormField) {
+    const config = field.config || {};
+    // with a dialog, the presets are the choices of its type picker; otherwise they are tiles under the button
+    const presets: any[] = Array.isArray(config.presets) && config.addMode !== 'modal' ? config.presets : [];
+    const label = config.addLabel || this.tr('ui.addItem');
+    const open = this.addMenu === field.model;
+    const plus = (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    );
+    return (
+      <div class={`rfg-add rfg-add-${config.addStyle === 'dashed' ? 'dashed' : 'button'}`}>
+        <button type="button" class="rfg-add-btn" aria-expanded={presets.length ? (open ? 'true' : 'false') : undefined} onClick={() => (presets.length ? (this.addMenu = open ? '' : field.model) : this.startAdd(field))}>
+          {plus}
+          <span>{label}</span>
+        </button>
+        {presets.length > 0 && open && (
+          <div class="rfg-presets" role="menu">
+            {presets.map(preset => (
+              <button type="button" role="menuitem" class="rfg-preset" onClick={() => this.startAdd(field, preset.values || {})}>
+                <span class="rfg-preset-title">{preset.label}</span>
+                {preset.description && <span class="rfg-preset-desc">{preset.description}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  private renderTrash(onClick: (e: Event) => void, label: string) {
+    return (
+      <button type="button" class="rfg-icon-btn" aria-label={label} title={label} onClick={onClick}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
+        </svg>
+      </button>
+    );
+  }
+
+  /** The ⋮ button of an item with its menu (edit, duplicate, move, remove). Without `config.itemMenu` plain cards just get a bin. */
+  private renderItemActions(repeater: FormField, item: { model: string }, i: number, canRemove: boolean, count: number, title: string) {
+    const keys = this.menuKeys(repeater);
+    if (!keys) return canRemove ? this.renderTrash(e => { e.stopPropagation(); this.removeItem(repeater, i); }, `${this.tr('ui.remove')}: ${title}`) : null;
+    const max = Number(repeater.config && repeater.config.maxItems) || 0;
+    const entries = keys.filter(k => (k === 'remove' ? canRemove : k === 'up' ? i > 0 : k === 'down' ? i < count - 1 : k === 'duplicate' ? !max || count < max : true));
+    if (!entries.length) return null;
+    const label = (k: string) => this.tr(k === 'edit' ? 'ui.edit' : k === 'duplicate' ? 'ui.duplicate' : k === 'up' ? 'ui.moveUp' : k === 'down' ? 'ui.moveDown' : 'ui.remove');
+    const open = this.itemMenu === item.model;
+    return (
+      <span class="rfg-menu-wrap">
+        <button
+          type="button"
+          class="rfg-icon-btn"
+          aria-haspopup="menu"
+          aria-expanded={open ? 'true' : 'false'}
+          aria-label={`${this.tr('ui.itemOptions')}: ${title}`}
+          onClick={(e: Event) => {
+            e.stopPropagation();
+            this.itemMenu = open ? '' : item.model;
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="12" cy="19" r="1.8" />
+          </svg>
+        </button>
+        {open && (
+          <div class="rfg-menu" role="menu">
+            {entries.map(k => (
+              <button
+                type="button"
+                role="menuitem"
+                class={`rfg-menu-item ${k === 'remove' ? 'is-danger' : ''}`}
+                onClick={(e: Event) => {
+                  e.stopPropagation();
+                  this.itemMenu = '';
+                  this.itemAction(repeater, i, k);
+                }}
+              >
+                {label(k)}
+              </button>
+            ))}
+          </div>
+        )}
+      </span>
+    );
+  }
+
+  private itemErrored(item: { model: string }) {
+    return Object.keys(this.validationErrors).some(k => k.startsWith(`${item.model}.`) || k.startsWith(`${item.model}[`));
+  }
+
+  private itemDone(repeater: FormField, item: { model: string }) {
+    const field = repeater.config && repeater.config.doneField;
+    const values = getByPath(this.values, item.model);
+    return !!field && !!values && values[field] === true;
+  }
+
+  private renderItem(repeater: FormField, item: { index: number; model: string; suffix: string; fields: FormField[] }, i: number, canRemove: boolean, count: number) {
+    const config = repeater.config || {};
+    const collapsible = !!config.collapsible;
+    const closed = collapsible && (this.collapsed[item.model] !== undefined ? this.collapsed[item.model] : !!config.startCollapsed);
+    const title = this.itemTitle(repeater, item, i + 1);
+    // `config.itemMeta`: a muted line next to the title ("19 units"); `config.doneField`: a yes/no answer of the item that shows a "Done" chip
+    const meta = config.itemMeta ? this.fillItem(String(config.itemMeta), item, i + 1) : '';
+    const done = this.itemDone(repeater, item);
+    const toggle = () => (this.collapsed = { ...this.collapsed, [item.model]: !closed });
+    const errored = this.itemErrored(item);
+    return (
+      <div key={item.suffix} class={`rfg-item ${closed ? 'is-closed' : ''} ${errored ? 'has-errors' : ''}`}>
+        <div class={`rfg-item-head ${collapsible ? 'is-clickable' : ''}`} onClick={collapsible ? toggle : undefined}>
+          {collapsible && <span class={`rfg-chevron ${closed ? '' : 'is-open'}`} aria-hidden="true"></span>}
+          <span class="rfg-item-title">{title}</span>
+          {meta && <span class="rfg-item-meta">{meta}</span>}
+          {done && <span class="rfg-item-done">{this.tr('ui.done')}</span>}
+          {errored && closed && <span class="rfg-item-flag">!</span>}
+          <span class="rfg-item-actions">{this.renderItemActions(repeater, item, i, canRemove, count, title)}</span>
+        </div>
+        <div class={`rfg-item-body ${closed ? 'rfg-hidden' : ''}`}>
+          <div class="rfg-grid">{this.renderBlocks(item.fields)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  /* drag to reorder (compact cards) */
+  private dragFrom: { model: string; index: number } | null = null;
+
+  /** A small card for an item: title, a summary line, an optional "Done" button, a ⋮ menu. Clicking it opens the item. */
+  private renderCompact(repeater: FormField, item: { index: number; model: string; suffix: string; fields: FormField[] }, i: number, canRemove: boolean, count: number) {
+    const config = repeater.config || {};
+    const title = this.itemTitle(repeater, item, i + 1);
+    const meta = config.itemMeta ? this.fillItem(String(config.itemMeta), item, i + 1) : '';
+    const sortable = config.sortable !== false && count > 1;
+    const errored = this.itemErrored(item);
+    const done = this.itemDone(repeater, item);
+    const doneField = config.doneField as string;
+    return (
+      <div
+        key={item.suffix}
+        class={`rfg-ccard ${errored ? 'has-errors' : ''} ${this.dropOver === item.model ? 'is-drop' : ''}`}
+        draggable={sortable}
+        onDragStart={(e: DragEvent) => {
+          this.dragFrom = { model: repeater.model, index: i };
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', title);
+          }
+        }}
+        onDragOver={(e: DragEvent) => {
+          if (!this.dragFrom || this.dragFrom.model !== repeater.model) return;
+          e.preventDefault();
+          if (this.dropOver !== item.model) this.dropOver = item.model;
+        }}
+        onDrop={(e: DragEvent) => {
+          e.preventDefault();
+          const from = this.dragFrom;
+          this.dragFrom = null;
+          this.dropOver = '';
+          if (from && from.model === repeater.model) this.moveItem(repeater, from.index, i);
+        }}
+        onDragEnd={() => {
+          this.dragFrom = null;
+          this.dropOver = '';
+        }}
+      >
+        <div class="rfg-ccard-head">
+          {sortable && (
+            <span class="rfg-grip" title={this.tr('ui.dragToReorder')} aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M5 8h14M5 12h14M5 16h14" />
+              </svg>
+            </span>
+          )}
+          <button type="button" class="rfg-ccard-title" onClick={() => this.openItem(repeater, i)}>
+            {title}
+          </button>
+          {errored && <span class="rfg-item-flag">!</span>}
+          {this.renderItemActions(repeater, item, i, canRemove, count, title)}
+        </div>
+        {meta && (
+          <button type="button" class="rfg-ccard-meta" onClick={() => this.openItem(repeater, i)}>
+            {meta}
+          </button>
+        )}
+        {doneField && (
+          <button
+            type="button"
+            class={`rfg-done-btn ${done ? 'is-done' : ''}`}
+            aria-pressed={done ? 'true' : 'false'}
+            onClick={() => this.setValueByModel(`${item.model}.${doneField}`, !done)}
+          >
+            {done ? (
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label={this.tr('ui.done')}>
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              config.doneLabel || this.tr('ui.done')
+            )}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  /** An item opened as its own page (`itemOpen: "page"`): a Back link and the item's fields (often tabs). */
+  private renderItemPage(repeater: FormField, item: { index: number; model: string; suffix: string; fields: FormField[] }, index: number) {
+    const title = this.itemTitle(repeater, item, index + 1);
+    return (
+      <div key={repeater.id} data-field-id={repeater.id} data-repeater={repeater.id} class="rfg-field rfg-repeater rfg-repeater-open">
+        <button type="button" class="rfg-back" onClick={() => this.closeItemPage(repeater)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5M11 6l-6 6 6 6" />
+          </svg>
+          <span>{repeater.config && repeater.config.backLabel ? repeater.config.backLabel : this.tr('ui.back')}</span>
+        </button>
+        <h3 class="rfg-detail-title">{title}</h3>
+        <div class="rfg-detail-body">
+          <div class="rfg-grid">{this.renderBlocks(item.fields, false, true)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * Table layout: the first row of columns of the item becomes the table row (the column headers are the labels of
+   * its first fields); anything after that row is a detail area under the row, shown only while it has visible fields.
+   */
+  private renderTable(repeater: FormField, items: Array<{ index: number; model: string; suffix: string; fields: FormField[] }>, canRemove: boolean) {
+    const template = repeater.fields || [];
+    const lead = template[0] && template[0].type === 'columns' ? template[0] : null;
+    const columnsOf = (fields: FormField[]): { id: string; span: number; fields: FormField[] }[] =>
+      lead ? (fields[0].columns || []).map(c => ({ id: c.id, span: c.span || 1, fields: c.fields })) : fields.filter(f => !isLayoutType(f.type)).map(f => ({ id: f.id, span: 1, fields: [f] }));
+    const head = columnsOf(template);
+    const hasActions = canRemove || !!this.menuKeys(repeater);
+    const template_columns = `${head.map(c => `minmax(0, ${c.span}fr)`).join(' ')} ${hasActions ? '36px' : ''}`.trim();
+    const vis = this.visibility();
+    // the header of a column: `config.columnLabel` of its first field, else that field's label
+    const labelOf = (column: { fields: FormField[] }) => {
+      const f = column.fields.find(x => x.label || (x.config && x.config.columnLabel)) || ({} as FormField);
+      return String((f.config && f.config.columnLabel) || f.label || '').replace(/<[^>]*>/g, '');
+    };
+    return (
+      <div class="rfg-table" role="table" style={{ '--rfg-table-cols': template_columns }}>
+        <div class={`rfg-table-head ${items.length ? '' : 'rfg-hidden'}`} role="row">
+          {head.map(column => {
+            const first = column.fields.find(f => f.label && !(f.config && f.config.columnLabel));
+            return (
+              <div role="columnheader" class="rfg-th">
+                {labelOf(column)}
+                {first && this.isRequired(first) && <span class="rfg-required" aria-hidden="true">*</span>}
+              </div>
+            );
+          })}
+          {hasActions && <div class="rfg-th"></div>}
+        </div>
+        {items.map((item, i) => {
+          const cells = columnsOf(item.fields);
+          const detail = lead ? item.fields.slice(1) : [];
+          const hasDetail = detail.some(block => flattenFields([block], true).some(f => vis[f.id]));
+          const title = this.itemTitle(repeater, item, i + 1);
+          return (
+            <div key={item.suffix} class="rfg-table-row-wrap">
+              <div class="rfg-table-row" role="row">
+                {cells.map((column, c) => (
+                  <div role="cell" class="rfg-cell" data-label={labelOf(head[c] || column)}>
+                    {this.renderBlocks(column.fields, true)}
+                  </div>
+                ))}
+                {(canRemove || this.menuKeys(repeater)) && <div class="rfg-cell rfg-cell-actions">{this.renderItemActions(repeater, item, i, canRemove, items.length, title)}</div>}
+              </div>
+              {hasDetail && (
+                <div class="rfg-table-detail">
+                  <div class="rfg-grid">{this.renderBlocks(detail)}</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  /** A row of columns: each column is a vertical stack of fields. */
+  private renderRow(row: FormField, hidden: boolean) {
+    const layout = rowLayout(row);
+    const vis = this.visibility();
+    const empty = !this.designMode && !flattenFields([row], true).some(f => vis[f.id]);
+    if (hidden || empty) return null;
+    return (
+      <div key={row.id} class={`rfg-row ${hidden || empty ? 'rfg-hidden' : ''}`} style={{ alignItems: layout.alignItems }}>
+        {(row.columns || []).map((column, index) => (
+          <div key={column.id} class="rfg-col" style={{ '--rfg-span': String(layout.spans[index]), ...(index === 0 ? { '--rfg-start': String(layout.firstColumn) } : {}) }}>
+            {this.renderBlocks(column.fields || [])}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  private zMap: { [id: string]: number } = {};
+  private zOf(field: FormField) {
+    return this.zMap[field.id] || this.zMap[field._template as string] || 1;
+  }
+
+  /** Does this block hold a group whose item is open as a page? */
+  private containsOpen(field: FormField) {
+    return flattenFields([field], true).some(f => f.type === 'repeater' && this.openItems[f.model] !== undefined);
+  }
+
+  /** > 0 while the inside of an open item page is being rendered: everything in it shows, nested tabs and sections included */
+  private insideItem = 0;
+
+  private renderBlocks(fields: FormField[], bare = false, keepAll = false) {
+    if (keepAll) {
+      this.insideItem++;
+      try {
+        return this.renderBlocks(fields, bare, false);
+      } finally {
+        this.insideItem--;
+      }
+    }
+    const vis = this.visibility();
+    // while an item is open as a page, the rest of the step steps aside: only the blocks that lead to it are shown
+    const detail = !this.insideItem && !this.designMode && Object.keys(this.openItems).length > 0;
+    return fields.map(raw => {
+      const field = this.withScript(this.recallField(raw));
+      if (detail && !this.containsOpen(field)) return null;
+      const hidden = !vis[field.id];
+      if (field.type === 'pageBreak') return null;
+      // `config.dialogOnly`: only in the item's dialog (e.g. the type of a meter); `config.hideInDialog`: left out of it (e.g. a row's "+" button)
+      const inDialog = field._prefix === DRAFT;
+      if (field.config && ((field.config.dialogOnly && !inDialog) || (field.config.hideInDialog && inDialog))) return null;
+      if (field.type === 'columns') return this.renderRow(field, hidden);
+      if (field.type === 'section') return this.renderSection(field, hidden);
+      if (field.type === 'tabs') return this.renderTabs(field, hidden);
+      if (field.type === 'modal') return null; // a dialog is only shown when something opens it
+      if (field.type === 'hidden') return null; // its value is in the answers, nothing to show
+      if (field.type === 'repeater') return this.renderRepeater(field, hidden);
+      return this.renderField(field, this.zOf(field), hidden, bare);
+    });
+  }
+
+  /* ----------------------------------------------------- recall: {{field:key}} and {{data}} in texts */
+
+  /**
+   * Shows earlier answers in texts: `{{field:email}}` becomes what was answered (the option's label for choices, dates
+   * in the form's language). `{{contact.name}}`-style tokens are filled by the host before (see applyPrefill); one that is
+   * left has no data and is dropped, except in the builder, which shows the token as it was written.
+   */
+  private recall(text: any, html = false): any {
+    if (typeof text !== 'string' || text.indexOf('{{') < 0) return text;
+    const escape = (v: string) => (html ? v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : v);
+    return text.replace(/\{\{\s*([\w.:[\]-]+)\s*\}\}/g, (all, key: string) => {
+      if (this.designMode) return all;
+      if (!key.startsWith('field:')) return '';
+      return escape(this.answerText(key.slice(6)));
+    });
+  }
+
+  /** An answer as people read it. */
+  private answerText(model: string): string {
+    const value = this.answerOf(model);
+    if (value === undefined || value === null || value === '') return '';
+    const field = this.fieldByModel(model);
+    const labelOf = (v: any) => {
+      const option = field && field.options && field.options.find((o: any) => String(o.value) === String(v));
+      if (option) return option.label;
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        try {
+          return new Date(`${v}T00:00:00`).toLocaleDateString(this.activeLanguage, { day: 'numeric', month: 'long', year: 'numeric' });
+        } catch (e) {
+          return v;
+        }
+      }
+      if (typeof v === 'boolean') return this.tr(v ? 'ui.yes' : 'ui.no');
+      return typeof v === 'object' ? '' : String(v);
+    };
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.start) return [labelOf(value.start), value.end ? labelOf(value.end) : ''].filter(Boolean).join(' – ');
+    if (Array.isArray(value)) return value.map(v => (v && typeof v === 'object' && v.date ? labelOf(v.date) : labelOf(v))).filter(Boolean).join(', ');
+    return labelOf(value);
+  }
+
+  /** The block with its texts recalled (the same object when it has nothing to fill in). */
+  private recallField(field: FormField): FormField {
+    const config = field.config || {};
+    const texts = [field.label, field.helpText, field.content, field.placeholder, field.checkboxLabel, config.caption];
+    if (!texts.some(t => typeof t === 'string' && t.indexOf('{{') >= 0)) return field;
+    return {
+      ...field,
+      label: this.recall(field.label, true),
+      helpText: this.recall(field.helpText),
+      content: this.recall(field.content, true),
+      placeholder: this.recall(field.placeholder),
+      checkboxLabel: this.recall(field.checkboxLabel, true),
+      ...(config.caption ? { config: { ...config, caption: this.recall(config.caption) } } : {}),
+    };
+  }
+
+  private renderFields(fields: FormField[]) {
+    return <div class="rfg-grid">{this.renderBlocks(fields)}</div>;
+  }
+
+  /**
+   * Fills `{count:model}` (number of picked items), `{value:model}` (the answer), `{next}` / `{prev}` (the title of the
+   * next / previous step) and `{step}` / `{steps}` (position and number of steps) into a text, e.g. a button label.
+   */
+  private interpolate(text: string): string {
+    let out = String(text ?? '').replace(/\{(count|value):([\w.\[\]-]+)\}/g, (_match, kind, key) => {
+      const v = this.answerOf(key);
+      if (kind === 'count') return String(Array.isArray(v) ? v.length : v === undefined || v === null || v === '' ? 0 : 1);
+      return Array.isArray(v) ? v.join(', ') : v === undefined || v === null ? '' : String(v);
+    });
+    if (/\{(next|prev|step|steps)\}/.test(out)) {
+      const pages = this.pagesFor(this.values) as any[];
+      const titleOf = (i: number) => (pages[i] && pages[i].title) || '';
+      out = out.replace(/\{next\}/g, titleOf(this.currentStep + 1)).replace(/\{prev\}/g, titleOf(this.currentStep - 1)).replace(/\{step\}/g, String(this.currentStep + 1)).replace(/\{steps\}/g, String(pages.length));
+    }
+    return out.trim();
+  }
+
+  /** Cover image (edge to edge) and logo, from `theme.cover` / `theme.logo`. With `coverStyle: 'hero'` the title sits on the cover. */
+  private renderBranding(theme: FormTheme, header?: any) {
+    if (this.designMode) return null;
+    const cover = safeImageUrl(theme.cover);
+    const logo = safeImageUrl(theme.logo);
+    if (!cover && !logo) return null;
+    const hero = !!cover && theme.coverStyle === 'hero';
+    const overlay = Math.max(0, Math.min(80, Number(theme.coverOverlay) || 0)) / 100;
+    const link = theme.logoLink ? this.safeUrl(theme.logoLink) : '';
+    const logoImg = logo && <img src={logo} alt={theme.logoAlt || ''} style={{ height: `${theme.logoHeight || 40}px` }} />;
+    const logoBlock = logo && (
+      <div class={`rfg-logo rfg-logo-${theme.logoAlign || 'left'}`}>
+        {link ? (
+          <a href={link} rel="noopener" target={/^https?:/i.test(link) ? '_blank' : undefined}>
+            {logoImg}
+          </a>
+        ) : (
+          logoImg
+        )}
+      </div>
+    );
+    return (
+      <div class={`rfg-brand ${hero ? 'rfg-brand-hero' : ''}`}>
+        {cover && (
+          <div
+            class="rfg-cover"
+            role="presentation"
+            style={{
+              backgroundImage: `${overlay ? `linear-gradient(rgba(0,0,0,${overlay}), rgba(0,0,0,${overlay})), ` : ''}url("${cover}")`,
+              backgroundPosition: `center ${theme.coverPosition || 'center'}`,
+              [hero ? 'minHeight' : 'height']: `${theme.coverHeight || 160}px`,
+            }}
+          >
+            {hero && (
+              <div class="rfg-hero-content">
+                {logoBlock}
+                {header}
+              </div>
+            )}
+          </div>
+        )}
+        {!hero && logoBlock}
+      </div>
+    );
+  }
+
+  private static SOCIAL_PATHS: { [type: string]: string } = {
+    facebook: 'M14 9h3V5h-3a4 4 0 0 0-4 4v2H7v4h3v6h4v-6h3l1-4h-4V9z',
+    instagram: 'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM17.5 6.5h.01',
+    linkedin: 'M5 9v10M5 5v.01M10 19v-6a3 3 0 0 1 6 0v6M10 9v10',
+    x: 'M4 4l16 16M20 4L4 20',
+    youtube: 'M3 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zM10 9l5 3-5 3z',
+    tiktok: 'M14 3v11a4 4 0 1 1-4-4M14 3c0 3 2 5 5 5',
+    email: 'M3 6h18v12H3zM3 7l9 7 9-7',
+    phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
+    website: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  };
+
+  private socialUrl(type: string, url: string): string {
+    const value = String(url || '').trim();
+    if (!value) return '';
+    if (type === 'email' && !/^mailto:/i.test(value)) return `mailto:${value}`;
+    if (type === 'phone' && !/^tel:/i.test(value)) return `tel:${value.replace(/\s+/g, '')}`;
+    return this.safeUrl(value);
+  }
+
+  /** The footer under the form (see `FormFooter`): logo, text, links, social icons and a copyright line. */
+  private renderFooter(theme: FormTheme) {
+    const footer = this.doc.footer;
+    if (this.designMode || !footer || footer.enabled === false) return null;
+    const links = (footer.links || []).filter(l => l && l.label && this.safeUrl(l.url));
+    const social = (footer.social || []).filter(l => l && this.socialUrl(l.type, l.url));
+    const logo = safeImageUrl(footer.logo);
+    const copyright = (footer.copyright || '').replace(/\{year\}/gi, String(new Date().getFullYear()));
+    if (!footer.text && !links.length && !social.length && !logo && !copyright) return null;
+    const style: { [key: string]: string } = { ...themeToCssVars(theme) };
+    // plain footers sit on the page, so by default they take the readable colour for the page (or its image)
+    const mode = pageMode(theme);
+    const onPage = mode === 'image' ? ((theme.pageOverlay || 0) >= 25 ? '#ffffff' : contrastColor('#808080')) : contrastColor(mode === 'gradient' ? pageGradientStops(theme)[0].color : theme.pageBackground || '#f3f4f6');
+    if (!footer.textColor && (footer.style || 'plain') === 'plain') style['--rfg-footer-text'] = onPage;
+    if (footer.backgroundColor) style['--rfg-footer-bg'] = footer.backgroundColor;
+    if (footer.textColor) style['--rfg-footer-text'] = footer.textColor;
+    const align = footer.align || 'center';
+    const kind = footer.style || 'plain';
+    return (
+      <footer class={`rfg-footer rfg-footer-${kind} rfg-footer-${align}`} style={style}>
+        <div class="rfg-footer-inner">
+          {logo && <img class="rfg-footer-logo" src={logo} alt="" style={{ height: `${footer.logoHeight || 28}px` }} />}
+          {footer.text && <p class="rfg-footer-text">{footer.text}</p>}
+          {links.length > 0 && (
+            <nav class="rfg-footer-links" aria-label="Footer">
+              {links.map((l, i) => {
+                const url = this.safeUrl(l.url);
+                return (
+                  <a key={i} href={url} {...(l.newTab || /^https?:/i.test(url) ? { target: '_blank', rel: 'noopener' } : {})}>
+                    {l.label}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+          {social.length > 0 && (
+            <div class="rfg-footer-social">
+              {social.map((l, i) => (
+                <a key={i} href={this.socialUrl(l.type, l.url)} aria-label={l.type} rel="noopener" target={/^https?:/i.test(l.url) ? '_blank' : undefined}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d={ReFormGenerator.SOCIAL_PATHS[l.type] || ReFormGenerator.SOCIAL_PATHS.website}></path>
+                  </svg>
+                </a>
+              ))}
+            </div>
+          )}
+          {copyright && <p class="rfg-footer-copy">{copyright}</p>}
+        </div>
+      </footer>
+    );
+  }
+
+  /** Language selector shown on the form when `i18n.switcher` is `flags` or `dropdown`. */
+  private renderSwitcher() {
+    const mode = this.switcherMode();
+    if (mode === 'none') return null;
+    const languages = availableLanguages(this.sourceDoc.i18n as I18nConfig);
+    const choose = (code: string) => this.setLanguage(code);
+    if (mode === 'dropdown') {
+      return (
+        <div class="rfg-lang">
+          <div class="rfg-select-wrap rfg-lang-select">
+            <select class="rfg-control rfg-lang-dd" aria-label={this.tr('ui.language')} onChange={(e: any) => choose(e.target.value)}>
+              {languages.map(code => {
+                const info = languageInfo(code);
+                return (
+                  <option value={code} selected={code === this.activeLanguage}>
+                    {info.flag ? `${info.flag} ` : ''}
+                    {info.name}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div class="rfg-lang" role="group" aria-label={this.tr('ui.language')}>
+        {languages.map(code => {
+          const info = languageInfo(code);
+          return (
+            <button type="button" key={code} class={`rfg-lang-btn ${code === this.activeLanguage ? 'is-active' : ''}`} title={info.name} aria-pressed={code === this.activeLanguage ? 'true' : 'false'} onClick={() => choose(code)}>
+              {info.flag && <span class="rfg-flag">{info.flag}</span>}
+              <span>{code.split('-')[0].toUpperCase()}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  private renderSuccess(settings: any) {
+    const again = settings.allowResubmit && (
+      <button type="button" class="rfg-link" onClick={() => this.reset()}>
+        {this.tr('ui.submitAnother')}
+      </button>
+    );
+    if (this.pendingRedirect) {
+      return (
+        <div class="rfg-success">
+          <a class="rfg-btn rfg-btn-primary" href={this.pendingRedirect} target="_top" rel="noopener">
+            {this.tr('ui.continue')}
+          </a>
+        </div>
+      );
+    }
+    // the thank-you page built in the form
+    if (this.afterSubmit() === 'page') {
+      return (
+        <div class="rfg-success-page">
+          <div class="rfg-grid">{this.renderBlocks(this.endingFields)}</div>
+          {again}
+        </div>
+      );
+    }
+    return (
+      <div class="rfg-success">
+        <div class="rfg-success-icon">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <p class="rfg-success-message" innerHTML={sanitizeHtml(this.recall(settings.successMessage, true))}></p>
+        {settings.allowResubmit && (
+          <button type="button" class="rfg-link" onClick={() => this.reset()}>
+            {this.tr('ui.submitAnother')}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  /** "Saved at 14:32" for the step list, or nothing before the first save. */
+  private savedText() {
+    if (!this.draftSavedAt) return '';
+    const time = new Date(this.draftSavedAt).toLocaleTimeString(this.activeLanguage, { hour: '2-digit', minute: '2-digit' });
+    return this.tr('ui.savedAt', { time });
+  }
+
+  /** "Saved 5 minutes ago" / "Saved just now" in the form's language, or '' before the first save. */
+  private savedAgo(): string {
+    if (!this.draftSavedAt) return '';
+    const minutes = Math.floor(Math.max(0, Math.max(Date.now(), this.clock) - this.draftSavedAt) / 60000);
+    let time = this.tr('ui.justNow');
+    if (minutes >= 1) {
+      try {
+        const format = new Intl.RelativeTimeFormat(this.activeLanguage, { numeric: 'auto' });
+        time = minutes < 60 ? format.format(-minutes, 'minute') : minutes < 1440 ? format.format(-Math.floor(minutes / 60), 'hour') : format.format(-Math.floor(minutes / 1440), 'day');
+      } catch (e) {
+        time = new Date(this.draftSavedAt).toLocaleTimeString(this.activeLanguage, { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    return this.tr('ui.savedAgo', { time });
+  }
+
+  /** Is a "{saved}" time on screen (the sidebar header's subtitle)? Then it is refreshed every half minute. */
+  private savedTimeShown() {
+    const settings = this.getSettings();
+    const header = settings.sidebarHeader;
+    return settings.stepsLayout === 'sidebar' && !!settings.saveDraft && !!header && typeof header.subtitle === 'string' && header.subtitle.includes('{saved}');
+  }
+
+  /**
+   * Opens a link the form offers (the sidebar's back link): only safe URLs. In a frame, `settings.redirectTarget` decides like for
+   * the redirect after sending: the whole page ("top", default) or only the frame ("self").
+   */
+  private navigateTo(raw: any) {
+    const url = this.safeUrl(raw);
+    if (!url || typeof window === 'undefined') return;
+    let framed = false;
+    try {
+      framed = window.top !== window.self;
+    } catch (e) {
+      framed = true;
+    }
+    if (framed && this.getSettings().redirectTarget !== 'self') {
+      try {
+        window.top!.location.href = url;
+        return;
+      } catch (e) {
+        /* the browser does not allow it: move the frame instead */
+      }
+    }
+    window.location.href = url;
+  }
+
+  /**
+   * The back link of the sidebar header (`settings.sidebarHeader`): saves the draft (with `saveDraft`), then fires `formAction`
+   * when `action` names one, else fires `exit` and goes to `backUrl` (or `exitUrl`).
+   */
+  private sidebarBack() {
+    const settings = this.getSettings();
+    const header = settings.sidebarHeader || {};
+    this.saveDraft();
+    const values = this.buildPayload().payload;
+    if (header.action) {
+      this.formAction.emit({ name: String(header.action), field: null, values });
+      return;
+    }
+    this.exit.emit({ values });
+    this.navigateTo(header.backUrl || settings.exitUrl);
+  }
+
+  /** `settings.sidebarHeader: { title, subtitle?, backUrl?, action? }`: a back arrow and a title at the top of the step list. */
+  private renderSidebarHeader(settings: any) {
+    const header = settings.sidebarHeader;
+    if (!header || typeof header !== 'object' || !(header.title || header.subtitle)) return null;
+    // "{saved}" becomes "Saved 5 minutes ago"; until the first save the subtitle is left out
+    const raw = typeof header.subtitle === 'string' ? header.subtitle : '';
+    const subtitle = raw.includes('{saved}') ? (settings.saveDraft && this.draftSavedAt ? raw.replace(/\{saved\}/g, this.savedAgo()) : '') : raw;
+    return (
+      <div class="rfg-nav-top rfg-nav-header">
+        <button type="button" class="rfg-nav-exit" onClick={() => this.sidebarBack()}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5M11 6l-6 6 6 6" />
+          </svg>
+          <span class="rfg-nav-exit-text">
+            <strong>{header.title || settings.exitText || this.tr('ui.saveExit')}</strong>
+            {subtitle && <small>{subtitle}</small>}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  /**
+   * `settings.sidebarActions`: buttons under the step list (`action`: "submit" sends like the submit button, "next" goes to the next
+   * step, "emit" fires `formAction` with `name`). On small screens the list becomes a strip, and the buttons move under the form.
+   */
+  private renderSidebarActions(settings: any, isLast: boolean, where: 'nav' | 'main') {
+    const list = (Array.isArray(settings.sidebarActions) ? settings.sidebarActions : []).filter((a: any) => a && a.label && ['submit', 'next', 'emit'].includes(a.action) && !(a.action === 'next' && isLast));
+    if (!list.length) return null;
+    return (
+      <div key={`side-actions-${where}`} class={`rfg-side-actions rfg-side-actions-${where}`}>
+        {list.map((a: any, i: number) => {
+          const variant = ['primary', 'secondary', 'outline', 'ghost', 'link'].includes(a.variant) ? a.variant : 'primary';
+          const busy = a.action === 'submit' && this.status === 'submitting';
+          const cls = variant === 'link' ? 'rfg-link rfg-side-link' : `rfg-btn rfg-bv-${variant} ${variant === 'primary' ? 'rfg-btn-primary' : variant === 'secondary' ? 'rfg-btn-secondary' : ''}`;
+          return (
+            <button key={`${i}-${a.action}`} type="button" class={cls} disabled={busy} onClick={() => this.runSidebarAction(a)}>
+              {busy ? this.tr('ui.sending') : this.interpolate(String(a.label))}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  private runSidebarAction(a: any) {
+    if (a.action === 'submit') this.submit();
+    else if (a.action === 'next') this.nextStep();
+    else this.formAction.emit({ name: String(a.name || ''), field: null, values: this.buildPayload().payload });
+  }
+
+  /**
+   * `settings.stepProgress`: how much of a step is done, for its ring: the share of its required questions (shown ones only) that
+   * are answered. A step without required questions is full once it was visited. `complete` = full and without errors.
+   */
+  private stepRing(page: any): { ratio: number; complete: boolean } {
+    const { answered, total } = requiredProgress(page, this.values, this.states());
+    const ratio = total ? answered / total : this.visited[page.id] ? 1 : 0;
+    return { ratio, complete: ratio >= 1 && this.completion[page.id] === true };
+  }
+
+  /** The step list of the sidebar layout: a dot (number, or a tick once the step is filled in) and the step title. */
+  private renderStepNav(pages: any[], step: number, settings: any) {
+    // a function, not one shared element: Stencil needs every element object to appear in exactly one place
+    const tick = () => (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    );
+    const rings = !!settings.stepProgress;
+    const ownHeader = this.renderSidebarHeader(settings);
+    return (
+      <aside class="rfg-steps-nav" aria-label={this.tr('ui.stepsNav')}>
+        <div class="rfg-steps-sticky">
+        {ownHeader}
+        {!ownHeader && settings.saveDraft && (
+          <div class="rfg-nav-top">
+            <button type="button" class="rfg-nav-exit" onClick={() => this.exitForm()}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5M11 6l-6 6 6 6" />
+              </svg>
+              <span class="rfg-nav-exit-text">
+                <strong>{settings.exitText || this.tr('ui.saveExit')}</strong>
+                {this.savedText() && <small>{this.savedText()}</small>}
+              </span>
+            </button>
+          </div>
+        )}
+        <ol class="rfg-steps">
+          {pages.map((page, index) => {
+            // with rings, the step the visitor is on also turns green once it is complete
+            const ring = rings ? this.stepRing(page) : null;
+            const done = ring ? ring.complete : !!this.completion[page.id] && index !== step;
+            const open = this.canOpenStep(index, pages);
+            return (
+              <li key={page.id}>
+                <button
+                  type="button"
+                  class={`rfg-step-item ${index === step ? 'is-current' : ''} ${done ? 'is-done' : ''} ${this.visited[page.id] ? 'is-visited' : ''}`}
+                  disabled={!open}
+                  aria-current={index === step ? 'step' : undefined}
+                  onClick={() => open && index !== step && this.openStep(index)}
+                >
+                  {ring && !done ? (
+                    <span class="rfg-step-dot rfg-step-ring">
+                      <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true">
+                        <circle class="rfg-ring-track" cx="14" cy="14" r="12.5" />
+                        <circle class="rfg-ring-fill" cx="14" cy="14" r="12.5" pathLength={100} stroke-dasharray="100" stroke-dashoffset={String(Math.round((1 - ring.ratio) * 1000) / 10)} />
+                      </svg>
+                      <span class="rfg-ring-num">{index + 1}</span>
+                    </span>
+                  ) : (
+                    <span class="rfg-step-dot">{done ? tick() : index + 1}</span>
+                  )}
+                  <span class="rfg-step-name">{page.title || this.tr('ui.step', { current: index + 1, total: pages.length })}</span>
+                  {ring && done && <span class="rfg-sr-only">{this.tr('ui.done')}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {this.renderSidebarActions(settings, step === pages.length - 1, 'nav')}
+        </div>
+      </aside>
+    );
+  }
+
+  /**
+   * How far along the visitor is (`settings.progressStyle`): a bar (default), the bar with a percentage, numbered
+   * steps, numbered steps with their titles, or nothing. `showProgress: false` (older forms) means nothing.
+   */
+  private progressStyle(settings: any): 'bar' | 'percent' | 'steps' | 'titles' | 'none' {
+    if (settings.showProgress === false) return 'none';
+    const style = settings.progressStyle;
+    return style === 'percent' || style === 'steps' || style === 'titles' || style === 'none' ? style : 'bar';
+  }
+
+  private renderProgress(pages: any[], step: number, settings: any) {
+    const style = this.progressStyle(settings);
+    if (style === 'none') return null;
+    const total = pages.length;
+    const count = settings.showStepCount !== false;
+    const head = settings.stepHeader !== false;
+    const label = this.tr('ui.step', { current: step + 1, total });
+    if (style === 'bar' || style === 'percent') {
+      const percent = Math.round(((step + 1) / total) * 100);
+      return (
+        <div key="progress" class={`rfg-progress is-${style}`} role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={total} aria-valuenow={step + 1}>
+          {(count || style === 'percent' || (!head && pages[step].title)) && (
+            <div class="rfg-progress-text">
+              {count && <span>{label}</span>}
+              {/* without the page heading, the step's title goes next to the count */}
+              {!head && pages[step].title ? <span class="rfg-step-title">{count ? ' · ' : ''}{pages[step].title}</span> : null}
+              {style === 'percent' && <span class="rfg-progress-percent">{percent}%</span>}
+            </div>
+          )}
+          <div class="rfg-progress-track">
+            <div class="rfg-progress-bar" style={{ width: `${percent}%` }}></div>
+          </div>
+        </div>
+      );
+    }
+    // numbered steps (with titles): visited steps can be clicked like the sidebar list (settings.stepNavigation)
+    const tick = () => (
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    );
+    return (
+      <nav key="progress" class={`rfg-stepper ${style === 'titles' ? 'rfg-stepper-titles' : ''}`} aria-label={this.tr('ui.stepsNav')}>
+        <ol>
+          {pages.map((page, index) => {
+            const done = !!this.completion[page.id] && index !== step;
+            const open = this.canOpenStep(index, pages);
+            const name = page.title || this.tr('ui.step', { current: index + 1, total });
+            return (
+              <li key={page.id} class={`${index === step ? 'is-current' : ''} ${done ? 'is-done' : ''}`}>
+                <button type="button" class="rfg-stepper-item" disabled={!open} aria-current={index === step ? 'step' : undefined} aria-label={name} title={name} onClick={() => open && index !== step && this.openStep(index)}>
+                  <span class="rfg-stepper-dot">{done ? tick() : index + 1}</span>
+                  {style === 'titles' && <span class="rfg-stepper-name">{name}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {/* small screens: the titles do not fit, the current one is written under the dots */}
+        {(count || (style === 'titles' && !head)) && (
+          <div class="rfg-stepper-caption">
+            {count ? label : ''}
+            {style === 'titles' && !head && pages[step].title ? `${count ? ' · ' : ''}${pages[step].title}` : ''}
+          </div>
+        )}
+      </nav>
+    );
+  }
+
+  /** The top of a step: its picture, then its title and description (`settings.stepHeader: false` hides the texts). */
+  private renderPageHead(page: any, settings: any, always = false) {
+    const image = safeImageUrl(page.image);
+    const texts = (always || settings.stepHeader !== false) && (page.title || page.description);
+    if (!image && !texts) return null;
+    return (
+      <div class="rfg-page-head">
+        {image && <img class="rfg-page-image" src={image} alt={page.alt || ''} />}
+        {texts && page.title && <h2 class="rfg-page-title">{this.recall(page.title)}</h2>}
+        {texts && page.description && <p class="rfg-page-desc">{this.recall(page.description)}</p>}
+      </div>
+    );
   }
 
   render() {
-    return (
-      <Host>
-        <div class="re-form-generator">
-          {this.fields.map(field => {
-            return (
-              <Fragment>
-                {this.buildRenderWrapper(field)}
-              </Fragment>
-            );
-          })}
-          {Object.keys(this.validationErrors).length ? (
-            <div class='form-error-message'>
-              <div class='form-error-message__message' innerHTML={this.apiAction.formErrorMessage || 'Please fill all required fields'}></div>
+    const settings = this.getSettings();
+    const action = this.getAction();
+    const theme = this.getTheme();
+    const vars = themeToCssVars(theme);
+    const sidebar = settings.stepsLayout === 'sidebar';
+    const rootClass = [
+      're-form-generator',
+      'rfg',
+      `rfg-input-${theme.inputStyle}`,
+      `rfg-card-${theme.cardStyle}`,
+      `rfg-btn-${theme.buttonStyle}`,
+      `rfg-head-${theme.headerAlign || 'left'}`,
+      `rfg-btnw-${theme.buttonWidth}`,
+      `rfg-btna-${theme.buttonAlign || 'left'}`,
+      this.designMode ? 'rfg-design' : '',
+    ].join(' ');
+
+    if (this.schemaError) {
+      return (
+        <Host>
+          <div class="rfg rfg-schema-error">Invalid form schema: {this.schemaError}</div>
+        </Host>
+      );
+    }
+
+    const style: any = vars;
+    const pages = (this.designMode ? [this.doc.fields] : this.pagesFor(this.values)) as any[];
+    const isSteps = !this.designMode && pages.length > 1;
+    const step = Math.min(this.currentStep, Math.max(0, pages.length - 1));
+    const isLast = step === pages.length - 1;
+    const hasErrors = Object.keys(this.validationErrors).length > 0;
+    const captcha = this.captchaConf();
+    const showSubmit = !this.designMode && !settings.hideSubmitButton && !(this.legacy && !Object.keys(action).length);
+    const leaves = flattenFields(this.doc.fields, true);
+    this.zMap = {};
+    this.registry = {};
+    leaves.forEach((f, i) => (this.zMap[f.id] = leaves.length - i + 1));
+
+    const direction = languageInfo(this.activeLanguage).dir;
+    const rootAttrs: any = { lang: this.activeLanguage, ...(direction ? { dir: direction } : {}) };
+
+    if (this.status === 'success') {
+      return (
+        <Host>
+          <div class={rootClass} style={style} {...rootAttrs}>
+            {this.renderBranding(theme)}
+            {this.renderSwitcher()}
+            {this.renderSuccess(settings)}
+          </div>
+        </Host>
+      );
+    }
+
+    // a button of the page that submits the form replaces the built-in submit button
+    const ownSubmit = !this.designMode && flattenFields(pages[step] || [], true).some(f => f.type === 'button' && (f.config && f.config.actions || []).some((a: any) => a && a.type === 'submit'));
+    const transition = settings.stepTransition === 'fade' || settings.stepTransition === 'slide' ? settings.stepTransition : '';
+    const pagesView = pages.map((page, index) => (
+      <section key={page.id || index} class={`rfg-page ${index === step ? '' : 'rfg-hidden'} ${isSteps && transition && index === step ? `rfg-enter-${transition}${this.stepDirection < 0 ? ' is-back' : ''}` : ''}`}>
+        {isSteps && !sidebar && this.renderPageHead(page, settings)}
+        {this.renderFields(page)}
+      </section>
+    ));
+
+    const footer = [
+      !this.designMode && hasErrors ? (
+        <div key="form-error" class="rfg-form-error" role="alert">
+          <span>{settings.formErrorMessage}</span>
+          <button type="button" class="rfg-link" onClick={() => this.showFirstError()}>
+            {this.tr('ui.showFirstError')}
+          </button>
+        </div>
+      ) : null,
+      this.status === 'error' ? <re-alert key="api-error" message={settings.errorMessage} type="error"></re-alert> : null,
+      !this.designMode && this.scriptError ? (
+        <div key="script-error" class="rfg-form-error" role="alert">
+          <span>{this.scriptError}</span>
+        </div>
+      ) : null,
+      showSubmit ? (
+        <div key="actions" class="rfg-actions">
+          {captcha && captcha.provider === 'honeypot' && (
+            <div class="rfg-hp" aria-hidden="true">
+              <label>
+                Website
+                <input type="text" name="website" tabindex={-1} autocomplete="off" />
+              </label>
             </div>
-          ) : ''}
-          {Object.keys(this.apiAction).length !== 0 && (
-            <Fragment>
-              {this.apiAction.recaptchaSiteKey ? (
-                <div class="recaptcha-wrapper" id="recaptcha-wrapper">
-                </div>
-              ) : null}
-              {this.showSuccessMessage ? (
-                <re-alert message={this.apiAction.successMessage || 'Success! Form submitted.'} type='success'></re-alert>
-              ) : null}
-              {this.showErrorMessage ? (
-                <re-alert message={this.apiAction.errorMessage || 'Error! There was an error submitting the form.'} type='error'></re-alert>
-              ) : null}
-              <div class="submit-container">
-                <button type="submit" class="submit-container__button" onClick={() => this.submit()}>{this.apiAction.submitButtonText || 'Submit'}</button>
-              </div>
-            </Fragment>
+          )}
+          {captcha && hasWidget(captcha.provider) && (
+            <div class={`rfg-captcha-wrap ${isLast ? '' : 'rfg-hidden'}`}>
+              <div class="rfg-captcha" key="captcha"></div>
+              {this.captchaField() && this.validationErrors[this.captchaField()] && <div class="rfg-error">{this.validationErrors[this.captchaField()][0]}</div>}
+            </div>
+          )}
+          {isSteps && step > 0 && !pages[step].hideBack && (
+            <button type="button" class="rfg-btn rfg-btn-secondary rfg-btn-back" onClick={() => this.prevStep()}>
+              {settings.backButtonText || this.tr('ui.back')}
+            </button>
+          )}
+          {isSteps && !isLast ? (
+            <button type="button" class="rfg-btn rfg-btn-primary" onClick={() => this.nextStep()}>
+              {this.interpolate(pages[step].nextLabel || settings.nextButtonText || this.tr('ui.continue')) || this.tr('ui.continue')}
+            </button>
+          ) : ownSubmit ? null : (
+            <button type="button" class="rfg-btn rfg-btn-primary" disabled={this.status === 'submitting'} onClick={() => this.submit()}>
+              {this.status === 'submitting' ? this.tr('ui.sending') : this.interpolate(settings.submitButtonText)}
+            </button>
           )}
         </div>
+      ) : null,
+    ];
+
+    const header = !this.designMode && this.doc.title && settings.showTitle && (
+      <header class="rfg-header">
+        <h1 innerHTML={sanitizeHtml(this.recall(this.doc.title, true))}></h1>
+        {this.doc.description && <p>{this.recall(this.doc.description)}</p>}
+      </header>
+    );
+
+    return (
+      <Host>
+        <div class={`${rootClass} ${isSteps && sidebar ? 'rfg-layout-sidebar' : ''} ${Object.keys(this.openItems).length ? 'rfg-has-detail' : ''}`} style={style} {...rootAttrs} {...(this.designMode ? ({ inert: '' } as any) : {})}>
+          {theme.customCss && !this.canAdoptCss() && <style innerHTML={theme.customCss}></style>}
+          {theme.coverStyle === 'hero' && safeImageUrl(theme.cover) && !this.designMode ? [this.renderBranding(theme, header), this.renderSwitcher()] : [this.renderBranding(theme), this.renderSwitcher(), header]}
+
+          {this.modal && this.renderModal()}
+
+          {isSteps && sidebar ? (
+            <div class={`rfg-flow ${settings.stepsSide === 'right' ? 'is-right' : ''}`}>
+              {this.renderStepNav(pages, step, settings)}
+              <div class="rfg-flow-main">
+                {this.renderPageHead({ ...pages[step], title: pages[step].title || this.tr('ui.step', { current: step + 1, total: pages.length }) }, settings, true)}
+                {pagesView}
+                {footer}
+                {this.renderSidebarActions(settings, isLast, 'main')}
+              </div>
+            </div>
+          ) : (
+            [
+              isSteps && settings.progressPosition !== 'bottom' ? this.renderProgress(pages, step, settings) : null,
+              pagesView,
+              isSteps && settings.progressPosition === 'bottom' ? <div key="progress-bottom" class="rfg-progress-bottom">{this.renderProgress(pages, step, settings)}</div> : null,
+              footer,
+            ]
+          )}
+        </div>
+        {this.renderFooter(theme)}
       </Host>
     );
   }
-
 }

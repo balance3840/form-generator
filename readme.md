@@ -1,2024 +1,408 @@
-Documentation
-=============
-
-Form generator
---------------
-
-Guide for implementing and understanding the form generator web component library.
-
-* * *
-
-*   **Version:** 0.0.14
-*   **Authors:** [Ramiro Estrella](https://github.com/balance3840) [Adrianna Wiącek](https://github.com/losica)
-
-*   **Created:** 3 July, 2024
-*   **Update:** 3 July, 2024
-
-* * *
-
-Installation
-------------
-
-Follow the steps below to setup the form generator in your website:
-
-1.  Place the following scripts preferably just before the closing `body` tag in the HTML
-    *   `<script type="module" src="https://unpkg.com/@restrella/form-generator@0.0.14/dist/form-generator/form-generator.esm.js"></script>`
-    *   `<script nomodule src="https://unpkg.com/@restrella/form-generator@0.0.14/dist/form-generator/form-generator.js"></script>`
-2.  Insert the `re-form-generator` tag where you want the component to be displayed
-3.  You are good to go for adding your form schema now!
-
-* * *
-
-Basic Usage
------------
-
-The form generator follows a JSON schema structure to add fields and configuration to the form. Here is the sample for your reference:  
-
-    
-    <!DOCTYPE html>
-    <html lang="en">
-        <head>
-        <title>Form Generator</title>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width" />
-        <script
-            type="module"
-            src="https://unpkg.com/@restrella/form-generator@0.0.14/dist/form-generator/form-generator.esm.js"
-        ></script>
-        <script
-            nomodule
-            src="https://unpkg.com/@restrella/form-generator@0.0.14/dist/form-generator/form-generator.js"
-        ></script>
-        </head>
-        <body>
-        <re-form-generator
-            schema='[
-            {
-            "type": "input",
-            "id": "name",
-            "inputType": "text",
-            "inputName": "name",
-            "visible": true,
-            "label": "Name",
-            "model": "applicantName",
-            "readonly": false,
-            "disabled": false,
-            "placeholder": "John",
-            "validationType": "string",
-            "validations": [
-                {
-                "name": "required",
-                "params": [
-                    "First name is a required field"
-                ]
-                }
-            ],
-            "layout": {
-                "row": "row1",
-                "cols": 6,
-                "group": "applicant",
-                "groupTitle": "Job application form"
-            }
-            },
-            {
-            "type": "input",
-            "id": "lastName",
-            "inputType": "text",
-            "inputName": "lastName",
-            "visible": true,
-            "label": "Last name",
-            "model": "applicantLastName",
-            "readonly": false,
-            "disabled": false,
-            "placeholder": "Doe",
-            "validationType": "string",
-            "validations": [
-                {
-                "name": "required",
-                "params": [
-                    "Last name is a required field"
-                ]
-                }
-            ],
-            "layout": {
-                "row": "row1",
-                "cols": 6,
-                "group": "applicant"
-            }
-            },
-            {
-            "type": "input",
-            "id": "email",
-            "inputType": "email",
-            "inputName": "email",
-            "visible": true,
-            "label": "Email",
-            "model": "applicantEmail",
-            "readonly": false,
-            "disabled": false,
-            "placeholder": "john.doe@email.com",
-            "validationType": "string",
-            "validations": [
-                {
-                "name": "required",
-                "params": [
-                    "Email is a required field"
-                ]
-                },
-                {
-                "name": "email",
-                "params": [
-                    "The email is not in the right format"
-                ]
-                }
-            ],
-            "layout": {
-                "group": "applicant"
-            }
-            },
-            {
-            "type": "select",
-            "id": "position",
-            "inputName": "position",
-            "visible": true,
-            "label": "What position are you applying for?",
-            "model": "apllicationPosition",
-            "readonly": false,
-            "disabled": false,
-            "placeholder": "Please select a position...",
-            "defaultValue": "",
-            "values": [
-                {
-                "value": 1,
-                "display": "Chief Executive Officer (CEO)",
-                "group": "Vacant positions"
-                },
-                {
-                "value": 2,
-                "display": "Chief Technology Officer (CTO)",
-                "group": "Vacant positions"
-                }
-            ],
-            "validationType": "number",
-            "validations": [
-                {
-                "name": "required"
-                }
-            ],
-            "layout": {
-                "row": "row2",
-                "group": "applicant",
-                "cols": 6
-            }
-            },
-            {
-            "type": "input",
-            "id": "availableDate",
-            "inputType": "date",
-            "inputName": "availableDate",
-            "visible": true,
-            "label": "Available date",
-            "model": "availableDate",
-            "readonly": false,
-            "disabled": false,
-            "validationType": "date",
-            "validations": [
-                {
-                "name": "required",
-                "params": ["Available date is required"]
-                },
-                {
-                "name": "max",
-                "params": ["2024-02-20", "You should be available before the the 20th of February"]
-                }
-            ],
-            "layout": {
-                "group": "applicant",
-                "row": "row2",
-                "cols": 6
-            }
-            },
-            {
-            "type": "input",
-            "id": "referenceName",
-            "inputType": "text",
-            "inputName": "referenceName",
-            "placeholder": "Martin",
-            "visible": true,
-            "label": "First name",
-            "model": "referenceName",
-            "readonly": false,
-            "disabled": false,
-            "validationType": "string",
-            "validations": [
-                {
-                "name": "required"
-                }
-            ],
-            "layout": {
-                "group": "reference",
-                "groupTitle": "Personal references",
-                "row": "row3",
-                "cols": 6
-            }
-            },
-            {
-            "type": "input",
-            "id": "referenceLastName",
-            "inputType": "text",
-            "inputName": "referenceLastName",
-            "placeholder": "Martin",
-            "visible": true,
-            "label": "Last name",
-            "model": "referenceLastName",
-            "readonly": false,
-            "disabled": false,
-            "validationType": "string",
-            "validations": [
-                {
-                "name": "required"
-                }
-            ],
-            "layout": {
-                "group": "reference",
-                "row": "row3",
-                "cols": 6
-            }
-            }
-        ]'
-            action='{
-            "httpMethod": "POST",
-            "endpoint": "ENDPOINT",
-            "bearerToken": "TOKEN",
-            "formData": "true",
-            "submitButtonText": "Apply now"
-        }'
-        >
-        </re-form-generator>
-        </body>
-    </html>
-              
-
-* * *
-
-Action
-------
-
-The form action is defined in a JSON schema passed through the `action` attribute of the form generator component.
-
-The properties that can be defined in this object are the following:
-
-*   String `recaptchaSiteKey` - In case your backend endpoint is protected using reCAPTCHA.
-*   String `httpMethod` - HTTP method of the endpoint
-    *   default: POST
-*   String `bearerToken` - Bearer token to be used in the endpoint (if endpoint requires authorization)
-*   Boolean `formData` - The request body should be made using form-data
-    *   default: false
-*   String `endpoint` - Endpoint where the request should be sent
-*   String `webhoookEndpoint` - Endpoint where the form events should be sent. List of events:
-    *   submit.failed
-*   String `formErrorMessage` - Message that should be shown when the validation fails (supports HTML)
-*   String `submitButtonText` - Text the submit button should display (supports HTML)
-*   String `successMessage` - Text the displayed in success alert after form submition
-*   String `errorMessage` - Text the displayed in success alert after form submition in case of errors
-
-An example of how this would look like:
-
-            `{     "recaptchaSiteKey": "MY_SITE_KEY",     "bearerToken": "MY_BEARER_TOKEN",     "formData": true,     "endpoint": "MY_API_ENDPOINT",     "webhoookEndpoint": "MY_WEBHOOK_ENDPOINT",     "formErrorMessage": "Please fix the errors in the form before submiting",     "submitButtonText": "Send form" }`
-              
-          
-
-* * *
-
-Fields mapping (optional)
--------------------------
-
-The fields are send to the api endpoint specified in the config based on the `model` property inside the field in the schema.
-
-Let's say you have a simple form with fields contaning the models `firstName` and `lastName`, the form generator will generate a request body similar to the following one:
-
-                `{     "name": "FIELD_VALUE",     "lastName": "FIELD_VALUE" }`
-                
-            
-
-However, this will not always be the format the API will expect. The form generator offers a way to define a custom field mapping by passing an array. Following the previous example, let's say that now we want to put the `name` and `lastName` inside a `person` object.
-
-This can be achieved using the following object structure:
-
-            `{     "name": ["person.name"],     "lastName": ["person.lastName"] }`
-            
-            
-
-It is important to mention that you can map the same field to multiple objects/object property. Here is an example:
-
-            `{     "name": ["person.name", "applicant.name"],     "lastName": ["person.lastName", "person.familyName"] }`
-            
-        
-
-* * *
-
-Form Schema
------------
-
-The `schema` attribute is basically the core of the component. In this, you can specify all the fields, layout, and validations that your form should contain.
-
-Further in the doumentation we will conver the different type of fields and validations you can use in the form, for now let's just see an example of how a field looks like in the schema:
-
-            `{   "type": "input",   "id": "name",   "inputType": "text",   "inputName": "name",   "visible": true,   "label": "Name",   "model": "applicantName",   "readonly": false,   "disabled": false,   "placeholder": "John",   "validationType": "string",   "validations": [     {       "name": "required",       "params": [         "First name is a required field"       ]     }   ] }`
-            
-          
-
-These properties in the schema can vary based on the `type` and as mentioned before are going to be detailed individually. These are some of the most common properties that can be applied to the fields:
-
-*   String `type` - Input field type. Accepted values:
-    *   input
-    *   textarea
-    *   toggle
-    *   select
-    *   checkboxGroup
-    *   radioGroup
-    *   multiSelect
-    *   countrySelect
-    *   file
-*   String `id` - id selector of the field
-*   Boolean `visible` - Wether the field should be visible or not
-*   String `label` - Field label (supports HTML)
-*   String `model` - Object property name to be send to the API
-*   Boolean `readonly` - Wether the field is read only or not
-*   Boolean `disabled` - Wether the field is disabled or not
-*   String `placeholder` - Field placeholder
-*   String `validationType` - [Yup](https://www.npmjs.com/package/yup) validation type
-    *   [string](https://www.npmjs.com/package/yup#string)
-    *   [number](https://www.npmjs.com/package/yup#number)
-    *   [date](https://www.npmjs.com/package/yup#date)
-    *   [array](https://www.npmjs.com/package/yup#array)
-    *   [mixed](https://www.npmjs.com/package/yup#mixed)
-*   Array `validations` - Validations rule to apply based on [Yup](https://www.npmjs.com/package/yup) validation type (This is explained in [Validations](#formgenerator_validations) section)
-
-* * *
-
-Layout
-------
-
-The layout configuration is specified inside the layout property of the field in the form [schema](#formgenerator_schema). Here is an example:
-
-                `{     // Other field properties     "layout": {         "row": "row1", // Row where it should be displayed,         "cols": 6, // Number of columns to display (from 1 to 12),         "group": "applicant", // If the field is part of a group (Optional)         "groupTitle": "Applicant details" // Title of the group (Optional)     } }`
-                
-            
-
-* * *
-
-Validations
------------
-
-Examples about how to implement some commonly used validations from [Yup](https://www.npmjs.com/package/yup) in the JSON schema. These validations must be implemented in the schema using a combination of String `validationType` and Array<any> `validations` properties.
-
-### String
-
-Examples about **string** `validationType` from [Yup](https://www.npmjs.com/package/yup)
-
-Validation
-
-Implementation
-
-`string.required(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "required",       "params": [         "This is a required field"       ]     }   ] }`
-                
-              
-
-`string.nullable(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "nullable",       "params": [       ]     }   ] }`
-                
-              
-
-`string.length(limit: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "length",       "params": [         15,         "The string should be exactly ${length} characters"       ]     }   ] }`                            
-                
-              
-
-`string.min(limit: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "min",       "params": [         10,         "The string should contain minimum ${min} characters"       ]     }   ] }`                                                       
-                
-              
-
-`string.max(limit: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "max",       "params": [         20,         "The string should contain maximum ${max} characters"       ]     }   ] }`                                                                             
-                
-              
-
-`string.matches(regex: RegExp, message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "matches",       "params": [         "^[a-zA-Z0-9]*$", // Regex pattern         "The string should match the required pattern"       ]     }   ] }`    
-                
-              
-
-`string.matches(regex: RegExp, options: { message: string, excludeEmptyString: bool }): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "matches",       "params": [         "^[a-zA-Z0-9]*$", // Regex pattern         {           "message": "The string should match the required pattern",           "excludeEmptyString": true         }       ]     }   ] }`
-                
-              
-
-`string.email(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "email",       "params": [         "The string should be a valid email address"       ]     }   ] }` 
-                
-              
-
-`string.url(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "url",       "params": [         "The string should be a valid URL"       ]     }   ] }`
-                
-              
-
-`string.uuid(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "uuid",       "params": [         "The string should be a valid UUID"       ]     }   ] }`  
-                
-              
-
-`string.datetime(options?: {message?: string | function, allowOffset?: boolean, precision?: number})`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "datetime",       "params": [         {           "message": "The string should be a valid datetime",           "allowOffset": true,           "precision": 3         }       ]     }   ] }`
-                
-              
-
-`string.datetime(message?: string | function)`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "datetime",       "params": [         "The string should be a valid datetime"       ]     }   ] }`
-                
-              
-
-`string.ensure(): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "ensure",       "params": []     }   ] }`
-                
-              
-
-`string.trim(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "trim",       "params": [         "The string should not have leading or trailing whitespace"       ]     }   ] }`
-                
-              
-
-`string.lowercase(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "lowercase",       "params": [         "The string should be in lowercase"       ]     }   ] }`
-                
-              
-
-`string.uppercase(message?: string | function): Schema`
-
-                `{   "validationType": "string",   "validations": [     {       "name": "uppercase",       "params": [         "The string should be in uppercase"       ]     }   ] }`
-                
-              
-
-### Number
-
-Examples about **number** `validationType` from [Yup](https://www.npmjs.com/package/yup)
-
-Validation
-
-Implementation
-
-`number.min(limit: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "min",       "params": [         5,         "The number should be at least ${min}"       ]     }   ] }`
-                
-              
-
-`number.max(limit: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "max",       "params": [         100,         "The number should be at most ${max}"       ]     }   ] }`
-                
-              
-
-`number.lessThan(max: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "lessThan",       "params": [         50,         "The number should be less than ${less}"       ]     }   ] }`
-                
-              
-
-`number.moreThan(min: number | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "moreThan",       "params": [         10,         "The number should be more than ${more}"       ]     }   ] }`
-                
-              
-
-`number.nullable(message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "nullable",       "params": []     }   ] }`
-                
-              
-
-`number.positive(message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "positive",       "params": [         "The number should be positive"       ]     }   ] }`
-                
-              
-
-`number.negative(message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "negative",       "params": [         "The number should be negative"       ]     }   ] }`
-                
-              
-
-`number.integer(message?: string | function): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "integer",       "params": [         "The number should be an integer"       ]     }   ] }`
-                
-              
-
-`number.truncate(): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "truncate",       "params": []     }   ] }`
-                
-              
-
-`number.round(type: 'floor' | 'ceil' | 'trunc' | 'round' = 'round'): Schema`
-
-                `{   "validationType": "number",   "validations": [     {       "name": "round",       "params": [         "round"       ]     }   ] }`
-                
-              
-
-### Date
-
-Examples about **date** `validationType` from [Yup](https://www.npmjs.com/package/yup)
-
-Validation
-
-Implementation
-
-`date.min(limit: Date | string | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "date",   "validations": [     {       "name": "min",       "params": [         "2023-01-01", // Date limit         "The date should be later than ${min}"       ]     }   ] }`
-                
-              
-
-`date.max(limit: Date | string | Ref, message?: string | function): Schema`
-
-                `{   "validationType": "date",   "validations": [     {       "name": "max",       "params": [         "2024-01-01", // Date limit         "The date should be earlier than ${max}"       ]     }   ] }`
-                
-              
-
-### Array
-
-Examples about **array** `validationType` from [Yup](https://www.npmjs.com/package/yup)
-
-Validation
-
-Implementation
-
-`array.json(): this`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "json",       "params": []     }   ] }`
-                
-              
-
-`array.length(length: number | Ref, message?: string | function): this`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "length",       "params": [         5,         "The array should contain exactly ${length} items"       ]     }   ] }`
-                
-              
-
-`array.min(limit: number | Ref, message?: string | function): this`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "min",       "params": [         2,         "The array should contain at least ${min} items"       ]     }   ] }`
-                
-              
-
-`array.max(limit: number | Ref, message?: string | function): this`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "max",       "params": [         10,         "The array should contain at most ${max} items"       ]     }   ] }`
-                
-              
-
-`array.ensure(): this`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "ensure",       "params": []     }   ] }`
-                
-              
-
-`array.compact(rejector: (value) => boolean): Schema`
-
-                `{   "validationType": "array",   "validations": [     {       "name": "compact",       "params": [         "function(value) { return value === null; }"       ]     }   ] }`
-                
-              
-
-### Mixed
-
-Examples about **mixed** `validationType` from [Yup](https://www.npmjs.com/package/yup)
-
-Validation
-
-Implementation
-
-`mixed.required(message?: string | function): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "required",       "params": [         "This field is required"       ]     }   ] }`
-                
-              
-
-`mixed.oneOf(arrayOfValues: Array, message?: string | function): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "oneOf",       "params": [         [1, 2, 3], // Example array of valid values         "The value must be one of ${values}"       ]     }   ] }`
-                
-              
-
-`mixed.notOneOf(arrayOfValues: Array, message?: string | function): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "notOneOf",       "params": [         [1, 2, 3], // Example array of invalid values         "The value must not be one of ${values}"       ]     }   ] }`
-                
-              
-
-`mixed.equals(arrayOfValues: Array, message?: string | function): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "equals",       "params": [         [1, 2, 3], // Example array of equal values         "The value must be equal to one of ${values}"       ]     }   ] }`
-                
-              
-
-`mixed.notEquals(arrayOfValues: Array, message?: string | function): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "notEquals",       "params": [         [1, 2, 3], // Example array of not equal values         "The value must not be equal to one of ${values}"       ]     }   ] }`
-                
-              
-
-`mixed.default(value: any): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "default",       "params": [         "default value"       ]     }   ] }`
-                
-              
-
-`mixed.nullable(isNullable?: boolean): Schema`
-
-                `{   "validationType": "mixed",   "validations": [     {       "name": "nullable",       "params": [         true // Allows the value to be null       ]     }   ] }`
-                
-              
-
-Schema fields
--------------
-
-Form schema allows following components to be generated:
-
-*   [Input](#formgenerator_input)
-*   [Checkbox group](#formgenerator_checkbox_group)
-*   [Country select](#formgenerator_country_select)
-*   [File drag and drop](#formgenerator_file_input)
-*   [Multiselect](#formgenerator_multiselect)
-*   [Radio group](#formgenerator_radio)
-*   [Select](#formgenerator_select)
-*   [Textarea](#formgenerator_textarea)
-*   [Toggle](#formgenerator_toggle)
-
-Input
------
-
-Input field allow following `inputType` values in the form schema:
-
-*   [checkbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/checkbox)
-*   [color](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/color)
-*   [date](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/date)
-*   [datetime-local](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local)
-*   [email](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email)
-*   [month](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/month)
-*   [number](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/number)
-*   [password](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/password)
-*   [range](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/range)
-*   [tel](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/tel)
-*   [text](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/text)
-*   [time](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/time)
-*   [url](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/url)
-*   [week](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/week)
-
-If you want to specify any attirbutte that given input type supports natively you can do it in the schema using `attributtes` property. For example, if you want an `inputType` week to have the attibutes `min` and `max`, you can do it as follow:
-
-    
-    {
-      // Other field properties
-      "inputType": "week",
-      "attributes": {
-        "min": "2024-W1",
-        "max": "2024-W10"
-      }
-    }
-        
-
-* * *
-
-### Checkbox
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "checkbox-field",
-        "inputType": "checkbox",
-        "inputName": "checkbox-name",
-        "visible": "true",
-        "label": "Checkbox field",
-        "model": "checkboxField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Color
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "color-field",
-        "inputType": "color",
-        "inputName": "color-name",
-        "visible": "true",
-        "label": "Color field",
-        "model": "colorField"
-        "defaultValue": "#FFC0CB"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Date
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "date-field",
-        "inputType": "date",
-        "inputName": "date-name",
-        "visible": "true",
-        "label": "Date field",
-        "model": "dateField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Datetime-local
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "datetime-local-field",
-        "inputType": "datetime-local",
-        "inputName": "datetime-local-name",
-        "visible": "true",
-        "label": "Datetime-local field",
-        "model": "datetime-localField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Email
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "email-field",
-        "inputType": "email",
-        "inputName": "email-name",
-        "visible": "true",
-        "label": "Email field",
-        "model": "emailField",
-        "placeholder": "example@example.com"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Month
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "month-field",
-        "inputType": "month",
-        "inputName": "month-name",
-        "visible": "true",
-        "label": "Month field",
-        "model": "monthField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Number
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "number-field",
-        "inputType": "number",
-        "inputName": "number-name",
-        "visible": "true",
-        "label": "<h1>I also support HTML</h1>",
-        "model": "numberField",
-        "defaultValue": 69
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Password
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "password-field",
-        "inputType": "password",
-        "inputName": "password-name",
-        "visible": "true",
-        "label": "Password field",
-        "model": "passwordField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### range
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "range-field",
-        "inputType": "range",
-        "inputName": "range-name",
-        "visible": "true",
-        "label": "Range field",
-        "model": "rangeField",
-        "attributes": {
-          "min": 0,
-          "max": 100,
-          "step": 10
-        },
-        "defaultValue": 50
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Tel
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "phone-field",
-        "inputType": "tel",
-        "inputName": "phone-name",
-        "visible": "true",
-        "label": "Phone field",
-        "model": "phoneField",
-        "attributes": {
-          "pattern":"[0-9]{3}-[0-9]{3}-[0-9]{4}"
-        }
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### text
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "text-field",
-        "inputType": "text",
-        "inputName": "text-name",
-        "visible": "true",
-        "label": "Text field",
-        "model": "textField",
-        "defaultValue": "This is a disabled and readonly field",
-        "readonly": true,
-        "disabled": true
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Time
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "time-field",
-        "inputType": "time",
-        "inputName": "time-name",
-        "visible": "true",
-        "label": "Time field",
-        "model": "timeField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Url
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "url-field",
-        "inputType": "url",
-        "inputName": "url-name",
-        "visible": "true",
-        "label": "Url field",
-        "model": "urlField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-### Week
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "input",
-        "id": "week-field",
-        "inputType": "week",
-        "inputName": "week-name",
-        "visible": "true",
-        "label": "Week field",
-        "model": "weekField"
-      }]'>
-    </re-form-generator>
-    
-
-* * *
-
-Checkbox group
---------------
-
-Checkbox group is an input field that allows multiple items selection from pre-defined selection options.
-
-Available radio buttons can be defined in the `items` property.
-
-When it comes to the default values, they can defined with the `checked` property in the `attributes` array. For instance:
-
-    
-    {
-      // Other field properties
-      "items": [
-        {
-          "label": "Checkbox option 1",
-          "value": "check-option-1",
-          "attributes": {
-            "checked": true
-          }
-        },
-        {
-          "label": "Checkbox option 2",
-          "value": "check-option-2",
-          "attributes": {
-            "checked": true
-          }
-        },
-        {
-          "label": "Checkbox option 3",
-          "value": "check-option-3"
-        }
-      ]
-    }
-                          
-
-### Checkbox group
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "checkboxGroup",
-        "inputType": "object",
-        "id": "checkbox-group",
-        "inputName": "checkbox-group",
-        "visible": true,
-        "label": "Checkbox Group",
-        "model": "checkboxOptions",
-        "items": [
-          {
-            "label": "Checkbox option 1",
-            "value": "check-option-1",
-            "attributes": {
-              "checked": true
-            }
-          },
-          {
-            "label": "Checkbox option 2",
-            "value": "check-option-2",
-            "attributes": {
-              "checked": true
-            }
-          },
-          {
-            "label": "Checkbox option 3",
-            "value": "check-option-3"
-          }
-        ]
-      }]'>
-    </re-form-generator>
-              
-
-* * *
-
-Country select
---------------
-
-Country select field allow selecting country or dial code. Countries are searchable by their names and dial codes. The `modelValueKey` property defines which value is selected: `name`, `dialCode` or `code`. The `inputDisplayKey` property is resposible for the value that is displayed after country selection. To specify `defaultValue` use lowercase country ISO code, for example, `"defaultValue": "dk"`.
-
-### Country select
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "countrySelect",
-        "id": "country",
-        "inputName": "country",
-        "visible": true,
-        "label": "Country",
-        "model": "country",
-        "modelValueKey": "code",
-        "placeholder": "Select country",
-        "layout": {
-            "row": "row1",
-            "cols": 6
-        }
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-### Dial code
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "countrySelect",
-        "id": "dial_code",
-        "inputName": "dial_code",
-        "visible": true,
-        "label": "Dial code",
-        "model": "dial_code",
-        "defaultValue": "dk",
-        "modelValueKey": "dialCode",
-        "inputDisplayKey": "dialCode",
-        "showDialCode": true,
-        "placeholder": "Select dial code",
-        "layout": {
-            "row": "row1",
-            "cols": 4
-        }
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-File drag and drop
-------------------
-
-File drag and dropdown input field let the user choose one or more files from their device storage. On default single file selection is allowed. To enable multiple file selection or to control allowed file types, specify the `attributes` property. For instance:
-
-    
-    {
-      // Other field properties
-      "attributes": {
-        "multiple": true,
-        "accept": "image/*,.pdf"
-      }
-    }
-            
-
-Text displayed in the dropdown zone can be changed by defining `textTitle`, `subTitle` and `placeholder` properties.
-
-    
-    {
-      {
-        // Other field properties
-        "textTitle":  "Custom title",
-        "subTitle": "Custom subtitle",
-        "placeholder": "Placeholder"
-      }
-    }
-                          
-
-### File input
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "file",
-        "inputType": "file",
-        "label": "Documents",
-        "id": "documents",
-        "inputName": "documents",
-        "visible": "true",
-        "model": "documents"
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-### File input - custom attributes
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "file",
-        "inputType": "file",
-        "label": "Documents",
-        "id": "documents",
-        "inputName": "documents",
-        "visible": "true",
-        "model": "documents",
-        "textTitle":  "Custom title",
-        "subTitle": "Custom subtitle",
-        "placeholder": "Placeholder",
-        "attributes": {
-            "multiple": true,
-            "accept": "image/*,.pdf"
-        }
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Multiselect
------------
-
-Multiselect is an input field that allows multiple items to be selected. Available selection options should be defined in the `values` property. For instance:
-
-    
-    {
-      // Other field properties
-      "values": [
-        {
-          "value": 1,
-          "display": "Option 1",
-          "group": "options"
-        },
-        {
-          "value": 2,
-          "display": "Option 2",
-          "group": "options"
-        },
-        {
-          "value": 3,
-          "display": "Option 3",
-          "group": "options"
-        }
-      ]
-    }
-          
+# Form generator v2
+
+**[📖 Read the documentation → balance3840.github.io/form-generator/](https://balance3840.github.io/form-generator/)**
+
+
+A web component that renders themeable, validated forms from a JSON schema.
+
+```html
+<script type="module" src="https://unpkg.com/@restrella/form-generator@2/dist/form-generator/form-generator.esm.js"></script>
+
+<re-form-generator id="form"></re-form-generator>
+<script>
+  const form = document.getElementById('form');
+  form.schema = {
+    version: 2,
+    title: 'Contact us',
+    fields: [
+      { type: 'input', id: 'name', model: 'name', inputType: 'text', label: 'Name', validationType: 'string', validations: [{ name: 'required' }], layout: { cols: 6 } },
+      { type: 'input', id: 'email', model: 'email', inputType: 'email', label: 'Email', validationType: 'string', validations: [{ name: 'required' }, { name: 'email' }], layout: { cols: 6 } },
+      { type: 'textarea', id: 'msg', model: 'message', label: 'Message', validationType: 'string' },
+    ],
+  };
+  form.addEventListener('submitted', e => console.log(e.detail.values));
+</script>
+```
+
+Install it with `npm install @restrella/form-generator`, or load it from a CDN as above.
+
+You rarely need to write this JSON by hand: the **form-builder** app is a visual editor that produces it.
+
+## What changed in v2
+
+v2 is a breaking release. In short:
+
+| v1 | v2 |
+| --- | --- |
+| Bare array of fields, plus separate `action` / `mapping` props | One **document**: `{ version: 2, title, description, fields, theme, settings, action }` (the props still work and override the document) |
+| `layout.row` / `layout.group` / `groupTitle` | Rows of columns (`type: "columns"`), each column a stack of fields; section titles are `heading` fields |
+| Choices as `values` (select), `items` (radio/checkbox) | One shape for every choice field: `options: [{ label, value, group? }]` |
+| Pre-checked via `items[].attributes.checked`, multi-select `defaultOptions` (indexes) | `defaultValue` |
+| Fields without `visible: true` were hidden | Fields are visible unless `visible: false` |
+| Hard-coded colours | Themes (CSS variables), presets, fonts, input styles |
+| Success = dismissible alert | Success screen (`settings.successMessage`) |
+| – | New: conditional logic, multi-step forms, rating, opinion scale, slider, colour, heading / paragraph / divider blocks |
+
+### Migrating a v1 schema
+
+The generator accepts v1 schemas and **migrates them on the fly**, so old pages keep rendering. To convert for good:
+
+```bash
+npm run migrate -- old-schema.json -o new-form.json
+# also fold in the old props, and show the fields v1 would have hidden:
+npm run migrate -- old-schema.json --action action.json --mapping mapping.json --show-hidden -o new-form.json
+```
+
+Every change is reported on stderr. In code: `import { migrateV1 } from '@restrella/form-generator'` returns `{ doc, notes }`. The form builder also has an **Import / migrate** tab that does the same with a report.
+
+## Document reference
+
+```jsonc
+{
+  "version": 2,
+  "title": "Event feedback",
+  "description": "Optional text under the title",
+  "theme":    { "preset": "indigo", "primaryColor": "#4f46e5" },
+  "settings": { "submitButtonText": "Send", "successMessage": "Thanks!" },
+  "action":   { "endpoint": "https://api.example.com/forms" },
+  "i18n":     { "defaultLanguage": "en", "languages": ["en", "es"], "translations": { "es": { "title": "Opiniones del evento" } } },
+  "fields":   [ /* see below */ ]
+}
+```
+
+### Fields
+
+Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g. `"m²"`). Button and message texts can use `{count:model}` (number of items picked in a field) and `{value:model}` (its answer). Text inputs also accept `attributes.autocomplete` (e.g. `given-name`, `email`) for browser autofill, `attributes.rows` on `textarea` and `attributes.step` on `number`. Common properties: `type`, `id`, `model` (the key in the submitted data), `label`, `helpText`, `tooltip` (more help behind a small "?" after the label: shown on hover, keyboard focus and tap, read by screen readers), `placeholder`, `defaultValue`, `visible`, `disabled`, `readonly`, `keyLocked` (something outside the form, like the contract PDF, reads this answer by its `model`: the builder does not let it be renamed, nor a required field deleted), `validationType`, `validations`, `logic`.
+
+| `type` | Notes |
+| --- | --- |
+| `input` | `inputType`: `text email number tel url password date time datetime-local month week color checkbox` (`checkbox` uses `checkboxLabel`) |
+| `textarea` | |
+| `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer). `config.optionStyle: "cards"` shows each choice as a card with a title and an optional option `description`, `"chips"` as small pills you switch on and off (a checkbox group as chips is a multi-pick); `config.optionsFrom: { field, labelKey }` takes the choices from the items of a repeating group (e.g. the units of this room); on a radio group `config.autoAdvance` goes to the next step as soon as an answer is picked. `config.visibleOptions: N` shows the first N options and a "Show more options" button for the rest (a picked option is always shown). See [Rich options](#rich-options) for badges, logos, links and help on each option |
+| `toggle` | on/off switch (`validationType: "boolean"`) |
+| `address` | address search with short labels ("Street 5, 2200 City"). `config.provider`: `osm` (OpenStreetMap, worldwide, free, no key, light use), `google` (Places API New), `mapbox`, `geoapify`, `dk` (Danish official register, Dataforsyningen) or `custom` (your own `source`, as in `search`). Keyed providers take `config.apiKey` (it is visible in the page: restrict it to your domain). `config.countries` (ISO codes, e.g. `["dk"]`) and `config.city` narrow the search, `config.multiple` allows several picks (use `validationType: "array"`), `config.answer` is what is saved: `text` (default), `id` or `both` (`{ id, label }`). Floors and doors are only available from providers that have them (e.g. `dk`) |
+| `search` | live search against your own endpoint, with removable chips when `config.multiple`. `config.source`: `{ url: "https://…?q={q}", resultsPath, labelKey, labelTemplate, valueKey, minChars, debounce, headers }`. The answer is the `valueKey` of the pick (a list when `multiple`, so use `validationType: "array"`). The endpoint must return JSON and allow requests from your site (CORS). **Step by step search** (street → number → floor/door): add `source.drill: { typeKey: "type", expandTypes: ["vejnavn", "adgangsadresse"] }`. Results of those types open the next level when picked (the box is filled with their text and searched again; a result that equals the box text is the answer), other types are final. `source.extraKey` shows a small note next to a result, `source.labelTemplate` builds a short label from several fields |
+| `countrySelect` | `showDialCode`, `modelValueKey` (`code` by default, or `name` / `dialCode`), `defaultValue` |
+| `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos), `config.fileStyle: "block"` makes that button a full-width dashed bar |
+| `rating` | `config: { max }` |
+| `scale` | `config: { min, max, minLabel, maxLabel }`. `config.nps: true` makes it a Net Promoter Score question: 0-10 kept on one line on phones, with a thin red / amber / green line for detractors, passives and promoters (`"plain"` drops the colours) |
+| `phone` | a country picker (flag and dial code, the `re-country-select` list) and the number. The answer is `"+45 20123456"` (country code, a space, the digits; a national leading 0 is dropped except for Italy). `config.defaultCountry` (`"dk"`) is where it starts, otherwise the visitor's region / the form language's country. Pasting `+46 70…` picks the country. The `phoneCountries` rule also limits the picker. `config.phoneStyle`: `inline` (default: one box, the flag and dial code inside it) or `separate` (the picker next to the box) |
+| `likert` | agree / disagree style answers. The points are `options` (`[{ label: "Strongly disagree", value: 1 }, …]`). Without `config.rows` it is one question and the answer is a point; with `config.rows: [{ label, value }]` it is a table of statements and the answer is `{ [row value]: point }` (on phones the rows become cards). `config.showNumbers` shows 1, 2, 3… above the points. Looks (the answer is always the point's number): `config.style` is `dots` (default), `buttons` (numbered boxes), `emoji` (`options[].emoji`, faces by default) or `images` (`options[].image`); `config.colorMode: "gradient"` tints the points red → green, `options[].color` sets one point's color, `config.accent` the color of the picked point; `config.labels` (one question) is `all` (default), `ends` or `none`. `required` means every statement is answered |
+| `ranking` | people put the `options` in order (click to place, drag or arrows to move). The answer is the list of option values, best first. `config.rankLimit` asks only for a top N. `required` means all options (or the top N) are placed |
+| `slider` | `config: { min, max, step, unit }` |
+| `heading`, `paragraph`, `divider` | content blocks (`label` / `helpText`, `content`, `config.level`) |
+| `columns` | a **row** of columns, see [Layout](#layout-rows-and-columns) |
+| `pageBreak` | splits the form into steps (with `config.ending` it starts the thank-you page instead). Its `label` is the title of the step that starts after it, `helpText` its description (the first step's are `settings.firstStepTitle` / `firstStepDescription`). It can have `logic` to skip the whole step |
+| `section` | a titled card around other fields (`fields`). `config`: `style` (`card` or `plain`), `collapsible`, `startCollapsed`. See [App-like flows](#app-like-flows) |
+| `repeater` | a group people can add several of (guests, rooms, meters…). The answer is a list of objects. See [App-like flows](#app-like-flows) |
+| `tabs` | switch between groups of fields: `tabs: [{ id, label, fields }]`, `config.style` (`line` or `pills`). The tab with an error opens by itself |
+| `modal` | a dialog (pop-up form) that a button opens with the `openModal` action: `label` (title), `fields`, `config.confirmLabel` / `cancelLabel` / `confirmActions`. See [Dialogs](#dialogs) |
+| `button` | a button that runs `config.actions`, see [Buttons and actions](#app-like-flows) |
+| `callout` | a message box: `label` (title), `content`, `config.tone` (`info success warning danger`). Combine with `logic` to show it only when it applies |
+| `image`, `video`, `link`, `icon`, `embed` | content blocks. `image`: `config.src` (https or an uploaded data URL), `alt`, `caption`, `width` (`small` / `medium` / `full`), `align`, `link`, `rounded`. `video`: `config.url` (YouTube (privacy-enhanced player), Vimeo, Loom, or an .mp4/.webm file), `caption`. `link`: `label`, `config.url` (http(s), mailto:, tel:), `style` (`button` / `text`), `newTab`. `icon`: `config.emoji` or `config.icon` (see `BLOCK_ICONS`), `size`, `align`, `label` / `helpText` under it. `embed`: `config.url` (https: a map, a booking calendar, a PDF), `height` |
+| thank-you page | a `pageBreak` with `config.ending: true`: the blocks after it are shown after a successful send instead of the form (never as a step, no questions) |
+| `signature` | a box to sign in (finger, pen, mouse). The answer is a PNG data URL. `config.height`, `config.hint`. `config.mode: "dialog"` shows a grey box with a button (`signLabel`) that opens the signing pad in a dialog and then shows the signature |
 
-When it comes to the default values, they are controlled through `defaultOptions`, specifing indices of values that should be pre-selected. For example:
+### Layout: rows and columns
 
-    
-    {
-      // Other field properties
-      "defaultOptions": [0, 1]
-    }
-                      
-
-### Multiselect
-
-    
-    <re-form-generator
-      schema='[{
-      "type": "multiSelect",
-      "id": "multiselect",
-      "inputName": "options",
-      "inputType": "number",
-      "visible": true,
-      "label": "Multiselect",
-      "model": "options",
-      "placeholder": "Select options",
-      "values": [
-          {
-            "value": 1,
-            "display": "Option 1",
-            "group": "options"
-          },
-          {
-            "value": 2,
-            "display": "Option 2",
-            "group": "options"
-          },
-          {
-            "value": 3,
-            "display": "Option 3",
-            "group": "options"
-          }
-      ]
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Radio group
------------
-
-Radio group is an input field that allows single value selection from pre-defined radio buttons. Selecting any radio button automatically deselects any other currently-selected radio button.
-
-Available radio buttons can be defined in the `items` property.
-
-When it comes to the default value, it is defined with the `checked` property in the `attributes` array. For instance:
-
-    
-    {
-      // Other field properties
-      "items": [
-        {
-          "label": "Radio 1",
-          "value": "radio-1"
-        },
-        {
-          "label": "Radio 2",
-          "value": "radio-2",
-          "attributes": {
-            "checked": true
-          }
-        },
-        {
-          "label": "Radio 3",
-          "value": "radio-3"
-        }
-      ]
-    }
-                      
-
-### Radio group
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "radioGroup",
-        "inputType": "radio",
-        "id": "radio-group",
-        "inputName": "radio-group",
-        "visible": true,
-        "label": "Radio Group",
-        "model": "radioOption",
-        "items": [
-          {
-            "label": "Radio 1",
-            "value": "radio-1"
-          },
-          {
-            "label": "Radio 2",
-            "value": "radio-2",
-            "attributes": {
-              "checked": true
-            }
-          },
-          {
-            "label": "Radio 3",
-            "value": "radio-3"
-          }
-        ]
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Select
-------
-
-Select is an input field that allows an item to be selected out of pre-defined options. Available selection options should be defined in the `values` property. Each `value` object should be described by following attributes: `value`, `display` and `group`. For instance:
-
-    
-    {
-      // Other field properties
-      "values": [
-        {
-          "value": "one",
-          "display": "Option 1",
-          "group": "options"
-        },
-        {
-          "value": "two",
-          "display": "Option 2",
-          "group": "options"
-        },
-        {
-          "value": "three",
-          "display": "Option 3",
-          "group": "options"
-        }
-      ]
-    }
-          
+Fields are stacked top to bottom. To put fields side by side, wrap them in a `columns` row. Every column has a `span` (out of 12) and holds its **own stack of fields**, so you can have three short fields on the left next to one tall field on the right:
 
-When it comes to the default value, it is controlled through `defaultValue`, specifing of `value` property of the option that should be pre-selected. For example:
+```json
+{
+  "type": "columns",
+  "id": "row1",
+  "config": { "align": "start", "justify": "start" },
+  "columns": [
+    { "id": "left",  "span": 8, "fields": [ { "type": "input", "id": "name", "model": "name", "label": "Name" }, { "type": "input", "id": "email", "model": "email", "label": "Email" } ] },
+    { "id": "right", "span": 4, "fields": [ { "type": "textarea", "id": "bio", "model": "bio", "label": "About you" } ] }
+  ]
+}
+```
 
-    
-    {
-      // Other field properties
-      "defaultValue": "one"
-    }
-                      
-
-### Select
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "select",
-        "id": "select",
-        "inputName": "options",
-        "visible": true,
-        "label": "Select",
-        "model": "selectOption",
-        "readonly": false,
-        "disabled": false,
-        "placeholder": "Please select an option...",
-        "defaultValue": "two",
-        "values": [
-          {
-            "value": "one",
-            "display": "Option 1",
-            "group": "Options"
-          },
-          {
-            "value": "two",
-            "display": "Option 2",
-            "group": "Options"
-          },
-          {
-            "value": "three",
-            "display": "Option 3",
-            "group": "Options"
-          }
-        ]
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Textarea
---------
-
-Textarea is an input field that allows for multi-line text.
-
-Textarea attributes like `maxlength` or `rows` can be deffined in the `attributes` property in a following way:
-
-      `{   // Other field properties   "attributes": {     "maxlength": 20,     "rows": 2   } }`
-      
-    
-
-### Textarea
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "textarea",
-        "id": "long-text",
-        "inputName": "long-text",
-        "visible": true,
-        "label": "Textarea",
-        "model": "longText",
-        "readonly": false,
-        "disabled": false,
-        "placeholder": "Please feed me with some text...",
-        "attributes": {
-          "maxlength": 20,
-          "rows": 2
-        }
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Toggle
-------
-
-The toggle input is used to choose one of two values.
-
-The `inputType` and `validationType` should be defined as `boolean`.
-
-    
-    {
-      // Other field properties
-      "inputType": "boolean",
-      "validationType": "boolean"
-    }
-          
-
-### Toggle
-
-    
-    <re-form-generator
-      schema='[{
-        "type": "toggle",
-        "id": "toggle-input",
-        "inputType": "boolean",
-        "inputName": "is-on",
-        "visible": true,
-        "label": "Do you want subscribe?",
-        "model": "isOn",
-        "validationType": "boolean",
-        "defaultValue": true,
-        "attributes": {
-          "value": true
-        }
-      }]'>
-    </re-form-generator>
-          
-
-* * *
-
-Events
-------
-
-Name
-
-Description
-
-Code Example
-
-`submitted`
+- `config.align`: vertical alignment of the columns, `start` `center` `end` or `stretch`.
+- `config.justify`: where a row whose spans add up to less than 12 sits, `start` `center` or `end` (e.g. a single centered `span: 6` column).
+- Rows can't be nested. A row can have `logic` to show or hide all of it, and columns stack on narrow screens.
+- The old per-field width (`layout.cols`) is still understood: adjacent partial-width fields are grouped into rows automatically when the schema loads.
 
-Event emitted when the form is submitted. When form action is not defined, event will emit all form values, otherwise, if action is defined, the response of the request will be passed as an argument of the callback.
-
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.addEventListener('submitted', event => { 
-        console.log(event.detail);
-      });
-    </script>
-        
+### Validation
 
-`validationError`
+`validationType` is a Yup type (`string number boolean date array object`); `validations` is a list of `{ name, params }` where `name` is a Yup method. The message is the last parameter, and a friendly default is used when omitted:
 
-In the submit process when there are errors this event is emitted.
+```json
+{ "name": "required", "params": ["Please tell us your name"] }
+{ "name": "min", "params": [3, "At least 3 characters"] }
+{ "name": "matches", "params": ["^[0-9]{5}$", "Five digits please"] }
+```
 
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.addEventListener('validationError', event => { 
-        console.log(event.detail);
-      });
-    </script>
-        
+On a `boolean` field, `required` means "must be ticked". A rule whose value is empty is ignored.
 
-`valueChanged`
+Available rules by `validationType`:
 
-Event is emitted every time when form input data changes.
+| Type | Rules |
+| --- | --- |
+| `string` | `required` `min` / `max` / `length` (characters) `email` `url` `uuid` `matches` (regex string) `lowercase` `uppercase` `oneOf` / `notOneOf` (list of values) `sameAs` / `notSameAs` (another field) |
+| `number` | `required` `min` `max` `moreThan` `lessThan` `integer` `positive` `negative` `oneOf` / `notOneOf` `sameAs` / `notSameAs` `minField` / `maxField` (another field) |
+| `date` | `required` `min` `max` (earliest / latest date) `minField` / `maxField` (not before / not after another field) |
+| `array` | `required` `min` `max` `length` (number of choices) |
+| `boolean` | `required` (must be ticked) |
+| `file` (used automatically for `type: "file"`) | `required` `maxFileSize` (MB per file) `fileTypes` (`[".pdf", "image/*"]`) `minFiles` `maxFiles` |
 
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.addEventListener('valueChanged', event => { 
-        console.log(event.detail);
-      });
-    </script>
-        
+Phone and e-mail checks: `phone` (a number that exists in its country's numbering plan, checked with libphonenumber-js: length and leading digits), `phoneCountries` (`[["dk", "se"], "message"]`: only numbers from these countries) and `emailDomains` (`[["company.com"], "message"]`: only addresses on these domains, subdomains included).
 
-* * *
+Not every rule makes sense for every input: the builder offers them per kind of input, through `rulesFor(field)` / `RULES_BY_KIND` (a phone number gets `phone`, `phoneCountries`, `matches`, `sameAs`…; a URL `url`, `maxLength`, `matches`; a dropdown, a Likert or a ranking only `required`).
 
-Methods
--------
+Rules that compare with another field take that field's `model` as their value, e.g. `{ "name": "sameAs", "params": ["email", "The emails do not match"] }` or `{ "name": "minField", "params": ["startDate", "End must be after the start"] }`. If the referenced field no longer exists the rule is ignored. A file field's `attributes.accept` is enforced on submit too, not just used as a hint for the file picker.
 
-Name
+### Conditional logic
 
-Description
 
-Code Example
+```json
+"logic": { "action": "show", "match": "all", "conditions": [{ "field": "attended", "operator": "equals", "value": "yes" }] }
+```
 
-`updateValue`
+`action` is one of `show`, `hide`, `disable` (can't be edited while the rule matches), `enable` (can **only** be edited while it matches) and `require` (becomes required while it matches). Give `logic` a **list** of rules to combine several (every show/hide rule has to allow it). `match` is `all` (AND), `any` (OR) or `none` (NOT any). A condition can be a **group** with its own `match` and `conditions`, nested as deep as needed: `(A or B) and (C and D)` is `{ "match": "all", "conditions": [ { "match": "any", "conditions": [A, B] }, { "match": "all", "conditions": [C, D] } ] }`. Empty groups are ignored. Operators: `equals not_equals contains not_contains gt lt empty not_empty`. `field` is another field's `model`. For lists (checkbox groups, repeaters) `gt` / `lt` compare the number of entries, so `{ "field": "guests", "operator": "lt", "value": 1 }` means "no guest added". Hidden fields are not validated and not submitted; fields switched off by a rule are not validated.
 
-Updates the value of the model.
+**Months, weeks and years.** `{ "type": "month" }` answers `"2026-10"`, `{ "type": "week" }` an ISO week `"2026-W42"` (picked as a calendar row, with week numbers), `{ "type": "year" }` `"2026"`. `config.multiple: true` answers a list; `config.minDate` / `maxDate` (`"today"`, `"+60"` or a date) grey out what is outside.
 
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.addEventListener('valueChanged', event => { 
-        const field = event.detail;
-        const { birthday } = field;
-        if (birthday) {
-          const parts = birthday.split('-');
-          const [year, month, date] = parts;
-          formGenerator.updateValue('year', year);
-          formGenerator.updateValue('month', month);
-          formGenerator.updateValue('date', date);
-        }
-      });
-    </script>
-              
+### Rich options
 
-`submit`
+Radio and checkbox groups can say more about each option (like a list of providers to pick from). Besides `label`, `value` and `group`, an option can have:
 
-It will submit the form with its values and will trigger the `submitted` event.
+| Property | |
+| --- | --- |
+| `badge` | a short tag after the label, e.g. `"Most used"` |
+| `description` | a second line of smaller text under the label |
+| `image` | a logo (at most 28 px high, keeps its proportions). Where it goes is set per question with `config.imagePosition`: `left` (default: before the label, on its line; it wraps only when the line is full), `right` (right after the label, before its badge and help), `top` or `bottom` (on a line of its own, above the label or under the description and link). Only `http(s)`, relative and `data:image/…;base64` addresses are used. `imageAlt` describes it for screen readers (empty by default: the label already names it) |
+| `link` | `{ label, url }`: a link after the description that opens in a new tab (`rel="noopener noreferrer"`). Only `http(s)` URLs; clicking it does not pick the option |
+| `help` | a text behind a small "?" after the label (hover, focus, click or tap; Escape closes it). Clicking the "?" does not pick the option |
 
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.submit();
-    </script>
-              
+```json
+{
+  "type": "radioGroup", "id": "deposit", "model": "deposit", "label": "Who holds the deposit?",
+  "config": { "optionStyle": "cards", "visibleOptions": 3 },
+  "options": [
+    { "label": "Bank guarantee", "value": "bank", "badge": "Most used", "image": "https://example.com/bank.svg",
+      "description": "The bank pays if something goes wrong.", "link": { "label": "Read more", "url": "https://example.com/bank" },
+      "help": "You pay a small yearly fee instead of the full deposit." }
+  ]
+}
+```
 
-`validate`
+With `config.optionStyle: "cards"`, options that use any of these get the provider-list look: bordered cards on a light background, the radio / tick on the left and the content on the right, the picked card outlined in the primary colour. Cards without them keep the big tile look. All texts are translatable (`field.<id>.optionBadge.<value>`, `optionDesc`, `optionHelp`, `optionLink`, `optionAlt`), and so is a field's `tooltip` (`field.<id>.tooltip`).
 
-Validates the form. In case of errors, the `validationError` event will be emitted.
+### App-like flows
 
-    
-    <script>
-      const formGenerator = document.querySelector('re-form-generator');
-      formGenerator.validate();
-    </script>
-              
+Everything below is plain JSON, so a form can behave like a small application.
 
-* * *
+**Steps.** A `pageBreak` starts a new step. `settings.stepsLayout: "sidebar"` shows a list of the steps next to the form (a strip on small screens), with a tick on the steps that are filled in; the default is a progress bar. Above the form, `settings.progressStyle` picks `bar` (default), `percent`, `steps` (numbered dots), `titles` (numbered dots with the step titles) or `none`; `showStepCount: false` hides “Step 2 of 4”, `progressPosition: "bottom"` puts it above the buttons, `stepHeader: false` hides the step's title and description on its page, `stepTransition` is `fade` or `slide` (off when the visitor asks for less motion), `backButtonText` renames Back, and `theme.buttonAlign: "split"` puts Back on the left and Next on the right. A page break's `config` sets its own step: `image` (+ `alt`) at the top, `nextLabel` for its Next button, `hideBack: true`. The first step uses `settings.firstStepImage` / `firstStepImageAlt`. Every one of these texts is translatable. `settings.stepNavigation`: `visited` (default, in order: Next and the step list check each step before moving on, and a step gets its tick only when its answers are valid), `free` (any order: every step can be opened, everything is checked on send) or `locked` (the step list only goes back). `settings.nextButtonText` can use `{next}` (title of the next step): `"{next} →"`. `settings.saveDraft: true` keeps the answers in this browser (`draftKey` names the slot; files are not kept) and shows a "Save and exit" button (`exitText`, `exitUrl`); the draft is removed after a successful submit.
 
-Styles
-------
+**The step list (sidebar).** With `stepsLayout: "sidebar"` the list is on the left; `stepsSide: "right"` moves it to the right (on small screens it is always above the form). These settings add more to the list:
 
-You can overwrite default input fields style. For example:
+- `stepProgress: true`: each step shows a ring that fills up as its required questions are answered (only questions that are shown count; a repeater counts as answered when it has its `minItems` and the required fields of every item are filled in). A step without required questions is full once it was visited. A full ring on a step without errors becomes a green circle with a tick.
+- `sidebarHeader: { title, subtitle?, backUrl?, action? }`: a back arrow and a title at the top of the list ("Back and save as draft"). It replaces the "Save and exit" button. A click saves the draft (with `saveDraft`), then fires `formAction` `{ name: action, field: null, values }` when `action` is set, otherwise fires `exit` and opens `backUrl` (or `exitUrl`). In a frame, `redirectTarget` decides whether the whole page or only the frame moves. `{saved}` in the subtitle becomes "Saved just now" / "Saved 5 minutes ago" (in the form language, kept up to date); it is left out until the first save.
+- `sidebarActions: [{ label, variant?, action, name? }]`: full-width buttons under the steps. `variant`: `primary` (default), `secondary`, `outline`, `ghost` or `link` (a centred text link). `action`: `submit` (sends the form like the submit button, with every check), `next` (the next step; hidden on the last one) or `emit` (fires `formAction` with `name`). On small screens, where the list becomes a strip, the buttons move under the form.
 
-            `.input__label {   font-size: 20px !important;   color: blue;   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }  .submit-container__button {   background-color: blue !important; }`      
-            
-          
+```json
+"settings": {
+  "stepsLayout": "sidebar", "stepProgress": true, "saveDraft": true,
+  "sidebarHeader": { "title": "Back and save as draft", "subtitle": "{saved}", "backUrl": "/contracts" },
+  "sidebarActions": [
+    { "label": "Create contract", "action": "submit" },
+    { "label": "Preview", "variant": "link", "action": "emit", "name": "preview" }
+  ]
+}
+```
 
-### Default styling
+**Sections.** `{ "type": "section", "label": "Dates", "fields": [ … ] }` groups fields in a card. Rows can sit inside sections. `config.badge` puts a round number ("1") next to the title, `config.tooltip` adds a "?" icon with a help text, and a section with a `disable` rule is greyed out and unusable (a numbered checklist that unlocks step by step). A section without fields is just a card with a title.
 
-#### Form generator
+**Tabs.** `{ "type": "tabs", "tabs": [ { "id": "a", "label": "Units", "fields": [ … ] }, … ] }`. Answers of all tabs are part of the same form; rules can use fields of other tabs.
 
-    
-    .input__description {
-      color: #6c757d;
-      font-size: 13px;
-      margin: 0;
-    }
-    .re-form-generator {
-      width: calc(100% - 40px);
-      border: 1px solid #000 3b;
-      padding: 20px;
-      border-radius: 20px;
-      background: #fff;
-      /* Rounded sliders */
-    }
-    .re-form-generator .select-input {
-      position: relative;
-      appearance: none;
-      -webkit-appearance: none;
-      width: 100%;
-      font-size: 14px;
-      height: 44px;
-      padding: 0.675em 6em 0.675em 1em;
-      background-color: #fff;
-      border: 1px solid #caced1;
-      border-radius: 0.25rem;
-      color: #000;
-      cursor: pointer;
-    }
-    .re-form-generator .select-input::after, .re-form-generator .select-input::before {
-      content: "";
-      position: absolute;
-      right: 1rem;
-      pointer-events: none;
-    }
-    .re-form-generator .select-input::before {
-      border-left: 0.3rem solid transparent;
-      border-right: 0.3rem solid transparent;
-      border-bottom: 0.3rem solid black;
-      top: 40%;
-    }
-    .re-form-generator .select-input::after {
-      border-left: 0.3rem solid transparent;
-      border-right: 0.3rem solid transparent;
-      border-top: 0.3rem solid black;
-      top: 55%;
-    }
-    .re-form-generator .group-title {
-      font-size: 24px;
-      padding-bottom: 6px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #cbd5e1;
-    }
-    .re-form-generator textarea {
-      resize: none;
-      height: 90px;
-      font-size: 14px;
-      line-height: 17px;
-      color: #252733;
-      background: #fafafa;
-      padding: 12px;
-      border: 1px solid #e3e8eb;
-      border-radius: 5px;
-      width: 100%;
-      font-size: 14px;
-      color: #252733;
-      box-sizing: border-box;
-      font-family: inherit;
-    }
-    .re-form-generator .input-text, .re-form-generator .input-email, .re-form-generator .input-date, .re-form-generator .input-number, .re-form-generator .select-input {
-      background: #fafafa;
-      padding: 12px;
-      border: 1px solid #e3e8eb;
-      border-radius: 5px;
-      width: 100%;
-      font-size: 14px;
-      color: #252733;
-      box-sizing: border-box;
-      font-family: inherit;
-      height: 43px;
-    }
-    .re-form-generator .input-text.input-checkbox, .re-form-generator .input-email.input-checkbox, .re-form-generator .input-date.input-checkbox, .re-form-generator .input-number.input-checkbox, .re-form-generator .select-input.input-checkbox {
-      height: 18px;
-      width: 18px;
-      background-color: #eee;
-      margin: 0;
-    }
-    .re-form-generator .row-container {
-      display: flex;
-      gap: 10px;
-      flex-grow: 12;
-    }
-    @media (max-width: 768px) {
-      .re-form-generator .row-container {
-        display: block;
-      }
-    }
-    .re-form-generator .row-container .col-1 {
-      width: calc((100% / 12) * 1);
-    }
-    .re-form-generator .row-container .col-2 {
-      width: calc((100% / 12) * 2);
-    }
-    .re-form-generator .row-container .col-3 {
-      width: calc((100% / 12) * 3);
-    }
-    .re-form-generator .row-container .col-4 {
-      width: calc((100% / 12) * 4);
-    }
-    .re-form-generator .row-container .col-5 {
-      width: calc((100% / 12) * 5);
-    }
-    .re-form-generator .row-container .col-6 {
-      width: calc((100% / 12) * 6);
-    }
-    .re-form-generator .row-container .col-7 {
-      width: calc((100% / 12) * 7);
-    }
-    .re-form-generator .row-container .col-8 {
-      width: calc((100% / 12) * 8);
-    }
-    .re-form-generator .row-container .col-9 {
-      width: calc((100% / 12) * 9);
-    }
-    .re-form-generator .row-container .col-10 {
-      width: calc((100% / 12) * 10);
-    }
-    .re-form-generator .row-container .col-11 {
-      width: calc((100% / 12) * 11);
-    }
-    .re-form-generator .row-container .col-12 {
-      width: calc((100% / 12) * 12);
-    }
-    @media (max-width: 768px) {
-      .re-form-generator .row-container .col-1 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-2 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-3 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-4 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-5 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-6 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-7 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-8 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-9 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-10 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-11 {
-        width: 100%;
-      }
-      .re-form-generator .row-container .col-12 {
-        width: 100%;
-      }
-    }
-    .re-form-generator .input__label {
-      font-weight: 700;
-      font-size: 14px;
-      line-height: 20px;
-      margin-bottom: 12px;
-      display: inline-block;
-    }
-    .re-form-generator .error-message {
-      font-size: 12px;
-      color: #ff6868;
-    }
-    .re-form-generator .switch {
-      position: relative;
-      display: inline-block;
-      width: 45px;
-      height: 25px;
-    }
-    .re-form-generator .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .re-form-generator .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #83888f;
-      transition: 0.4s;
-      transition: 0.4s;
-    }
-    .re-form-generator .slider:before {
-      position: absolute;
-      content: "";
-      height: 21px;
-      width: 21px;
-      left: 2px;
-      bottom: 2px;
-      background-color: white;
-      transition: 0.4s;
-      transition: 0.4s;
-    }
-    .re-form-generator input:checked + .slider {
-      background-color: #2196f3;
-    }
-    .re-form-generator input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-    .re-form-generator input:focus + .slider {
-      box-shadow: 0 0 1px #2196f3;
-    }
-    .re-form-generator .slider.round {
-      border-radius: 34px;
-    }
-    .re-form-generator .slider.round:before {
-      border-radius: 50%;
-    }
-    .re-form-generator .input-group {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      padding: 0 0 16px 0;
-      font-weight: 700;
-      font-size: 14px;
-      line-height: 20px;
-    }
-    .re-form-generator .input-group.hasErrors input, .re-form-generator .input-group.hasErrors .multi-select, .re-form-generator .input-group.hasErrors .select-input {
-      border: 1.5px solid #ff6868;
-      border-radius: 5px;
-    }
-    .re-form-generator .input-group.hasErrors .file-field-container {
-      border: 1.5px solid #ff6868;
-      border-radius: 5px;
-    }
-    .re-form-generator .input-group.input-checkbox-container {
-      display: flex;
-      flex-direction: row-reverse;
-      align-items: center;
-      justify-content: start;
-      gap: 0.5rem;
-    }
-    .re-form-generator .input-group.input-checkbox-container .input__label {
-      margin-bottom: 0px;
-      margin-left: 6px;
-      font-weight: normal;
-    }
-    .re-form-generator .input-group.input-checkbox-container .error-message {
-      flex-basis: 100%;
-      position: absolute;
-      bottom: 0px;
-    }
-    .re-form-generator .input-group.input-checkbox-container.hasErrors {
-      margin-bottom: 16px;
-    }
-    .re-form-generator .input-group.input-checkboxGroup-container .checkboxGroup .label {
-      margin-bottom: 0px;
-      margin-left: 6px;
-      font-weight: normal;
-    }
-    .re-form-generator .input-group.two-columns {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-    }
-    .re-form-generator .submit-container {
-      display: flex;
-      margin-top: 16px;
-    }
-    .re-form-generator .submit-container__button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      background-color: #2196f3;
-      color: #fff;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      width: 100%;
-    }
-    .re-form-generator .submit-container__button:hover {
-      background-color: #1565c0;
-    }
-    .re-form-generator .radioGroup {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .re-form-generator .radioGroup-element {
-      display: flex;
-      flex-direction: row;
-      gap: 0.5rem;
-      align-items: center;
-    }
-    .re-form-generator .radioGroup-element .label {
-      font-weight: normal;
-    }
-    .re-form-generator .radioGroup .input-radio {
-      padding: 2px;
-      margin: 0;
-    }
-    .re-form-generator .hidden {
-      display: none;
-    }
-    .re-form-generator .form-error-message {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .re-form-generator .form-error-message__message {
-      color: #ff6868;
-      font-size: 12px;
-      font-weight: 700;
-    }
-          
+**Repeating groups.** The answer is a list of objects, one per item:
 
-#### File input
+```json
+{
+  "type": "repeater", "id": "guests", "model": "guests",
+  "config": { "itemLabel": "Guest #{n}", "addLabel": "Add guest", "minItems": 1, "maxItems": 4, "collapsible": true },
+  "fields": [
+    { "type": "input", "id": "t_name", "model": "name", "label": "Name", "validations": [{ "name": "required", "params": [] }] },
+    { "type": "input", "id": "t_email", "model": "email", "inputType": "email", "label": "Email" }
+  ]
+}
+```
+
+→ `{ "guests": [ { "name": "Anna", "email": "…" }, … ] }`. Config: `layout` (`cards` or `table`), `itemLabel` (`{n}` and `{key}` of an answer in the item), `addLabel`, `addStyle` (`button` or `dashed`), `emptyText`, `minItems` / `maxItems`, `allowAdd` / `allowRemove`, `collapsible` / `startCollapsed`, `presets`. A repeater can contain another repeater (the checklist of a room).
+
+- **Logic inside an item** uses the other fields of the same item by their key (`"condition"`), and still reaches normal fields. Errors are keyed by path (`guests[0].email`).
+- **`layout: "table"`**: the first child must be a `columns` row; its columns become the table columns (the headers are their labels). Anything after that row appears under the row, only while it has something to show (e.g. defect details of a unit that is "Damaged").
+- **`presets`**: `[{ "label": "Kitchen", "description": "…", "values": { "name": "Kitchen", "units": [ { "unit": "Stove" } ] } }]`. The add button then opens these choices and the new item starts with the `values` (nested lists included).
 
-        `re-file-input-field .file-field-container {   width: 100%;   display: flex; } re-file-input-field .file-field-container .file-dropzone {   width: 100%;   height: 16rem;   border: 1px dashed #e3e8eb;   border-radius: 5px;   background-color: #fafafa;   cursor: pointer;   display: flex;   flex-direction: column;   align-items: center;   justify-content: center;   transition: background-color 0.3s, border-color 0.3s; } re-file-input-field .file-field-container .file-dropzone.hover {   background-color: #e5e7eb;   border-color: #9ca3af; } re-file-input-field .file-field-container .file-dropzone.hover .dropzone-icon, re-file-input-field .file-field-container .file-dropzone.hover .dropzone-text, re-file-input-field .file-field-container .file-dropzone.hover .dropzone-subtext {   color: #252733; } re-file-input-field .file-field-container .file-dropzone:hover {   background-color: #f9fafb; } re-file-input-field .file-field-container .file-dropzone:hover .dropzone-icon {   color: #9ca3af; } re-file-input-field .file-field-container .file-dropzone:hover .dropzone-text, re-file-input-field .file-field-container .file-dropzone:hover .dropzone-subtext {   color: #6b7280; } re-file-input-field .file-field-container .file-dropzone.dark {   background-color: #374151;   border-color: #4b5563; } re-file-input-field .file-field-container .file-dropzone.dark:hover {   background-color: #4b5563;   border-color: #6b7280; } re-file-input-field .file-field-container .file-dropzone.dark .dropzone-icon, re-file-input-field .file-field-container .file-dropzone.dark .dropzone-text, re-file-input-field .file-field-container .file-dropzone.dark .dropzone-subtext {   color: #9ca3af; } re-file-input-field .file-field-container .file-dropzone .dropzone-content {   display: flex;   flex-direction: column;   align-items: center;   justify-content: center;   padding-top: 1.25rem;   padding-bottom: 1.5rem;   font-weight: normal; } re-file-input-field .file-field-container .file-dropzone .dropzone-icon {   width: 2rem;   height: 2rem;   margin-bottom: 1rem;   color: #6b7280;   transition: color 0.3s; } re-file-input-field .file-field-container .file-dropzone .dropzone-text {   margin-bottom: 0.5rem;   color: #6b7280;   transition: color 0.3s;   display: flex;   gap: 8px;   flex-direction: column;   align-items: center;   justify-content: center; } re-file-input-field .file-field-container .file-dropzone .dropzone-text .file-element {   display: flex;   gap: 8px;   color: #252733; } re-file-input-field .file-field-container .file-dropzone .font-bold {   font-weight: bold; } re-file-input-field .file-field-container .file-dropzone .dropzone-subtext {   font-size: 0.8rem;   color: #6b7280;   transition: color 0.3s; } re-file-input-field .file-field-container .file-dropzone .remove-file {   width: 20px;   height: 20px;   border-radius: 50%;   background-color: #ff6868;   color: white;   text-align: center;   line-height: 20px;   font-size: 14px;   font-weight: bold; } re-file-input-field .file-field-container .file-dropzone .file-name {   font-weight: bold;   max-width: 250px;   text-overflow: ellipsis;   overflow: hidden;   white-space: nowrap; }`
-        
-      
+**Small cards, dialogs and pages for items.** Besides `cards` (the fields inline) and `table`, a repeater can show its items as small cards (`layout: "grid"`, `columns`, or any layout with `itemOpen` other than `inline`). A card has a title (`itemLabel`), a summary line (`itemMeta`; `{count:defects|No defects|1 defect|# defects}` picks a text by the number of items in a nested group, `{key}` of an array lists its entries), an optional **Done** button (`doneField`: a yes/no answer of the item) and a ⋮ menu. Config:
 
-#### Multiselect
+| | |
+| --- | --- |
+| `itemOpen` | `inline` (default for cards), `modal` (clicking a card edits it in a dialog) or `page` (the item replaces the list, with a Back link, `backLabel`; its fields can use tabs and buttons) |
+| `addMode` | `inline` (a blank item is added) or `modal` (a dialog with the item's fields asks first: `addTitle`, `editTitle`, `confirmLabel`, `cancelLabel`) |
+| `itemMenu` | the ⋮ menu: any of `edit duplicate up down remove` (default for small cards: all) |
+| `sortable` | drag small cards to reorder them (default on) |
+
+Fields of an item can be `config.dialogOnly` (only in the item's dialog, e.g. the type of a meter) or `config.hideInDialog` (left out of it, e.g. a "+" button in a table row).
 
-    
-    re-multi-select .multi-select {
-      position: relative;
-      width: 100%;
-      background: #fafafa;
-      font-weight: normal;
-    }
-    re-multi-select .multi-select__header {
-      padding: 10px;
-      border: 1px solid #e3e8eb;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      border-radius: 5px;
-    }
-    re-multi-select .multi-select__header.disabled {
-      pointer-events: none;
-      background-color: #ddd;
-    }
-    re-multi-select .multi-select__header .selected_options {
-      display: flex;
-      justify-content: row;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    re-multi-select .multi-select__header .selected_options__option {
-      background-color: #2196f3;
-      border-radius: 5px;
-      color: #fff;
-      padding: 0rem 0.5rem;
-      font-size: 11px;
-      font-weight: 400;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    re-multi-select .multi-select__header .selected_options__option-close {
-      padding: 0 0.25rem;
-    }
-    re-multi-select .multi-select__options {
-      position: absolute;
-      width: calc(100% - 2px);
-      border: 1px solid #e3e8eb;
-      border-top: none;
-      max-height: 150px;
-      overflow-y: auto;
-      background: #fff;
-      z-index: 1;
-      margin: 0;
-      padding: 0;
-      border-bottom-left-radius: 5px;
-      border-bottom-right-radius: 5px;
-    }
-    re-multi-select .multi-select__option {
-      padding: 10px;
-      cursor: pointer;
-    }
-    re-multi-select .multi-select__option.selected {
-      background-color: #f0f0f0;
-    }
-    re-multi-select .multi-select__option:not(.selected):hover {
-      background-color: #2196f3;
-      color: #fff;
-    }
-    re-multi-select .multi-select__option:last-of-type {
-      border-bottom-left-radius: 5px;
-      border-bottom-right-radius: 5px;
-    }
-    re-multi-select .multi-select .arrow-up::before {
-      content: '▲';
-    }
-    re-multi-select .multi-select .arrow-down::before {
-      content: '▼';
+### Dialogs
+
+A `modal` block is a form in a pop-up. It is placed anywhere (typically inside the item or step whose answers it needs) and opened by a button with `{ "type": "openModal", "modal": "<block id>", "values": { … } }`. What people type stays in the dialog (it is not part of the answers) until they confirm; then the block's `config.confirmActions` run, and they can use it as `{draft:key}`:
+
+```json
+{ "type": "modal", "id": "stateDialog", "label": "Set the condition of everything",
+  "fields": [ { "type": "radioGroup", "id": "s", "model": "state", "label": "Condition", "options": [ … ], "validations": [{ "name": "required" }] } ],
+  "config": { "confirmLabel": "Set condition", "confirmActions": [ { "type": "setAll", "field": "units", "key": "condition", "value": "{draft:state}" } ] } }
+```
+
+Fields inside a dialog are validated when it is confirmed. Names used by buttons, actions and `optionsFrom` are looked up from the item the block sits in outward, so "units" inside a room means that room's units.
+
+**Buttons and actions.** `{ "type": "button", "label": "Review report", "config": { "variant": "outline", "actions": [ { "type": "emit", "name": "review" } ] } }`. `variant`: `primary secondary outline ghost danger`; `size: "large"`; `align`: `start center end stretch`; `icon`: `arrow-right arrow-left plus check download`. Give a button `logic` to show it or to `disable` it while something is missing. Actions run in order and stop at the first one that cannot continue:
+
+| Action | |
+| --- | --- |
+| `next` / `back` | move between steps (`next` checks the current step first) |
+| `goto` | `{ "type": "goto", "step": "<page break id>" or "start", "validate": true }` |
+| `set` | `{ "type": "set", "field": "model", "value": "x" }` (inside an item: a field of the same item first) |
+| `add` | `{ "type": "add", "field": "guests", "values": { … } }` adds an item (through its dialog when the group has `addMode: "modal"`). In `values`, `{key}` is an answer of the item the button is in: a "+" in a unit row can open the defect dialog with `{ "units": ["{unit}"] }` |
+| `setAll` | `{ "type": "setAll", "field": "units", "key": "condition", "value": "Good" }` sets one answer on every item of a group |
+| `openModal` | `{ "type": "openModal", "modal": "<block id>", "values": { … } }` opens a [dialog](#dialogs) |
+| `submit` / `reset` | send / start over. A page with its own `submit` button hides the built-in submit button |
+| `link` | `{ "type": "link", "url": "https://…", "newTab": true }` (http, https, mailto, tel or relative) |
+| `emit` | fires the `formAction` event `{ name, field, values }` so your own code can react |
+| `saveDraft` / `exit` | save progress / save and fire `exit` (then open `settings.exitUrl`) |
+
+### Room-list style flows (type picker, global vs. per-item tools)
+
+- **Add dialog with a type picker**: `presets` on a repeater with `addMode: 'modal'` shows the presets first; `uniqueKey` keeps names unique ("Kitchen 2"), `dialogContent: 'marked'` limits the dialog to fields marked `dialogOnly`.
+- **Global vs. per-item actions**: the same button works at two levels. `setAll` takes a nested path (`field: 'rooms.units'`) to change every item of every row; inside an item the plain path only touches that item. A step-level list (e.g. `allDefects`) can use `optionsFrom: { field: 'rooms.units', labelKey, groupKey }` with `searchable` to pick items from all rows, grouped.
+- **Translating preset data**: `config.presetTextKeys: ['name', 'unit']` lists the properties inside `presets[].values` (at any depth) whose text people read; those strings appear in the translations next to the preset label (e.g. the room name and the unit names). Stored values such as a condition (`'Good'`) are never translated. `addTitle` and `backLabel` are translatable too.
+- **Item pages**: an open item shows everything inside it, tabs and sections included; the rest of the step steps aside. `closeItem` returns to the list (e.g. a "Mark as done" button: `set done` then `closeItem`).
+
+### Branding: logo, cover, page background, footer
+
+Everything lives in `theme` (look) and `footer` (content):
+
+- `theme.logo`, `logoHeight`, `logoAlign`, `logoLink` (makes it a link), `logoAlt`.
+- `theme.cover`, `coverHeight`, `coverPosition` (`top|center|bottom`), `coverOverlay` (0-80, darkens it), `coverStyle` (`banner` or `hero`, which puts the logo, title and description on the image).
+- `theme.pageImage`, `pageImageFit` (`cover|contain|tile`), `pageOverlay`: a background image behind the form. The component is only the card, so the page applies it with `pageStyle(theme)` (an object) or `pageStyleText(theme)` (a `style` string), both exported.
+- `theme.headingFont` (a separate font for titles) and `theme.headerAlign` (`left|center`).
+- `footer`: `{ enabled, style: 'plain'|'card'|'bar', align, text, links: [{label,url,newTab}], social: [{type,url}], copyright ("© {year} Acme"), logo, logoHeight, backgroundColor, textColor }`. It renders under the card; its text, link labels and copyright are translatable. Social types: facebook, instagram, linkedin, x, youtube, tiktok, email, phone, website.
+
+### Theme
+
+`theme` takes a `preset` (`indigo minimal soft ocean forest sunset midnight mono`) and/or overrides: `logo logoHeight logoAlign cover coverHeight` (images: `https://…`, a relative path or a `data:image/…` URL; anything else is ignored) `primaryColor backgroundColor textColor pageBackground fontFamily borderRadius inputStyle (outlined|filled|underlined) spacing (compact|comfortable|spacious) cardStyle (shadow|bordered|flat) maxWidth buttonStyle (solid|outline) buttonWidth (full|auto|equal: Back and Next in halves) buttonAlign (left|center|right) labelStyle (normal|uppercase) customCss`. Everything is exposed as `--rfg-*` CSS variables you can also override from your own CSS.
+
+### Languages (i18n)
+
+Write the form once in its default language, then add translations. Anything not translated falls back to the default language.
+
+```json
+"i18n": {
+  "defaultLanguage": "en",
+  "languages": ["en", "es", "fr"],
+  "detect": true,
+  "switcher": "flags",
+  "translations": {
+    "es": {
+      "title": "Contáctanos",
+      "settings.submitButtonText": "Enviar",
+      "field.name.label": "Tu nombre",
+      "field.plan.option.free": "Gratis",
+      "ui.submit": "Mandar"
     }
-    re-multi-select .multi-select .arrow {
-      font-size: 0.63rem;
-      padding: 0 0.25rem;
-    }     
-          
+  }
+}
+```
+
+- **Which language is shown:** the `language` prop if set (it also hides the switcher); else the visitor's choice in the switcher; else the browser language (`navigator.languages`, `detect` is on by default) when it matches one of `languages` (`pt-BR` matches `pt`); else `defaultLanguage`.
+- **Switcher:** `"none"` (default), `"flags"` or `"dropdown"`: a language selector at the top of the form. Flags are emoji, so on Windows they show as letters.
+- **Keys:** `title`, `description`, `settings.<name>`, `settings.sidebarHeader.<title|subtitle>`, `settings.sidebarActions.<index>.label`, and `field.<field id>.<label|helpText|tooltip|placeholder|content|checkboxLabel|config.minLabel|config.maxLabel|config.unit>`, `field.<id>.option.<option value>`, `field.<id>.<optionDesc|optionBadge|optionHelp|optionLink|optionAlt>.<option value>`, `field.<id>.validation.<rule name>` (a custom error message). The builder's **Translate** tab lists them all.
+- **Built-in texts** (buttons, step counter, upload text, default error messages, country names) are translated for `en es fr de it pt nl pl ca da` and can be overridden per language with `ui.*` / `validation.*` keys (see `BUILT_IN_UI` in `src/utils/i18n.ts`). Other languages use English for these unless you provide them. This works for the default language too, so a single-language form can reword them: `"translations": { "en": { "ui.step": "Stage {current} of {total}" } }`. Country names use the browser's `Intl.DisplayNames`.
+- `ar`, `he` and `fa` set `dir="rtl"` on the form.
+
+```html
+<re-form-generator language="es"></re-form-generator>   <!-- force a language -->
+<script>
+  form.addEventListener('languageChanged', e => console.log(e.detail.language));
+  form.setLanguage('fr');                                 // switch from your own UI
+</script>
+```
+
+### Spam protection
+
+`settings.captcha`: `{ "provider": "turnstile", "siteKey": "…", "theme": "auto" }`.
+
+| `provider` | |
+| --- | --- |
+| `honeypot` | a hidden trap field, no account or key. A submission that fills it is silently dropped. Stops simple bots only |
+| `turnstile` | Cloudflare Turnstile (answers get `cf-turnstile-response`) |
+| `hcaptcha` | hCaptcha (`h-captcha-response`) |
+| `recaptcha` | Google reCAPTCHA v2 checkbox (`g-recaptcha-response`) |
+| `recaptcha3` | Google reCAPTCHA v3, invisible (`g-recaptcha-response`) |
+
+The token travels with the answers, **and your server must verify it** with the provider's *secret* key (see the builder's "Show how to check it"). The old `action.recaptchaSiteKey` still works as reCAPTCHA v2. Each provider publishes test site keys that always pass, handy while building.
+
+### Keys and secrets in a front-end form
+
+Everything in a web page is readable by visitors, so treat anything you put in a form as public:
+
+- **Fine to include:** captcha *site* keys, Mapbox public (`pk.`) tokens, and Google / Geoapify browser keys **that you restricted** to your domain and to one API, with a spending limit or quota alert set.
+- **Never include:** captcha *secret* keys, Mapbox `sk.` tokens, unrestricted keys, and `action.bearerToken` values that are not meant to be public (the token is sent from the visitor's browser).
+- **For a key you cannot restrict**, put a small proxy in between: the form calls your address, the proxy adds the key and forwards the request. The builder generates a ready-to-paste Cloudflare Worker for the address providers ("Keep the key off the page") and switches the field to it.
+- Submit the form to **your own server** (`action.endpoint`) and verify captcha tokens there.
+
+### The form's own code
+
+`script` (a string at the top of the document) is JavaScript that runs with the form, like the “Script” box of the old forms, but **in a sandbox**: a hidden frame with no access to the page, its cookies, its storage or anybody's login. It talks to the form through a `form` object:
+
+```js
+form.on('change', ({ key, value }) => {      // also 'ready', 'step', 'beforeSubmit', 'submitted'
+  if (key === 'city') form.filterOptions('projects', o => o.label.includes(value));
+});
+form.set('year', '2000');                    // or form.set({ a: 1, b: 2 })
+form.get('city');                            // form.values: every answer
+form.setOptions('projects', [{ label: 'A', value: 'a' }]);   // form.resetOptions('projects') undoes it
+form.hide('vat'); form.show('vat');          // hidden fields are not checked and not sent
+form.goToStep('stepId'); form.redirect('https://…');
+form.alert('Thank you!');                    // a message for the person (plain alert() works too)
+form.style('email', { background: '#fff3f3', borderColor: '#e11d48' });   // colours, see below; form.resetStyle('email') undoes it
+form.on('beforeSubmit', ({ values }) => values.age < 18 ? 'You must be 18 or older.' : true);  // false or a message stops the send
+```
+
+`form.style(field, colours)` takes only colours (`#hex`, `rgb()`/`hsl()` or a colour name) for `background` (the input box), `color` (its text), `borderColor`, `accentColor` (selected options, focus ring), `labelColor` and `highlight` (a coloured box behind the whole question). A second call adds to the first; `null` removes one colour. Nothing else can be styled, so the code cannot add CSS to the page.
+
+The code can call APIs with `fetch`, and `beforeSubmit` waits for an `async` handler (at most 4 seconds). The frame has no origin of its own, so only APIs that allow every site (`Access-Control-Allow-Origin: *`) answer, never with the visitor's cookies or login, and the page's Content-Security-Policy applies.
 
-#### Country select
+`form.updateValue` / `form.getValue` work too (the names older scripts used). The prop `allow-script="false"` never runs it; the builder's canvas never does.
 
-        `re-form-generator re-country-select .country-select-input-wrapper {   position: relative;   width: 100%;   height: 43px; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container {   position: absolute;   width: 100%;   max-height: 300px;   background: #fff; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container::-webkit-scrollbar {   display: none; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper {   position: relative;   font-size: 14px;   font-weight: normal;   width: 100%;   height: 100%;   pointer-events: none;   display: block; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper .selected-flag {   transform: translateY(-50%) scale(0.8);   width: 24px;   position: absolute;   left: 10px;   top: 20px;   display: block; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper .selected-country-value {   position: absolute;   top: 11px;   left: 40px;   overflow: hidden;   text-overflow: ellipsis;   width: -webkit-fill-available;   text-wrap: nowrap;   margin-right: 5px;   display: block; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-container .selected-country-wrapper.hidden {   display: none; } re-form-generator re-country-select .country-select-input-wrapper .country-search {   width: 100%;   box-sizing: border-box;   border: 1px solid #e3e8eb;   padding: 10px;   text-indent: 26px;   border-radius: 5px;   height: 43px;   font-family: unset;   text-indent: 26px;   background: #fafafa; } re-form-generator re-country-select .country-select-input-wrapper .country-search input::placeholder {   font-family: unset; } re-form-generator re-country-select .country-select-input-wrapper .country-search.no-indent {   text-indent: 0px; } re-form-generator re-country-select .country-select-input-wrapper input::placeholder {   font-family: 'Times-Roman'; } re-form-generator re-country-select .country-select-input-wrapper .dropdown {   position: absolute;   top: 40px;   width: 100%;   border: 1px solid #e3e8eb;   background-color: white;   overflow-y: auto;   display: none; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-item {   padding: 10px;   cursor: pointer;   border: 0.5px solid #e3e8eb;   border-top: 0px;   background: #fff;   font-weight: normal; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-item:last-of-type {   border-bottom: 0px; } re-form-generator re-country-select .country-select-input-wrapper .dropdown-item:hover {   background: #f0f0f0; } re-form-generator re-country-select .country-select-input-wrapper .flag {   width: 20px;   height: 15px;   margin-right: 10px; } re-form-generator re-country-select .country-select-input-wrapper .country-select-dropdown-wrapper {   overflow-y: scroll;   max-height: 200px;   border-bottom: 1px solid #e3e8eb;   border-bottom-left-radius: 5px;   border-bottom-right-radius: 5px; } re-form-generator re-country-select .country-select-input-wrapper .country-select-dropdown-wrapper::-webkit-scrollbar {   display: none; }`
-        
-      
+### Settings & action
 
-* * *
+`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`, `afterSubmit` (`message`, `page`: the thank-you page, or `redirect`) and `redirectTarget` (`top`, default: an embedded form moves the whole page, with a Continue button when the browser refuses; `self`: only the frame), and for steps `stepsLayout stepsSide progressStyle showStepCount progressPosition stepHeader stepTransition stepNavigation firstStepTitle firstStepDescription firstStepImage firstStepImageAlt nextButtonText backButtonText saveDraft draftKey exitText exitUrl`, and for the step list `stepProgress sidebarHeader sidebarActions` (see [App-like flows](#app-like-flows)).
 
-Changelog
----------
+`action` (optional): `endpoint httpMethod bearerToken headers formData webhookEndpoint recaptchaSiteKey mapping`. Without an endpoint the form just emits `submitted`.
 
-See what's new added, changed, fixed, improved or updated in the latest versions.
+## Component API
 
-### Version 0.0.14 (4 July, 2024)
+| Prop | |
+| --- | --- |
+| `schema` | document (object or JSON string) or a v1 array |
+| `model` | initial values keyed by `model` |
+| `action`, `mapping` | override `schema.action` / `action.mapping` |
+| `theme` | object, preset id, or JSON string; overrides `schema.theme` |
+| `language` | forces a language (e.g. `es`, `pt-BR`); see [Languages](#languages-i18n) |
+| `designMode` | used by the builder: shows every field, no logic, inert |
 
-*   AddedInitial version
+Events: `submitted` (`{ values, response, error }`), `valueChanged`, `validationError`, `handleSubmit`, `languageChanged` (`{ language }`), `formAction` (`{ name, field, values }`, from a button's `emit` action; from the step list's header or buttons `field` is `null`), `stepChanged` (`{ index, id, title }`), `draftSaved` (`{ values }`, every time the draft is saved), `exit` (`{ values }`, "Save and exit" or the step list's back link).
+Methods: `submit()`, `validate()`, `reset()`, `getValues()`, `updateValue(key, value)` (keys inside a repeater are paths like `guests[0].email`), `goToStep(id, validate?)`, `setLanguage(code)`, `getLanguage()`.
+Slots: `field-label@<field id>` renders custom content under a field's label.
 
-*   [](https://twitter.com/harnishdesign/)
-*   [](http://www.facebook.com/harnishdesign/)
-*   [](http://www.dribbble.com/harnishdesign/)
-*   [](http://www.github.com/)
+## Contributing
 
-Copyright © 2020 [iDocs](http://www.harnishdesign.net/idocs-one-page-documentation-html-template/). All Rights Reserved.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to run the project locally and for the release process.
 
-Design & Develop by [HarnishDesign](http://www.harnishdesign.net/).
+## License
 
-[](javascript:void(0) "Back to Top")
+[MIT](LICENSE)

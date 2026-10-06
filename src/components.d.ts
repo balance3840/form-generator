@@ -5,37 +5,114 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { SearchItem } from "./utils/search";
+export { SearchItem } from "./utils/search";
 export namespace Components {
     interface ReAlert {
         "message": string;
         "type": 'success' | 'warning' | 'error' | 'info';
     }
     interface ReCountrySelect {
+        /**
+          * Read out by screen readers (the compact picker has no visible label).
+         */
+        "ariaLabelText": string;
+        /**
+          * Small picker (flag and dial code) in front of a phone number: the list opens wider than the box.
+         */
+        "compact": boolean;
         "defaultValue": string;
         "disabled": any;
         "inputDisplayKey": string;
         "inputOptions": any;
+        /**
+          * Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes.
+         */
+        "language": string;
         "modelKey": string;
+        /**
+          * Shown when the search matches nothing.
+         */
+        "noResultsText": string;
+        /**
+          * Only offer these countries (codes like "dk", "se"). Empty: all of them.
+         */
+        "only": string[];
         "showDialCode": boolean;
         "zIndex": string;
     }
     interface ReFileInputField {
+        /**
+          * With `compact`: the button spans the whole width (a dashed "add photo" bar).
+         */
+        "block": boolean;
+        /**
+          * A small "add" button instead of the big drop area (use with `preview` for photos).
+         */
+        "compact": boolean;
         "inputAttributes": any;
         "inputProps": any;
         "modelKey": string;
         "placeholder": string;
+        /**
+          * Show a thumbnail for every chosen image.
+         */
+        "preview": boolean;
         "subTitle": string;
         "textTitle": string;
     }
     interface ReFormGenerator {
+        /**
+          * Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`.
+         */
         "action": any;
+        /**
+          * Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it.
+         */
+        "allowScript": boolean;
+        /**
+          * Used by the builder: shows every field, ignores logic and disables interaction.
+         */
+        "designMode": boolean;
         "formId": string;
+        "getLanguage": () => Promise<string>;
+        "getValues": () => Promise<{ [key: string]: any; }>;
+        /**
+          * Goes to a step by its id (a page break's id, or `start` for the first step). Resolves to false if it could not.
+         */
+        "goToStep": (stepId: string, validate?: boolean) => Promise<boolean>;
+        /**
+          * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher. Without it the language is picked from `schema.i18n` (browser language if available, else the default).
+         */
+        "language": string;
+        /**
+          * v1 compatibility: field mapping. Prefer `action.mapping`.
+         */
         "mapping": any;
+        /**
+          * Initial values, keyed by field `model`.
+         */
         "model": any;
+        "reset": () => Promise<void>;
+        /**
+          * The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string.
+         */
         "schema": any;
+        /**
+          * Switches the form to `language` (must be one of the document's languages, or a built-in one).
+         */
+        "setLanguage": (language: string) => Promise<void>;
         "submit": () => Promise<any>;
-        "updateValue": (key: any, value: any) => Promise<void>;
-        "validate": () => Promise<any>;
+        /**
+          * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files` with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+         */
+        "submitter"?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
+        /**
+          * Theme object (or preset id / JSON string). Overrides `schema.theme`.
+         */
+        "theme": any;
+        "updateValue": (key: string, value: any) => Promise<void>;
+        "validate": () => Promise<{ [key: string]: string[]; }>;
     }
     interface ReMultiSelect {
         "defaultOptions": any;
@@ -44,6 +121,56 @@ export namespace Components {
         "inputOptions": any;
         "modelKey": string;
         "options": Array<{ value: any, label: string }>;
+    }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface ReSearchSelect {
+        "disabled": boolean;
+        /**
+          * Id of the element that labels the input (aria-labelledby). A `<label for>` is avoided on purpose: Chrome reads such labels ("Address") and pops up its saved addresses over our list.
+         */
+        "labelledBy": string;
+        "modelKey": string;
+        "multiple": boolean;
+        "placeholder": string;
+        /**
+          * The current selection, owned by the form.
+         */
+        "selected": SearchItem[];
+        "source": any;
+        /**
+          * Localized texts: { searching, noResults, remove }.
+         */
+        "texts": { [key: string]: string };
+    }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface ReSignaturePad {
+        "disabled": boolean;
+        /**
+          * Height of the box in pixels.
+         */
+        "height": number;
+        /**
+          * The answer key the form stores the signature under.
+         */
+        "modelKey": string;
+        "texts": { hint?: string; clear?: string };
+        /**
+          * The current signature (PNG data URL), or empty.
+         */
+        "value": string;
     }
 }
 export interface ReCountrySelectCustomEvent<T> extends CustomEvent<T> {
@@ -61,6 +188,14 @@ export interface ReFormGeneratorCustomEvent<T> extends CustomEvent<T> {
 export interface ReMultiSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLReMultiSelectElement;
+}
+export interface ReSearchSelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReSearchSelectElement;
+}
+export interface ReSignaturePadCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReSignaturePadElement;
 }
 declare global {
     interface HTMLReAlertElement extends Components.ReAlert, HTMLStencilElement {
@@ -108,6 +243,11 @@ declare global {
         "submitted": any;
         "validationError": any;
         "valueChanged": any;
+        "languageChanged": { language: string };
+        "formAction": { name: string; field: string | null; values: any };
+        "stepChanged": { index: number; id: string; title: string };
+        "draftSaved": { values: any };
+        "exit": { values: any };
     }
     interface HTMLReFormGeneratorElement extends Components.ReFormGenerator, HTMLStencilElement {
         addEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -140,12 +280,63 @@ declare global {
         prototype: HTMLReMultiSelectElement;
         new (): HTMLReMultiSelectElement;
     };
+    interface HTMLReSearchSelectElementEventMap {
+        "searchValueChanged": { [model: string]: SearchItem[] };
+    }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface HTMLReSearchSelectElement extends Components.ReSearchSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReSearchSelectElementEventMap>(type: K, listener: (this: HTMLReSearchSelectElement, ev: ReSearchSelectCustomEvent<HTMLReSearchSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReSearchSelectElementEventMap>(type: K, listener: (this: HTMLReSearchSelectElement, ev: ReSearchSelectCustomEvent<HTMLReSearchSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReSearchSelectElement: {
+        prototype: HTMLReSearchSelectElement;
+        new (): HTMLReSearchSelectElement;
+    };
+    interface HTMLReSignaturePadElementEventMap {
+        "signatureChanged": any;
+    }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface HTMLReSignaturePadElement extends Components.ReSignaturePad, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReSignaturePadElementEventMap>(type: K, listener: (this: HTMLReSignaturePadElement, ev: ReSignaturePadCustomEvent<HTMLReSignaturePadElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReSignaturePadElementEventMap>(type: K, listener: (this: HTMLReSignaturePadElement, ev: ReSignaturePadCustomEvent<HTMLReSignaturePadElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReSignaturePadElement: {
+        prototype: HTMLReSignaturePadElement;
+        new (): HTMLReSignaturePadElement;
+    };
     interface HTMLElementTagNameMap {
         "re-alert": HTMLReAlertElement;
         "re-country-select": HTMLReCountrySelectElement;
         "re-file-input-field": HTMLReFileInputFieldElement;
         "re-form-generator": HTMLReFormGeneratorElement;
         "re-multi-select": HTMLReMultiSelectElement;
+        "re-search-select": HTMLReSearchSelectElement;
+        "re-signature-pad": HTMLReSignaturePadElement;
     }
 }
 declare namespace LocalJSX {
@@ -154,34 +345,118 @@ declare namespace LocalJSX {
         "type"?: 'success' | 'warning' | 'error' | 'info';
     }
     interface ReCountrySelect {
+        /**
+          * Read out by screen readers (the compact picker has no visible label).
+         */
+        "ariaLabelText"?: string;
+        /**
+          * Small picker (flag and dial code) in front of a phone number: the list opens wider than the box.
+         */
+        "compact"?: boolean;
         "defaultValue"?: string;
         "disabled"?: any;
         "inputDisplayKey"?: string;
         "inputOptions"?: any;
+        /**
+          * Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes.
+         */
+        "language"?: string;
         "modelKey"?: string;
+        /**
+          * Shown when the search matches nothing.
+         */
+        "noResultsText"?: string;
         "onSelectedCountryChanged"?: (event: ReCountrySelectCustomEvent<any>) => void;
+        /**
+          * Only offer these countries (codes like "dk", "se"). Empty: all of them.
+         */
+        "only"?: string[];
         "showDialCode"?: boolean;
         "zIndex"?: string;
     }
     interface ReFileInputField {
+        /**
+          * With `compact`: the button spans the whole width (a dashed "add photo" bar).
+         */
+        "block"?: boolean;
+        /**
+          * A small "add" button instead of the big drop area (use with `preview` for photos).
+         */
+        "compact"?: boolean;
         "inputAttributes"?: any;
         "inputProps"?: any;
         "modelKey"?: string;
         "onSelectedFileChanged"?: (event: ReFileInputFieldCustomEvent<any>) => void;
         "placeholder"?: string;
+        /**
+          * Show a thumbnail for every chosen image.
+         */
+        "preview"?: boolean;
         "subTitle"?: string;
         "textTitle"?: string;
     }
     interface ReFormGenerator {
+        /**
+          * Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`.
+         */
         "action"?: any;
+        /**
+          * Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it.
+         */
+        "allowScript"?: boolean;
+        /**
+          * Used by the builder: shows every field, ignores logic and disables interaction.
+         */
+        "designMode"?: boolean;
         "formId"?: string;
+        /**
+          * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher. Without it the language is picked from `schema.i18n` (browser language if available, else the default).
+         */
+        "language"?: string;
+        /**
+          * v1 compatibility: field mapping. Prefer `action.mapping`.
+         */
         "mapping"?: any;
+        /**
+          * Initial values, keyed by field `model`.
+         */
         "model"?: any;
+        /**
+          * Fires when the draft is saved (`settings.saveDraft`).
+         */
+        "onDraftSaved"?: (event: ReFormGeneratorCustomEvent<{ values: any }>) => void;
+        /**
+          * Fires when the visitor leaves with "Save and exit" (`settings.exitUrl` is opened afterwards, if set).
+         */
+        "onExit"?: (event: ReFormGeneratorCustomEvent<{ values: any }>) => void;
+        /**
+          * Fires when a button runs an `emit` action: `{ name, field, values }`. Use it to hook your own code to a button.
+         */
+        "onFormAction"?: (event: ReFormGeneratorCustomEvent<{ name: string; field: string | null; values: any }>) => void;
         "onHandleSubmit"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        /**
+          * Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop).
+         */
+        "onLanguageChanged"?: (event: ReFormGeneratorCustomEvent<{ language: string }>) => void;
+        /**
+          * Fires when the visitor moves to another step: `{ index, id, title }`.
+         */
+        "onStepChanged"?: (event: ReFormGeneratorCustomEvent<{ index: number; id: string; title: string }>) => void;
         "onSubmitted"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValidationError"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValueChanged"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        /**
+          * The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string.
+         */
         "schema"?: any;
+        /**
+          * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files` with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+         */
+        "submitter"?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
+        /**
+          * Theme object (or preset id / JSON string). Overrides `schema.theme`.
+         */
+        "theme"?: any;
     }
     interface ReMultiSelect {
         "defaultOptions"?: any;
@@ -192,12 +467,66 @@ declare namespace LocalJSX {
         "onMultiSelectValueChanged"?: (event: ReMultiSelectCustomEvent<any>) => void;
         "options"?: Array<{ value: any, label: string }>;
     }
+    /**
+     * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+     * The form passes the endpoint in `source`:
+     *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+     *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+     * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+     * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+     * the others are final. `extraKey` shows a small note next to a result.
+     * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+     * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+     * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+     */
+    interface ReSearchSelect {
+        "disabled"?: boolean;
+        /**
+          * Id of the element that labels the input (aria-labelledby). A `<label for>` is avoided on purpose: Chrome reads such labels ("Address") and pops up its saved addresses over our list.
+         */
+        "labelledBy"?: string;
+        "modelKey"?: string;
+        "multiple"?: boolean;
+        "onSearchValueChanged"?: (event: ReSearchSelectCustomEvent<{ [model: string]: SearchItem[] }>) => void;
+        "placeholder"?: string;
+        /**
+          * The current selection, owned by the form.
+         */
+        "selected"?: SearchItem[];
+        "source"?: any;
+        /**
+          * Localized texts: { searching, noResults, remove }.
+         */
+        "texts"?: { [key: string]: string };
+    }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface ReSignaturePad {
+        "disabled"?: boolean;
+        /**
+          * Height of the box in pixels.
+         */
+        "height"?: number;
+        /**
+          * The answer key the form stores the signature under.
+         */
+        "modelKey"?: string;
+        "onSignatureChanged"?: (event: ReSignaturePadCustomEvent<any>) => void;
+        "texts"?: { hint?: string; clear?: string };
+        /**
+          * The current signature (PNG data URL), or empty.
+         */
+        "value"?: string;
+    }
     interface IntrinsicElements {
         "re-alert": ReAlert;
         "re-country-select": ReCountrySelect;
         "re-file-input-field": ReFileInputField;
         "re-form-generator": ReFormGenerator;
         "re-multi-select": ReMultiSelect;
+        "re-search-select": ReSearchSelect;
+        "re-signature-pad": ReSignaturePad;
     }
 }
 export { LocalJSX as JSX };
@@ -209,6 +538,23 @@ declare module "@stencil/core" {
             "re-file-input-field": LocalJSX.ReFileInputField & JSXBase.HTMLAttributes<HTMLReFileInputFieldElement>;
             "re-form-generator": LocalJSX.ReFormGenerator & JSXBase.HTMLAttributes<HTMLReFormGeneratorElement>;
             "re-multi-select": LocalJSX.ReMultiSelect & JSXBase.HTMLAttributes<HTMLReMultiSelectElement>;
+            /**
+             * Remote autocomplete. Type to search, pick from the results. With `multiple` the picks pile up as removable chips.
+             * The form passes the endpoint in `source`:
+             *   { url: 'https://api.example.com/search?q={q}', resultsPath: 'items', labelKey: 'name', valueKey: 'id',
+             *     labelTemplate: '{street} {number}, {zip} {city|town}', minChars: 2, debounce: 250, headers: { Authorization: '…' } }
+             * Step by step search (street -> number -> unit): `drill: { typeKey: 'type', expandTypes: ['vejnavn', 'adgangsadresse'] }`.
+             * Results whose type is listed open the next level when picked (the box is filled with their text and searched again);
+             * the others are final. `extraKey` shows a small note next to a result.
+             * `labelTemplate` builds a shorter label from several fields: `{a.b}` is replaced by that path, `{a|b}` uses the first
+             * one that has a value, and empty parts are dropped. Without it `labelKey` is used.
+             * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
+             */
+            "re-search-select": LocalJSX.ReSearchSelect & JSXBase.HTMLAttributes<HTMLReSearchSelectElement>;
+            /**
+             * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+             */
+            "re-signature-pad": LocalJSX.ReSignaturePad & JSXBase.HTMLAttributes<HTMLReSignaturePadElement>;
         }
     }
 }

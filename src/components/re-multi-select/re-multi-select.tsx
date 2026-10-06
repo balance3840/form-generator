@@ -1,4 +1,5 @@
 import { Component, Listen, Prop, State, h, Event, EventEmitter, } from '@stencil/core';
+import { clickedInside } from '../../utils/dom';
 
 
 @Component({
@@ -47,7 +48,8 @@ export class MultiSelect {
 
   @Listen('click', { target: 'document' })
   handleOutsideClick(event: MouseEvent) {
-    if (!this.multiSelectRef.contains(event.target as Node)) {
+    if (!this.multiSelectRef) return;
+    if (!clickedInside(event, this.multiSelectRef)) {
       this.isOpen = false;
     }
   }
@@ -72,7 +74,7 @@ export class MultiSelect {
       classNames += ' disabled';
     }
     return (
-      <div class="multi-select" ref={(el) => {this.multiSelectRef = el}}>
+      <div class={`multi-select ${this.isOpen ? 'is-open' : ''}`} ref={(el) => {this.multiSelectRef = el}}>
         <div class={classNames} onClick={(e) => this.toggleDropdown(e, true)}>
           {(this.selectedOptions.length) ?
             (
@@ -90,7 +92,7 @@ export class MultiSelect {
               : <span> {this.selectedOptions.length} { this.inputOptions?.selectedWord || 'selected'}</span>
             ) : <span> { this.inputOptions?.placeholder || 'Select...' }</span>
           }
-          <div class="arrow"><span class={this.isOpen ? 'arrow-up' : 'arrow-down'}></span></div>
+          <div class="arrow" aria-hidden="true"></div>
         </div>
         {this.isOpen && (
           <ul class="multi-select__options">

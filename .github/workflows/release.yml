@@ -1,0 +1,47 @@
+name: Release
+
+# Publishes the package to npm and creates a GitHub release when a version tag is pushed:
+#   npm version 2.0.0 && git push --follow-tags        (or: git tag v2.0.0 && git push origin v2.0.0)
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # the GitHub release
+  id-token: write   # npm provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: The tag must match package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION"; exit 1
+          fi
+          # 2.0.0-alpha.1 -> npm tag "alpha"; plain versions -> "latest"
+          case "$VERSION" in
+            *-*) PRE=$(echo "$VERSION" | sed -E 's/^[^-]+-([a-zA-Z]+).*/\1/'); echo "NPM_TAG=$PRE" >> "$GITHUB_ENV"; echo "PRERELEASE=--prerelease" >> "$GITHUB_ENV" ;;
+            *)   echo "NPM_TAG=latest" >> "$GITHUB_ENV"; echo "PRERELEASE=" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:flow
+
+      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes $PRERELEASE
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,152 @@
+re-search-select {
+  display: block;
+
+  .search-select {
+    position: relative;
+    width: 100%;
+  }
+
+  .search-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--rfg-input-height, 44px);
+    padding: 5px 10px;
+    background: var(--rfg-bg, #fff);
+    border: 1px solid var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 10px);
+    cursor: text;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &.is-open,
+    &:focus-within {
+      border-color: var(--rfg-primary, #4f46e5);
+      box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
+    }
+    &.is-disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .search-input {
+    flex: 1 1 60px;
+    min-width: 60px;
+    padding: 4px 2px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    color: var(--rfg-text, #1f2937);
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--rfg-text, #1f2937) 42%, transparent);
+    }
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  // A picked item: a compact pill with a pin. Long labels are cut with an ellipsis (full text on hover).
+  .search-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 4px 4px 4px 9px;
+    border: 1px solid color-mix(in srgb, var(--rfg-primary, #4f46e5) 22%, transparent);
+    border-radius: calc(var(--rfg-radius, 10px) * 0.8);
+    background: var(--rfg-primary-soft, #eef2ff);
+    color: var(--rfg-text, #1f2937);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+
+    &::before {
+      content: '';
+      flex: none;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--rfg-primary, #4f46e5);
+    }
+  }
+  .search-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .search-chip-x {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--rfg-muted, #6b7280);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(in srgb, var(--rfg-primary, #4f46e5) 16%, transparent);
+      color: var(--rfg-text, #1f2937);
+    }
+  }
+
+  .search-list {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    margin: 4px 0 0;
+    padding: 4px;
+    list-style: none;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--rfg-bg, #fff);
+    border: 1px solid var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  }
+  .search-option {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 10px;
+    cursor: pointer;
+    border-radius: calc(var(--rfg-radius, 10px) * 0.6);
+
+    &.is-active {
+      background: var(--rfg-tint, #f3f4f6);
+    }
+    &.is-selected {
+      color: var(--rfg-primary, #4f46e5);
+      font-weight: 600;
+    }
+  }
+  .search-option-label {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-option-extra {
+    font-size: 12.5px;
+    color: var(--rfg-muted, #6b7280);
+    white-space: nowrap;
+  }
+  .search-option-more {
+    flex: none;
+    color: var(--rfg-muted, #6b7280);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .search-note {
+    padding: 10px;
+    color: var(--rfg-muted, #6b7280);
+    font-size: 14px;
+  }
+}

@@ -1,341 +1,3936 @@
-$mobile-breakpoint: 480px;
-$tablet-breakpoint: 768px;
-
-.input {
-    &__description {
-        color: #6c757d;
-        font-size: 13px;
-        margin: 0;
-    }
+re-form-generator {
+  display: block;
+  container-type: inline-size;
+  container-name: rfg;
 }
 
-.re-form-generator {
-    width: calc(100% - 40px);
-    border: 1px solid #0000003b;
-    padding: 20px;
-    border-radius: 20px;
-    background: #FFFFFF;
+.rfg {
+  // ---- theme tokens (overridden inline by the `theme` prop) ----
+  --rfg-primary: #4f46e5;
+  --rfg-primary-contrast: #ffffff;
+  --rfg-bg: #ffffff;
+  --rfg-text: #1f2937;
+  --rfg-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --rfg-radius: 10px;
+  --rfg-gap: 20px;
+  --rfg-input-pad: 12px 14px;
+  --rfg-input-height: 48px;
+  --rfg-max-width: 640px;
+  --rfg-label-transform: none;
+  --rfg-label-spacing: 0;
+  --rfg-label-size: 14px;
+  --rfg-error: #e5484d;
 
-    .select-input {
-        position: relative;
-        appearance: none;
-        -webkit-appearance: none;
-        width: 100%;
-        font-size: 14px;
-        height: 44px;
-        padding: 0.675em 6em 0.675em 1em;
-        background-color: #fff;
-        border: 1px solid #caced1;
-        border-radius: 0.25rem;
-        color: #000;
-        cursor: pointer;
+  // ---- derived tokens ----
+  --rfg-border: color-mix(in srgb, var(--rfg-text) 16%, transparent);
+  --rfg-border-strong: color-mix(in srgb, var(--rfg-text) 32%, transparent);
+  --rfg-muted: color-mix(in srgb, var(--rfg-text) 62%, transparent);
+  --rfg-tint: color-mix(in srgb, var(--rfg-text) 5%, var(--rfg-bg));
+  --rfg-primary-soft: color-mix(in srgb, var(--rfg-primary) 12%, var(--rfg-bg));
+  --rfg-focus: color-mix(in srgb, var(--rfg-primary) 28%, transparent);
 
-        &::after,
-        &::before {
-            content: "";
-            position: absolute;
-            right: 1rem;
-            pointer-events: none;
-        }
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--rfg-max-width);
+  margin: 0 auto;
+  --rfg-pad-y: 32px;
+  --rfg-pad-x: 32px;
+  padding: var(--rfg-pad-y) var(--rfg-pad-x);
+  background: var(--rfg-bg);
+  color: var(--rfg-text);
+  font-family: var(--rfg-font);
+  font-size: 15px;
+  line-height: 1.5;
+  border-radius: calc(var(--rfg-radius) * 1.6);
 
-        &::before {
-            border-left: 0.3rem solid transparent;
-            border-right: 0.3rem solid transparent;
-            border-bottom: 0.3rem solid black;
-            top: 40%;
-        }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-        &::after {
-            border-left: 0.3rem solid transparent;
-            border-right: 0.3rem solid transparent;
-            border-top: 0.3rem solid black;
-            top: 55%;
-        }
+  &.rfg-card-bordered {
+    border: 1px solid var(--rfg-border);
+  }
+  &.rfg-card-shadow {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.08);
+  }
+  // Flat: no shadow, border or rounding, but the content keeps its breathing room.
+  &.rfg-card-flat {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  &.rfg-design {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  &.rfg-schema-error {
+    color: var(--rfg-error);
+  }
+
+  /* ------------------------------------------------- branding: cover + logo */
+  // The cover bleeds to the card edges (it cancels the card padding) and follows its rounded top corners.
+  .rfg-cover {
+    margin: calc(var(--rfg-pad-y) * -1) calc(var(--rfg-pad-x) * -1) calc(var(--rfg-pad-y) * 0.75);
+    background-color: var(--rfg-tint);
+    background-size: cover;
+    background-position: center;
+    border-radius: calc(var(--rfg-radius) * 1.6) calc(var(--rfg-radius) * 1.6) 0 0;
+  }
+  .rfg-card-flat .rfg-cover {
+    border-radius: 0;
+  }
+  .rfg-logo {
+    display: flex;
+    margin-bottom: calc(var(--rfg-gap) * 0.8);
+
+    img {
+      display: block;
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
     }
-
-    .group-title {
-        font-size: 24px;
-        padding-bottom: 6px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid #cbd5e1;
+    &.rfg-logo-center {
+      justify-content: center;
     }
-
-    textarea {
-        resize: none;
-        height: 90px;
-        font-size: 14px;
-        line-height: 17px;
-        color: #252733;
-        background: #FAFAFA;
-        padding: 12px;
-        border: 1px solid #E3E8EB;
-        border-radius: 5px;
-        width: 100%;
-        font-size: 14px;
-        color: #252733;
-        box-sizing: border-box;
-        font-family: inherit;
+    &.rfg-logo-right {
+      justify-content: flex-end;
     }
+  }
 
-    .input-text,
-    .input-email,
-    .input-date,
-    .input-month,
-    .input-number,
-    .input-datetime-local,
-    .input-tel,
-    .input-time,
-    .input-url,
-    .input-week,
-    .input-password,
-    .select-input {
-        background: #FAFAFA;
-        padding: 12px;
-        border: 1px solid #E3E8EB;
-        border-radius: 5px;
-        width: 100%;
-        font-size: 14px;
-        color: #252733;
-        box-sizing: border-box;
-        font-family: inherit;
-        height: 43px;
+  // Hero cover: the logo, title and description sit on top of the image.
+  .rfg-brand-hero .rfg-cover {
+    display: flex;
+    align-items: flex-end;
+    padding: 24px 32px;
+    margin-bottom: calc(var(--rfg-gap) * 0.9);
+    color: #ffffff;
 
-        &.input-checkbox {
-            height: 18px;
-            width: 18px;
-            background-color: #eee;
-            margin: 0;
-        }
+    .rfg-hero-content {
+      width: 100%;
     }
-
-    .row-container {
-        display: flex;
-        gap: 10px;
-        flex-grow: 12;
-
-        @media (max-width: $tablet-breakpoint) {
-            display: block;
-        }
-
-        @for $i from 1 through 12 {
-            .col-#{$i} {
-                width: calc((100% / 12) * #{$i});
-            }
-        }
-
-        // Mobile columns
-        @media (max-width: $tablet-breakpoint) {
-            @for $i from 1 through 12 {
-                .col-#{$i} {
-                    width: 100%;
-                }
-            }
-        }
-
+    .rfg-logo {
+      margin-bottom: 14px;
     }
-
-    .input__label {
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 20px;
-        margin-bottom: 12px;
-        display: inline-block;
+    .rfg-header {
+      margin: 0;
+      padding: 0;
     }
-
-    .error-message {
-        font-size: 12px;
-        color: #FF6868;
+    .rfg-header h1,
+    .rfg-header p {
+      color: #ffffff;
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
     }
-
-    /* Rounded sliders */
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 45px;
-        height: 25px;
-
-        input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+  }
+  &.rfg-head-center {
+    .rfg-header,
+    .rfg-page-head {
+      text-align: center;
     }
-
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #83888F;
-        transition: .4s;
-        transition: .4s;
-
-        &:before {
-            position: absolute;
-            content: "";
-            height: 21px;
-            width: 21px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            transition: .4s;
-        }
+    .rfg-brand-hero .rfg-hero-content {
+      text-align: center;
     }
+  }
+  .rfg-header h1,
+  .rfg-page-title,
+  .rfg-heading {
+    font-family: var(--rfg-heading-font, var(--rfg-font));
+  }
+
+  .rfg-step-title {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--rfg-text);
+  }
+
+  // "Other…" option: spans every column of the option grid and shows a text box when picked.
+  .rfg-other {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ------------------------------------------------------------ header */
+  .rfg-header {
+    margin-bottom: calc(var(--rfg-gap) * 1.4);
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    p {
+      margin: 0;
+      color: var(--rfg-muted);
+      white-space: pre-line;
+    }
+  }
+
+  /* ------------------------------------------------------------ layout */
+  // Top level: blocks stacked vertically.
+  .rfg-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rfg-gap);
+  }
+
+  .rfg-field {
+    position: relative;
+    min-width: 0;
+  }
+
+  // A row of columns on a 12 unit grid. Each column is a vertical stack of fields.
+  .rfg-row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--rfg-gap) 16px;
+  }
+  .rfg-col {
+    grid-column: var(--rfg-start, auto) / span var(--rfg-span, 12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--rfg-gap);
+    min-width: 0;
+  }
+
+  .rfg-hidden {
+    display: none !important;
+  }
+
+  .rfg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rfg-label {
+    display: block;
+    font-size: var(--rfg-label-size);
+    font-weight: 600;
+    text-transform: var(--rfg-label-transform);
+    letter-spacing: var(--rfg-label-spacing);
+    line-height: 1.35;
+    color: var(--rfg-label-color, inherit);
+  }
+  /* colours set by the form's code (form.style): the tints made from them must be worked out again here */
+  .rfg-script-styled {
+    --rfg-tint: color-mix(in srgb, var(--rfg-text) 5%, var(--rfg-bg));
+    --rfg-primary-soft: color-mix(in srgb, var(--rfg-primary) 12%, var(--rfg-bg));
+    --rfg-focus: color-mix(in srgb, var(--rfg-primary) 28%, transparent);
+    color: var(--rfg-text);
+  }
+  .rfg-script-highlight {
+    background: var(--rfg-highlight);
+    padding: 12px 14px;
+    margin-inline: -14px;
+    border-radius: var(--rfg-radius);
+    transition: background 0.2s;
+  }
+  .rfg-required {
+    color: var(--rfg-error);
+    margin-left: 3px;
+  }
+  .rfg-help {
+    font-size: 13px;
+    color: var(--rfg-muted);
+    margin-top: -2px;
+  }
+  .rfg-error {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--rfg-error);
+  }
+  .rfg-form-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 12px;
+    margin-top: var(--rfg-gap);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-error);
+    text-align: center;
+
+    .rfg-link {
+      font-size: 13px;
+      color: var(--rfg-error);
+    }
+  }
+
+  /* ------------------------------------------------------ text controls */
+  .rfg-control {
+    display: block;
+    width: 100%;
+    min-height: var(--rfg-input-height);
+    padding: var(--rfg-input-pad);
+    font: inherit;
+    font-size: 15px;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--rfg-text) 42%, transparent);
+    }
+    &:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--rfg-text) 45%, transparent);
+    }
+    &:focus {
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+  // A single-line box is exactly the input height (12px + 22px of text + 12px + the border = 48px), the same as the
+  // country picker and the date box next to it.
+  input.rfg-control {
+    line-height: 22px;
+  }
+  textarea.rfg-control {
+    resize: vertical;
+    min-height: 110px;
+  }
+  // The browser's own date and time controls are taller than a text box; fixing their height keeps a row of fields
+  // (a date next to a country, a number, a text) the same height.
+  input.rfg-control[type='date'],
+  input.rfg-control[type='time'],
+  input.rfg-control[type='datetime-local'],
+  input.rfg-control[type='month'],
+  input.rfg-control[type='week'] {
+    height: var(--rfg-input-height);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .rfg-input-color {
+    padding: 4px;
+    height: var(--rfg-input-height);
+    cursor: pointer;
+  }
+
+  &.rfg-input-filled .rfg-control,
+  &.rfg-input-filled .multi-select__header,
+  &.rfg-input-filled .country-select-input-wrapper .country-search {
+    background: var(--rfg-tint);
+    border-color: transparent;
+    &:focus {
+      background: var(--rfg-bg);
+      border-color: var(--rfg-primary);
+    }
+  }
+  // Filled: the frame of choice boxes, scale buttons and the upload area is replaced by the same soft tint.
+  &.rfg-input-filled {
+    .rfg-option:not(.rfg-option-card):not(.rfg-option-chip),
+    .rfg-scale-btn {
+      background: var(--rfg-tint);
+      border-color: transparent;
+      &:hover {
+        border-color: var(--rfg-primary);
+      }
+      &.is-checked,
+      &.is-active {
+        background: var(--rfg-primary-soft);
+        border-color: var(--rfg-primary);
+      }
+    }
+    .rfg-option-chip {
+      background: var(--rfg-tint);
+      border-color: transparent;
+      &.is-checked {
+        background: var(--rfg-primary-soft);
+        border-color: var(--rfg-primary);
+      }
+    }    // "plain" and grouped lists stay frameless in every look
+    .rfg-options-plain .rfg-option:not(.rfg-option-card):not(.rfg-option-chip),
+    .rfg-options-list .rfg-option:not(.rfg-option-card):not(.rfg-option-chip) {
+      background: none;
+      border-color: transparent;
+      &:hover {
+        background: var(--rfg-tint);
+      }
+      &.is-checked {
+        background: none;
+        border-color: transparent;
+      }
+    }
+  }
+  // Underlined: a lighter, "borderless" look. Choice cards, scale buttons and uploads lose their boxes too.
+  &.rfg-input-underlined {
+    .rfg-control {
+      background: transparent;
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      padding-left: 2px;
+      padding-right: 2px;
+      &:focus {
+        box-shadow: none;
+      }
+    }
+    .rfg-select {
+      padding-inline-end: 28px;
+    }
+    .rfg-select-wrap::after {
+      right: auto;
+      inset-inline-end: 4px;
+    }
+    // the underlined look removes the frame of plain "boxes"; cards and chips keep theirs
+    .rfg-option:not(.rfg-option-card):not(.rfg-option-chip) {
+      border: 0;
+      border-radius: 0;
+      padding: 4px 0;
+      background: none;
+      &.is-checked {
+        background: none;
+        font-weight: 600;
+      }
+    }
+    .rfg-options {
+      gap: 4px;
+    }
+    .rfg-scale-btn {
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      background: transparent;
+      &.is-active {
+        background: transparent;
+        color: var(--rfg-primary);
+        border-color: var(--rfg-primary);
+      }
+    }
+    .multi-select__header,
+    .country-search {
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      background: transparent;
+    }
+    .file-dropzone {
+      border-radius: 0;
+    }
+    .rfg-range-value {
+      background: none;
+      padding: 0;
+    }
+  }
+
+  .rfg-attribution {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--rfg-muted);
+    text-align: right;
+  }
+
+  // Fixed text next to an input (`config.prefix` / `config.suffix`), e.g. "m²".
+  .rfg-addon-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+
+    .rfg-control {
+      flex: 1;
+      min-width: 0;
+    }
+    .rfg-addon {
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--rfg-muted);
+      background: var(--rfg-tint);
+      border: 1px solid var(--rfg-border-strong);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .rfg-addon {
+      gap: 6px;
+    }
+    .rfg-addon-icon {
+      flex: none;
+    }
+    .rfg-addon-prefix {
+      border-right: 0;
+      border-radius: var(--rfg-radius) 0 0 var(--rfg-radius);
+    }
+    .rfg-addon-suffix {
+      border-left: 0;
+      border-radius: 0 var(--rfg-radius) var(--rfg-radius) 0;
+    }
+    .rfg-addon-prefix + .rfg-control {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+    .rfg-control:has(+ .rfg-addon-suffix) {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+  // The addon takes the frame of the chosen input style, so the two halves read as one field.
+  &.rfg-input-filled .rfg-addon-wrap .rfg-addon {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--rfg-text) 9%, var(--rfg-bg));
+  }
+  &.rfg-input-underlined .rfg-addon-wrap .rfg-addon {
+    background: transparent;
+    border-width: 0 0 1.5px;
+    border-radius: 0;
+    padding: 0 2px 0 8px;
+  }
+
+  .rfg-select-wrap {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline-end: 16px;
+      top: 50%;
+      width: 7px;
+      height: 7px;
+      margin-top: -6px;
+      border-right: 2px solid var(--rfg-muted);
+      border-bottom: 2px solid var(--rfg-muted);
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
+  }
+  .rfg-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 40px;
+    cursor: pointer;
+  }
+
+  // A field with an open list (country, multi-select, search) rises above its neighbours, whichever way the list opens.
+  // Fields are layered so earlier ones sit above later ones (lists open downwards); an upward list needs the opposite.
+  .rfg-field:has(.country-select-input-wrapper.is-open, .multi-select.is-open, .search-list) {
+    z-index: 500 !important;
+  }
+
+  /* --------------------------------------------- choices, checkbox, switch */
+  // `config.optionColumns` (1-4) lays the options out in columns; narrow containers fall back to one.
+  .rfg-options {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-opt-cols, 1), minmax(0, 1fr));
+    gap: 8px;
+  }
+  .rfg-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-primary);
+    }
+    &.is-checked {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    input {
+      margin: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--rfg-primary);
+      flex: none;
+    }
+  }
+  .rfg-single-check {
+    border: 0;
+    padding: 0;
+    background: none !important;
+    align-items: flex-start;
+    input {
+      margin-top: 2px;
+    }
+  }
+  .rfg-help-check {
+    margin: 4px 0 0 28px;
+  }
+
+  .rfg-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .rfg-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    flex: none;
+    cursor: pointer;
 
     input {
-        &:checked {
-            + {
-                .slider {
-                    background-color: #2196F3;
-
-                    &:before {
-                        transform: translateX(20px);
-                    }
-                }
-            }
-        }
-
-        &:focus {
-            + {
-                .slider {
-                    box-shadow: 0 0 1px #2196F3;
-                }
-            }
-        }
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
     }
+  }
+  .rfg-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--rfg-border-strong);
+    border-radius: 999px;
+    transition: background 0.2s;
 
-    .slider.round {
-        border-radius: 34px;
-
-        &:before {
-            border-radius: 50%;
-        }
+    &::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s;
     }
-
-    .input-group {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        padding: 0 0 16px 0;
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 20px;
-
-        &.hasErrors {
-
-            input,
-            .multi-select,
-            .select-input {
-                border: 1.5px solid #FF6868;
-                border-radius: 5px;
-            }
-
-            .file-field-container {
-                border: 1.5px solid #FF6868;
-                border-radius: 5px;
-            }
-        }
-
-        &.input-checkbox-container {
-            display: flex;
-            flex-direction: row-reverse;
-            align-items: center;
-            justify-content: start;
-            gap: 0.5rem;
-
-            .input__label {
-                margin-bottom: 0px;
-                margin-left: 6px;
-                font-weight: normal;
-            }
-
-            .error-message {
-                flex-basis: 100%;
-                position: absolute;
-                bottom: 0px;
-            }
-
-            &.hasErrors {
-                margin-bottom: 16px;
-            }
-        }
-
-        &.input-checkboxGroup-container {
-            .checkboxGroup {
-                .label {
-                    margin-bottom: 0px;
-                    margin-left: 6px;
-                    font-weight: normal;
-                }
-            }
-        }
-
-        &.two-columns {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-        }
+  }
+  .rfg-switch input:checked + .rfg-slider {
+    background: var(--rfg-primary);
+    &::before {
+      transform: translateX(20px);
     }
+  }
+  .rfg-switch input:focus-visible + .rfg-slider {
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
 
-    .submit-container {
-        display: flex;
-        margin-top: 16px;
+  /* -------------------------------------------------- rating, scale, range */
+  .rfg-rating {
+    display: flex;
+    gap: 4px;
+  }
+  .rfg-star {
+    padding: 2px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--rfg-border-strong);
+    transition: transform 0.12s, color 0.12s;
+    line-height: 0;
 
-        &__button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            background-color: #2196f3;
-            color: #ffffff;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            width: 100%;
-
-            &:hover {
-                background-color: #1565c0;
-            }
-        }
+    svg {
+      fill: transparent;
     }
-
-    .radioGroup {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-
-        &-element {
-            display: flex;
-            flex-direction: row;
-            gap: 0.5rem;
-            align-items: center;
-
-            .label {
-                font-weight: normal;
-            }
-        }
-
-        .input-radio {
-            padding: 2px;
-            margin: 0;
-        }
+    &.is-active {
+      color: #f5a623;
+      svg {
+        fill: currentColor;
+      }
     }
-
-    .hidden {
-        display: none;
+    &:hover:not(:disabled) {
+      transform: scale(1.12);
     }
+  }
 
-    .form-error-message {
-        display: flex;
-        justify-content: center;
-        align-items: center;
+  .rfg-scale {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-scale-count, 10), minmax(0, 1fr));
+    gap: 6px;
+  }
+  .rfg-scale-btn {
+    height: var(--rfg-input-height);
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: calc(var(--rfg-radius) * 0.8);
+    cursor: pointer;
+    transition: all 0.15s;
 
-        &__message {
-            color: #FF6868;
-            font-size: 12px;
-            font-weight: 700;
-        }
+    &:hover:not(:disabled) {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
     }
+    &.is-active {
+      background: var(--rfg-primary);
+      border-color: var(--rfg-primary);
+      color: var(--rfg-primary-contrast);
+    }
+  }
+  .rfg-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--rfg-muted);
+  }
+
+  .rfg-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .rfg-range,
+  .rfg-range.rfg-control {
+    background: none;
+    border: 0;
+    padding: 0;
+    min-height: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    flex: 1;
+    accent-color: var(--rfg-primary);
+    height: 6px;
+    cursor: pointer;
+  }
+  // the track and thumb are drawn here so every theme (outlined, filled, underlined) shows the same slider
+  .rfg-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--rfg-text) 14%, transparent);
+  }
+  .rfg-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--rfg-text) 14%, transparent);
+  }
+  .rfg-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border: 3px solid var(--rfg-bg);
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  .rfg-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--rfg-bg);
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  .rfg-range-value {
+    min-width: 48px;
+    text-align: center;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--rfg-primary-soft);
+    color: var(--rfg-primary);
+  }
+
+  /* ---------------------------------------------------- content blocks */
+  .rfg-heading {
+    margin-top: 8px;
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    h2 {
+      font-size: 22px;
+    }
+    h3 {
+      font-size: 17px;
+    }
+    p {
+      margin: 4px 0 0;
+      color: var(--rfg-muted);
+    }
+  }
+  .rfg-paragraph p {
+    margin: 0;
+    color: var(--rfg-muted);
+    white-space: pre-line;
+  }
+  .rfg-divider {
+    border: 0;
+    border-top: 1px solid var(--rfg-border);
+    margin: 4px 0;
+  }
+
+  /* ----------------------------------------------------------- errors */
+  .rfg-has-error {
+    .rfg-control,
+    .multi-select__header,
+    .country-search,
+    .rfg-option,
+    .file-field-container,
+    .rfg-scale-btn {
+      border-color: var(--rfg-error);
+    }
+  }
+
+  /* ------------------------------------------------------ steps/progress */
+  .rfg-progress {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-progress-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rfg-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--rfg-tint);
+    overflow: hidden;
+  }
+  .rfg-progress-bar {
+    height: 100%;
+    background: var(--rfg-primary);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  .rfg-progress-text {
+    display: flex;
+    gap: 4px;
+    align-items: baseline;
+  }
+  .rfg-progress-percent {
+    margin-left: auto;
+    color: var(--rfg-primary);
+  }
+  .rfg-progress-bottom {
+    margin-top: calc(var(--rfg-gap) * 1.2);
+    .rfg-progress,
+    .rfg-stepper {
+      margin-bottom: 0;
+    }
+  }
+
+  // Numbered steps: dots joined by a line; done steps are filled, the current one is ringed.
+  .rfg-stepper {
+    margin-bottom: calc(var(--rfg-gap) * 1.4);
+    ol {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    li {
+      flex: 1 1 0;
+      min-width: 0;
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    // the line to the previous dot
+    li + li::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      right: calc(50% + 20px);
+      left: calc(-50% + 20px);
+      height: 2px;
+      border-radius: 2px;
+      background: var(--rfg-border-strong);
+    }
+    li.is-done + li::before,
+    li.is-done + li.is-current::before {
+      background: var(--rfg-primary);
+    }
+  }
+  .rfg-stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--rfg-muted);
+    cursor: pointer;
+    &:disabled {
+      cursor: default;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--rfg-primary);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+  }
+  .rfg-stepper-dot {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--rfg-bg);
+    border: 2px solid var(--rfg-border-strong);
+    color: var(--rfg-muted);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .rfg-stepper li.is-done .rfg-stepper-dot {
+    background: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .rfg-stepper li.is-current .rfg-stepper-dot {
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary);
+    box-shadow: 0 0 0 4px var(--rfg-tint);
+  }
+  .rfg-stepper-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .rfg-stepper li.is-current .rfg-stepper-name {
+    color: var(--rfg-text);
+  }
+  .rfg-stepper-caption {
+    display: none;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rfg-stepper:not(.rfg-stepper-titles) .rfg-stepper-caption {
+    display: block;
+  }
+
+  // The top of a step: picture, title, description.
+  .rfg-page-head {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-page-image {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+    border-radius: var(--rfg-radius, 12px);
+    margin-bottom: 16px;
+  }
+  .rfg-page-title {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--rfg-text);
+  }
+  .rfg-page-desc {
+    margin: 4px 0 0;
+    color: var(--rfg-muted);
+  }
+
+  // Moving between steps (settings.stepTransition)
+  .rfg-enter-fade {
+    animation: rfg-step-fade 0.28s ease both;
+  }
+  .rfg-enter-slide {
+    animation: rfg-step-slide 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .rfg-enter-slide.is-back {
+    animation-name: rfg-step-slide-back;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rfg-enter-fade,
+    .rfg-enter-slide {
+      animation: none;
+    }
+  }
+
+  /* ----------------------------------------------------------- buttons */
+  .rfg-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: calc(var(--rfg-gap) * 1.2);
+
+// Spam protection: the challenge widget, and the invisible trap field of the basic option.
+    .rfg-captcha-wrap {
+      flex-basis: 100%;
+    }
+    .rfg-hp {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+  }
+  .rfg-btn {
+    min-height: var(--rfg-input-height);
+    padding: 0 24px;
+    font: inherit;
+    font-weight: 600;
+    border-radius: var(--rfg-radius);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.05s, background 0.15s;
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-btn-primary {
+    flex: 1;
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    &:hover:not(:disabled) {
+      filter: brightness(0.92);
+    }
+  }
+  &.rfg-btnw-auto .rfg-btn-primary {
+    flex: none;
+  }
+  // Back and Next share the row in halves (a lone button still fills it)
+  &.rfg-btnw-equal .rfg-actions .rfg-btn {
+    flex: 1 1 0;
+  }
+  &.rfg-btn-outline .rfg-btn-primary {
+    background: transparent;
+    color: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+      filter: none;
+    }
+  }
+  /* ----------------------------------------------------- language switcher */
+  .rfg-lang {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: calc(var(--rfg-gap) * 0.8);
+  }
+  .rfg-lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    background: transparent;
+    border: 1px solid var(--rfg-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      color: var(--rfg-text);
+      border-color: var(--rfg-border-strong);
+    }
+    &.is-active {
+      color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+      border-color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-flag {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .rfg-lang-select {
+    min-width: 170px;
+  }
+  .rfg-lang-dd {
+    min-height: 36px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 13px;
+  }
+
+  // Button alignment only matters when the button does not fill the width (buttonWidth: auto).
+  &.rfg-btna-center .rfg-actions {
+    justify-content: center;
+  }
+  &.rfg-btna-right .rfg-actions {
+    justify-content: flex-end;
+  }
+  // Back on the left, Next / Submit on the right (also when there is no Back button)
+  &.rfg-btna-split .rfg-actions .rfg-btn-primary {
+    margin-left: auto;
+  }
+
+  .rfg-btn-secondary {
+    background: transparent;
+    color: var(--rfg-text);
+    border-color: var(--rfg-border-strong);
+    &:hover {
+      background: var(--rfg-tint);
+    }
+  }
+  .rfg-link {
+    border: 0;
+    background: none;
+    color: var(--rfg-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ----------------------------------------------- buttons: variants, blocks */
+  .rfg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .rfg-btn-lg {
+    min-height: 56px;
+    padding: 0 28px;
+    font-size: 16px;
+  }
+  .rfg-bv-outline {
+    background: transparent;
+    color: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-bv-ghost {
+    background: transparent;
+    color: var(--rfg-primary);
+    padding: 0 12px;
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-bv-danger {
+    background: var(--rfg-error);
+    color: #fff;
+    &:hover:not(:disabled) {
+      filter: brightness(0.92);
+    }
+  }
+  // A button placed in the form (not the submit bar): sits on its own line and does not stretch unless asked to.
+  .rfg-button-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+
+    .rfg-btn-primary {
+      flex: none;
+    }
+    &.rfg-ba-center {
+      align-items: center;
+    }
+    &.rfg-ba-end {
+      align-items: flex-end;
+    }
+    &.rfg-ba-stretch {
+      align-items: stretch;
+    }
+    .rfg-help {
+      margin-top: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------ callout */
+  .rfg-callout {
+    --rfg-tone: var(--rfg-primary);
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--rfg-radius);
+    border: 1px solid color-mix(in srgb, var(--rfg-tone) 30%, transparent);
+    background: color-mix(in srgb, var(--rfg-tone) 9%, var(--rfg-bg));
+
+    &.rfg-callout-success {
+      --rfg-tone: #16a34a;
+    }
+    &.rfg-callout-warning {
+      --rfg-tone: #d97706;
+    }
+    &.rfg-callout-danger {
+      --rfg-tone: var(--rfg-error);
+    }
+    .rfg-callout-icon {
+      flex: none;
+      margin-top: 1px;
+      color: var(--rfg-tone);
+    }
+    .rfg-callout-title {
+      font-weight: 700;
+    }
+    .rfg-callout-text {
+      font-size: 14px;
+      white-space: pre-line;
+      color: color-mix(in srgb, var(--rfg-text) 85%, transparent);
+    }
+    .rfg-callout-title + .rfg-callout-text {
+      margin-top: 2px;
+    }
+  }
+
+  /* ------------------------------------------------------ section (card) */
+  .rfg-section {
+    min-width: 0;
+  }
+  .rfg-section-card {
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    overflow: hidden;
+
+    .rfg-section-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rfg-border);
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+    .rfg-section-body {
+      padding: 20px;
+    }
+    &.is-closed .rfg-section-head {
+      border-bottom-color: transparent;
+    }
+  }
+  .rfg-section-plain {
+    .rfg-section-head {
+      padding: 0 0 12px;
+    }
+  }
+  .rfg-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    &.is-clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+  .rfg-section-title {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  .rfg-section-desc {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    color: var(--rfg-muted);
+  }
+  .rfg-chevron {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin: 0 4px 3px;
+    border-right: 2px solid var(--rfg-muted);
+    border-bottom: 2px solid var(--rfg-muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s;
+    &.is-open {
+      transform: rotate(45deg);
+    }
+  }
+
+  /* -------------------------------------------------------- option cards */
+  // Cards: big selectable tiles. The native control becomes a round / square tick in the corner,
+  // the title is larger and the whole tile lifts and glows when picked.
+  .rfg-options-cards {
+    gap: 12px;
+  }
+  .rfg-option-card {
+    position: relative;
+    align-items: center;
+    min-height: 68px;
+    padding: 16px;
+    padding-inline: 18px 52px;
+    border-width: 1.5px;
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    &.is-checked {
+      background: var(--rfg-primary-soft);
+      box-shadow: 0 0 0 1px var(--rfg-primary), 0 6px 18px color-mix(in srgb, var(--rfg-primary) 18%, transparent);
+    }
+    &:focus-within {
+      outline: 2px solid var(--rfg-focus);
+      outline-offset: 2px;
+    }
+    input {
+      appearance: none;
+      -webkit-appearance: none;
+      position: absolute;
+      top: 50%;
+      inset-inline-end: 16px;
+      margin: -11px 0 0;
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--rfg-border-strong);
+      border-radius: 50%;
+      background: var(--rfg-bg);
+      transition: all 0.15s;
+    }
+    input[type='checkbox'] {
+      border-radius: 7px;
+    }
+    input:checked {
+      border-color: var(--rfg-primary);
+      background-color: var(--rfg-primary);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+      background-size: 70%;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .rfg-option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .rfg-option-title {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .rfg-option-desc {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--rfg-muted);
+    }
+  }
+
+  /* ------------------------------------------------------------ repeater */
+  .rfg-repeater-head {
+    margin-bottom: 10px;
+    .rfg-help {
+      margin-top: 2px;
+    }
+  }
+  .rfg-items {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .rfg-empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--rfg-muted);
+    font-size: 14px;
+    border: 1px dashed var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+  }
+  .rfg-item {
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    overflow: hidden;
+
+    &.has-errors {
+      border-color: var(--rfg-error);
+    }
+  }
+  .rfg-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 18px;
+    background: var(--rfg-tint);
+    &.is-clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+  .rfg-item-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rfg-item-meta {
+    flex: none;
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  .rfg-item-done {
+    flex: none;
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #15803d;
+    background: color-mix(in srgb, #16a34a 14%, var(--rfg-bg));
+  }
+  .rfg-item-actions {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+  }
+  .rfg-item-flag {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--rfg-error);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .rfg-item-body {
+    padding: 18px;
+    border-top: 1px solid var(--rfg-border);
+  }
+  .rfg-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    background: transparent;
+    color: var(--rfg-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    &:hover {
+      background: color-mix(in srgb, var(--rfg-error) 12%, transparent);
+      color: var(--rfg-error);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+
+  // "+ Add" under a repeater: a text button, or a dashed box.
+  .rfg-add {
+    margin-top: 12px;
+  }
+  .rfg-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    cursor: pointer;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-add-dashed .rfg-add-btn {
+    width: 100%;
+    min-height: 88px;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1.5px dashed var(--rfg-border-strong);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    transition: all 0.15s;
+    &:hover {
+      text-decoration: none;
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-tint);
+  }
+  .rfg-preset {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    text-align: left;
+    font: inherit;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-preset-title {
+    font-weight: 600;
+  }
+  .rfg-preset-desc {
+    font-size: 12.5px;
+    color: var(--rfg-muted);
+  }
+
+  /* --------------------------------------------------------- repeater table */
+  .rfg-table {
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    overflow: hidden;
+  }
+  .rfg-table-head,
+  .rfg-table-row {
+    display: grid;
+    grid-template-columns: var(--rfg-table-cols);
+    gap: 12px;
+    align-items: center;
+    padding: 8px 14px;
+  }
+  .rfg-table-head {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: var(--rfg-tint);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg-table-row-wrap {
+    border-top: 1px solid var(--rfg-border);
+  }
+  .rfg-cell {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .rfg-field {
+      width: 100%;
+    }
+    .rfg-control {
+      min-height: 38px;
+      padding: 6px 10px;
+      font-size: 14px;
+    }
+    textarea.rfg-control {
+      min-height: 38px;
+    }
+    .rfg-readonly {
+      padding-left: 0;
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      font-weight: 500;
+      cursor: default;
+      text-overflow: ellipsis;
+    }
+  }
+  .rfg-cell-actions {
+    align-items: flex-end;
+  }
+  .rfg-table-detail {
+    padding: 14px 14px 16px;
+    border-top: 1px dashed var(--rfg-border);
+    background: color-mix(in srgb, var(--rfg-tint) 55%, var(--rfg-bg));
+  }
+
+  /* --------------------------------------------------- steps: sidebar layout */
+  &.rfg-layout-sidebar {
+    --rfg-pad-x: 0px;
+    --rfg-pad-y: 0px;
+    // `clip` keeps the rounded corners without making the card a scroll container (that would break the sticky step list)
+    overflow: clip;
+
+    > .rfg-header,
+    > .rfg-lang,
+    > .rfg-brand .rfg-logo {
+      margin-left: 32px;
+      margin-right: 32px;
+    }
+    > .rfg-header {
+      padding-top: 28px;
+    }
+    > .rfg-brand .rfg-logo {
+      padding-top: 24px;
+    }
+  }
+  .rfg-flow {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 420px;
+  }
+  .rfg-steps-nav {
+    border-right: 1px solid var(--rfg-border);
+    background: color-mix(in srgb, var(--rfg-tint) 60%, var(--rfg-bg));
+    display: flex;
+    flex-direction: column;
+  }
+  // `settings.stepsSide: "right"`: the step list on the right of the form
+  .rfg-flow.is-right {
+    grid-template-columns: minmax(0, 1fr) 264px;
+    .rfg-steps-nav {
+      order: 2;
+      border-right: 0;
+      border-left: 1px solid var(--rfg-border);
+    }
+  }
+  // the step list stays in view while a long step scrolls
+  .rfg-steps-sticky {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  .rfg-nav-top {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg-nav-exit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: var(--rfg-text);
+    cursor: pointer;
+    &:hover strong {
+      color: var(--rfg-primary);
+    }
+    small {
+      display: block;
+      font-size: 12px;
+      color: var(--rfg-muted);
+    }
+  }
+  .rfg-steps {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .rfg-step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 1px solid var(--rfg-border);
+    border-left: 3px solid transparent;
+    background: none;
+    font: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    color: var(--rfg-text);
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover:not(:disabled) {
+      background: var(--rfg-tint);
+    }
+    &:disabled {
+      cursor: default;
+      color: var(--rfg-muted);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 3px var(--rfg-focus);
+    }
+    &.is-current {
+      font-weight: 700;
+      border-left-color: var(--rfg-primary);
+      background: var(--rfg-bg);
+    }
+  }
+  .rfg-step-dot {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--rfg-border-strong);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--rfg-muted);
+    background: var(--rfg-bg);
+    transition: all 0.15s;
+  }
+  .is-visited .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary);
+  }
+  .is-current .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .is-done .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .rfg-step-name {
+    min-width: 0;
+  }
+  .rfg-flow-main {
+    min-width: 0;
+    padding: 28px 32px 32px;
+  }
+  .rfg-page-head {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-page-title {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .rfg-page-desc {
+    margin: 4px 0 0;
+    color: var(--rfg-muted);
+  }
+
+  /* ------------------------------------------------ numbered cards, help icon */
+  .rfg-section-head {
+    gap: 14px;
+    justify-content: flex-start;
+    .rfg-chevron {
+      margin-left: auto;
+    }
+  }
+  .rfg-section-titles {
+    flex: 1;
+    min-width: 0;
+  }
+  .rfg-badge {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--rfg-tint);
+    border: 1px solid var(--rfg-border);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .rfg-tip {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: 2px;
+    cursor: help;
+    outline: none;
+
+    &::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
+      z-index: 30;
+      width: max-content;
+      max-width: 280px;
+      padding: 8px 12px;
+      border-radius: calc(var(--rfg-radius) * 0.8);
+      background: #111827;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+      text-align: left;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s;
+    }
+    &:hover::after,
+    &:focus::after {
+      opacity: 1;
+    }
+  }
+  // a block that is switched off by a rule (the next numbered card until this one is done)
+  .rfg-section.is-locked {
+    opacity: 0.5;
+    filter: grayscale(0.3);
+    user-select: none;
+  }
+
+  /* --------------------------------------------------------------- tabs */
+  .rfg-tablist {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--rfg-gap);
+    border-bottom: 1px solid var(--rfg-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .rfg-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    margin-bottom: -1px;
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--rfg-muted);
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover {
+      color: var(--rfg-text);
+    }
+    &.is-active {
+      color: var(--rfg-text);
+      border-bottom-color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-tabs-pills .rfg-tablist {
+    gap: 8px;
+    border-bottom: 0;
+    .rfg-tab {
+      padding: 8px 16px;
+      margin: 0;
+      border: 1px solid var(--rfg-border-strong);
+      border-radius: 999px;
+      &.is-active {
+        color: var(--rfg-primary-contrast);
+        background: var(--rfg-primary);
+        border-color: var(--rfg-primary);
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------- dialogs */
+  .rfg-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8vh 16px 16px;
+    overflow-y: auto;
+    background: rgba(17, 24, 39, 0.5);
+    animation: rfg-fade 0.15s ease;
+  }
+  .rfg-modal {
+    width: 100%;
+    max-width: 640px;
+    background: var(--rfg-bg);
+    color: var(--rfg-text);
+    border-radius: calc(var(--rfg-radius) * 1.6);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    animation: rfg-pop 0.18s ease;
+  }
+  .rfg-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg-modal-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .rfg-modal-body {
+    padding: 24px 28px;
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+  .rfg-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 28px;
+    border-top: 1px solid var(--rfg-border);
+  }
+  @keyframes rfg-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rfg-pop {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+  }
+
+  /* ------------------------------------------- small cards, grid, item page */
+  .rfg-items-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-cols, 2), minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+  .rfg-grid-add {
+    display: flex;
+    .rfg-add {
+      flex: 1;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .rfg-add-btn {
+      flex: 1;
+      min-height: 120px;
+    }
+    .rfg-presets {
+      grid-column: auto;
+    }
+  }
+  .rfg-ccard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 16px 16px 16px;
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-border-strong);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    &.has-errors {
+      border-color: var(--rfg-error);
+    }
+    &.is-drop {
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-ccard-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .rfg-grip {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    color: var(--rfg-muted);
+    cursor: grab;
+  }
+  .rfg-ccard-title {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--rfg-text);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &:hover {
+      color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+      border-radius: 4px;
+    }
+  }
+  .rfg-ccard-meta {
+    padding: 0 0 6px 28px;
+    text-align: left;
+    font: inherit;
+    color: var(--rfg-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .rfg-done-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    background: var(--rfg-bg);
+    border: 1.5px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    &.is-done {
+      color: #fff;
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+
+  // ⋮ menu
+  .rfg-menu-wrap {
+    position: relative;
+    flex: none;
+  }
+  .rfg-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 40;
+    min-width: 170px;
+    padding: 6px;
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: var(--rfg-radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  }
+  .rfg-menu-item {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    text-align: left;
+    font: inherit;
+    font-size: 14px;
+    color: var(--rfg-text);
+    background: none;
+    border: 0;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    cursor: pointer;
+    &:hover {
+      background: var(--rfg-tint);
+    }
+    &.is-danger {
+      color: var(--rfg-error);
+    }
+  }
+
+  // an item opened as its own page
+  .rfg-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    margin-bottom: 8px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+  .rfg-detail-title {
+    margin: 0 0 var(--rfg-gap);
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  &.rfg-has-detail {
+    // (the blocks around an item that is open as a page are not rendered at all, see renderBlocks)
+    .rfg-actions,
+    .rfg-form-error {
+      display: none;
+    }
+  }
+
+  /* ----------------------------------------------------- field variants */
+  .rfg-plain {
+    padding: 8px 2px;
+    font-weight: 500;
+    min-height: var(--rfg-input-height);
+    display: flex;
+    align-items: center;
+    &.is-empty {
+      font-weight: 400;
+      color: var(--rfg-muted);
+    }
+  }
+  // a select that looks like a button (the condition of a unit)
+  .rfg-select-pill {
+    &::after {
+      display: none;
+    }
+    .rfg-select {
+      min-height: 40px;
+      padding: 0 14px;
+      text-align: center;
+      text-align-last: center;
+      font-weight: 600;
+      color: var(--rfg-primary);
+      border-radius: var(--rfg-radius);
+      background: var(--rfg-bg);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  }
+  .rfg-options-chips[role='radiogroup'] .rfg-option-chip.is-checked::after {
+    content: none;
+  }
+  .rfg-options-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .rfg-option-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+    &.is-checked {
+      color: var(--rfg-primary);
+      font-weight: 600;
+      border-width: 2px;
+      padding: 5px 13px;
+    }
+    &.is-checked::after {
+      content: '×';
+      margin-left: 4px;
+      font-size: 16px;
+      line-height: 1;
+    }
+  }
+  .rfg-sign-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 140px;
+    padding: 16px;
+    background: var(--rfg-tint);
+    border: 1px solid var(--rfg-border);
+    border-radius: var(--rfg-radius);
+  }
+  .rfg-sign-img {
+    max-width: 100%;
+    max-height: 120px;
+    background: var(--rfg-bg);
+    border-radius: calc(var(--rfg-radius) * 0.7);
+  }
+  .rfg-sign-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .rfg-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .rfg-btn-sm {
+    min-height: 38px;
+    padding: 0 18px;
+  }
+  // finished steps are green ticks
+  .is-done .rfg-step-dot {
+    border-color: #16a34a;
+    background: #16a34a;
+  }
+
+  /* --------------------------------------------- grouped / searchable choices */
+  .rfg-choice-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .rfg-choice-count {
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  .rfg-options-grouped {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .rfg-option-group-title {
+    margin-bottom: 6px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .rfg-options-list {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-opt-cols, 1), minmax(0, 1fr));
+    gap: 2px 16px;
+  }
+  // plain checkboxes: just a box and a label, no frames
+  .rfg-options-plain,
+  .rfg-options-list {
+    .rfg-option {
+      padding: 5px 2px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      &:hover {
+        background: var(--rfg-tint);
+      }
+    }
+  }
+  .rfg-options-plain .rfg-option.is-checked {
+    background: none;
+    font-weight: 600;
+  }
+  .rfg-options-plain {
+    gap: 2px 16px;
+  }
+
+  /* ------------------------------------------------------------ success */
+  .rfg-success {
+    text-align: center;
+    padding: 32px 8px;
+
+    &-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--rfg-primary-soft);
+      color: var(--rfg-primary);
+    }
+    &-message {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 16px;
+    }
+  }
+}
+
+/* ------------------------------------------------------------ phone number */
+.rfg .rfg-phone {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  // the picker is exactly as tall as the number box next to it (text boxes get their height from their padding)
+  re-country-select.rfg-phone-country {
+    flex: none;
+    display: flex;
+    width: 112px;
+    --rfg-input-height: 100%;
+    > div {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+  .rfg-phone-number {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* the "inline" look: one box (it is the .rfg-control, so it takes every input style and the error border), the flag and
+   dial code inside it on the left, a thin divider, then the number */
+.rfg .rfg-phone.rfg-phone-inline {
+  gap: 0;
+  padding: 0;
+  overflow: visible;
+  cursor: text;
+  &:focus-within {
+    border-color: var(--rfg-primary);
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  re-country-select.rfg-phone-country {
+    width: 104px;
+    border-inline-end: 1px solid var(--rfg-border);
+  }
+  re-country-select .country-select-input-wrapper .country-search,
+  re-country-select .country-select-input-wrapper .country-search:focus {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .rfg-phone-number {
+    flex: 1;
+    min-width: 0;
+    padding: var(--rfg-input-pad);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    color: var(--rfg-text);
+    outline: none;
+    &::placeholder {
+      color: color-mix(in srgb, var(--rfg-text) 42%, transparent);
+    }
+  }
+}
+.rfg.rfg-input-filled .rfg-phone.rfg-phone-inline:focus-within {
+  background: var(--rfg-bg);
+}
+.rfg.rfg-input-underlined .rfg-phone.rfg-phone-inline {
+  padding: 0;
+  &:focus-within {
+    box-shadow: none;
+  }
+  // one line under the whole field, no divider standing up from it
+  re-country-select.rfg-phone-country {
+    border-inline-end: 0;
+  }
+}
+
+/* ------------------------------------------------------------ content blocks: image, video, link, icon, embed */
+.rfg .rfg-content {
+  figure {
+    margin: 0;
+  }
+  figcaption,
+  .rfg-caption {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  &.rfg-align-center {
+    text-align: center;
+    figure {
+      margin-inline: auto;
+    }
+  }
+  &.rfg-align-right {
+    text-align: right;
+    figure {
+      margin-inline-start: auto;
+    }
+  }
+}
+.rfg .rfg-image-figure {
+  max-width: 100%;
+  &.rfg-w-small {
+    width: 33%;
+    min-width: 120px;
+  }
+  &.rfg-w-medium {
+    width: 60%;
+    min-width: 200px;
+  }
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  &.rfg-rounded img {
+    border-radius: var(--rfg-radius);
+  }
+}
+.rfg .rfg-ratio {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: var(--rfg-radius);
+  overflow: hidden;
+  background: #000;
+  iframe,
+  video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+.rfg .rfg-embed-figure iframe {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+}
+.rfg .rfg-media-empty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 12px;
+  border: 1.5px dashed var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-tint);
+  color: var(--rfg-muted);
+  font-size: 12.5px;
+  word-break: break-all;
+  &.rfg-ratio {
+    background: var(--rfg-tint);
+  }
+}
+.rfg .rfg-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.rfg .rfg-text-link {
+  color: var(--rfg-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rfg .rfg-icon-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rfg .rfg-align-center .rfg-icon-block {
+  align-items: center;
+}
+.rfg .rfg-align-right .rfg-icon-block {
+  align-items: flex-end;
+}
+.rfg .rfg-emoji {
+  line-height: 1;
+  &.rfg-size-small {
+    font-size: 28px;
+  }
+  &.rfg-size-medium {
+    font-size: 44px;
+  }
+  &.rfg-size-large {
+    font-size: 68px;
+  }
+}
+.rfg .rfg-icon-badge {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  // the theme's accent, or the colour picked for this icon
+  color: var(--rfg-icon-color, var(--rfg-primary));
+  background: color-mix(in srgb, var(--rfg-icon-color, var(--rfg-primary)) 13%, transparent);
+  svg {
+    width: 50%;
+    height: 50%;
+  }
+  &.rfg-size-small {
+    width: 40px;
+    height: 40px;
+  }
+  &.rfg-size-medium {
+    width: 60px;
+    height: 60px;
+  }
+  &.rfg-size-large {
+    width: 88px;
+    height: 88px;
+  }
+}
+.rfg .rfg-icon-title {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: var(--rfg-text);
+}
+.rfg .rfg-icon-text {
+  color: var(--rfg-muted);
+  max-width: 52ch;
+}
+.rfg .rfg-align-center .rfg-icon-block {
+  text-align: center;
+}
+.rfg .rfg-align-right .rfg-icon-block {
+  text-align: right;
+}
+.rfg .rfg-media-empty .rfg-play {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  font-size: 13px;
+  span:first-child {
+    font-size: 34px;
+    line-height: 1;
+  }
+}
+/* the thank-you page built in the form */
+.rfg .rfg-success-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rfg-gap);
+  .rfg-link {
+    align-self: center;
+  }
+}
+
+/* ------------------------------------------------------------ calendar: several days, or a range */
+.rfg .rfg-calendar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rfg .rfg-calendar {
+  max-width: 360px;
+  padding: 12px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+}
+.rfg .rfg-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  .rfg-icon-btn:disabled {
+    opacity: 0.3;
+  }
+}
+.rfg .rfg-cal-title {
+  font-weight: 600;
+}
+.rfg .rfg-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.rfg .rfg-cal-wd {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rfg-muted);
+  text-transform: capitalize;
+}
+.rfg .rfg-cal-day {
+  aspect-ratio: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--rfg-text);
+  cursor: pointer;
+  &:hover:not(:disabled):not(.is-picked) {
+    background: var(--rfg-tint);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  &.is-today {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--rfg-border-strong);
+  }
+  &.in-range {
+    border-radius: 0;
+    background: var(--rfg-primary-soft);
+  }
+  &.is-picked {
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    font-weight: 600;
+  }
+  &:disabled {
+    color: color-mix(in srgb, var(--rfg-text) 28%, transparent);
+    text-decoration: line-through;
+    cursor: default;
+  }
+}
+.rfg .is-range .rfg-cal-day {
+  &.range-start {
+    border-radius: 50% 0 0 50%;
+  }
+  &.range-end {
+    border-radius: 0 50% 50% 0;
+  }
+  &.range-start.range-end {
+    border-radius: 50%;
+  }
+}
+.rfg .rfg-cal-summary {
+  font-size: 14px;
+  small {
+    color: var(--rfg-muted);
+  }
+  .rfg-muted {
+    color: var(--rfg-muted);
+  }
+}
+.rfg .rfg-cal-picked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rfg .rfg-cal-pick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-tint);
+}
+.rfg .rfg-cal-pick-day {
+  min-width: 110px;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+.rfg .rfg-cal-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+.rfg .rfg-cal-remove {
+  margin-inline-start: auto;
+}
+.rfg .rfg-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: 999px;
+  background: var(--rfg-bg);
+  font: inherit;
+  font-size: 13px;
+  color: var(--rfg-text);
+  cursor: pointer;
+  &.is-on {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+}
+
+/* ------------------------------------------------------------ yes / no */
+.rfg .rfg-yesno {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+  gap: 10px;
+}
+.rfg .rfg-yesno-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: calc(var(--rfg-input-height) + 8px);
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font: inherit;
+  font-weight: 600;
+  color: var(--rfg-text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  svg {
+    color: var(--rfg-muted);
+  }
+  &:hover:not(:disabled) {
+    border-color: var(--rfg-primary);
+  }
+  &.is-checked {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary-soft);
+    svg {
+      color: var(--rfg-primary);
+    }
+  }
+}
+
+/* ------------------------------------------------------------ picture choice */
+.rfg .rfg-pictures {
+  display: grid;
+  grid-template-columns: repeat(var(--rfg-pic-cols, 3), minmax(0, 1fr));
+  gap: 10px;
+}
+.rfg .rfg-picture {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font: inherit;
+  color: var(--rfg-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:hover:not(:disabled) {
+    border-color: var(--rfg-primary);
+  }
+  &.is-checked {
+    border-color: var(--rfg-primary);
+    box-shadow: 0 0 0 2px var(--rfg-primary);
+  }
+}
+.rfg .rfg-picture-img {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--rfg-radius) * 0.7);
+  overflow: hidden;
+  background: var(--rfg-tint);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+.rfg .rfg-picture-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.rfg .rfg-picture-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--rfg-border-strong);
+}
+.rfg .rfg-picture.is-checked .rfg-picture-mark {
+  border-color: var(--rfg-primary);
+  background: var(--rfg-primary);
+  box-shadow: inset 0 0 0 3px var(--rfg-bg);
+}
+
+/* ------------------------------------------------------------ Likert */
+.rfg .rfg-likert-point {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: center;
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .rfg-likert-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--rfg-border-strong);
+    background: var(--rfg-bg);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  &:hover .rfg-likert-dot {
+    border-color: var(--rfg-likert-c, var(--rfg-primary));
+  }
+  input:focus-visible + * {
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  &.is-checked .rfg-likert-dot {
+    border-color: var(--rfg-likert-c, var(--rfg-primary));
+    background: var(--rfg-likert-c, var(--rfg-primary));
+    box-shadow: inset 0 0 0 4px var(--rfg-bg);
+  }
+  // numbered buttons
+  .rfg-likert-chip {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--rfg-radius) * 0.8);
+    border: 1.5px solid var(--rfg-border-strong);
+    background: var(--rfg-bg);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rfg-text);
+    transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+  }
+  &:hover .rfg-likert-chip {
+    border-color: var(--rfg-likert-c, var(--rfg-primary));
+  }
+  &.is-checked .rfg-likert-chip {
+    border-color: var(--rfg-likert-c, var(--rfg-primary));
+    background: var(--rfg-likert-c, var(--rfg-primary));
+    color: var(--rfg-primary-contrast);
+  }
+  // faces: quiet until hovered or picked
+  .rfg-likert-emoji {
+    font-size: 34px;
+    line-height: 1;
+    filter: grayscale(1);
+    opacity: 0.55;
+    border-radius: 50%;
+    transition: filter 0.15s, opacity 0.15s, transform 0.15s;
+  }
+  &:hover .rfg-likert-emoji {
+    filter: none;
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+  &.is-checked .rfg-likert-emoji {
+    filter: none;
+    opacity: 1;
+    transform: scale(1.15);
+    background: color-mix(in srgb, var(--rfg-likert-c, var(--rfg-primary)) 20%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rfg-likert-c, var(--rfg-primary)) 20%, transparent);
+  }
+  // pictures
+  .rfg-likert-img {
+    width: 64px;
+    height: 64px;
+    display: block;
+    overflow: hidden;
+    border-radius: calc(var(--rfg-radius) * 0.8);
+    border: 2px solid transparent;
+    background: var(--rfg-tint);
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+    opacity: 0.75;
+    img,
+    .rfg-likert-blank {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+  }
+  &:hover .rfg-likert-img {
+    opacity: 1;
+    border-color: var(--rfg-border-strong);
+  }
+  &.is-checked .rfg-likert-img {
+    opacity: 1;
+    border-color: var(--rfg-likert-c, var(--rfg-primary));
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  .rfg-likert-num {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg-likert-text {
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--rfg-muted);
+  }
+  &.is-checked .rfg-likert-text {
+    color: var(--rfg-text);
+    font-weight: 600;
+  }
+}
+/* one question: the points side by side, a line behind the dots */
+.rfg .rfg-likert-single {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--rfg-likert-count, 5), minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 8px 12px;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  &.is-dots::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: calc(100% / var(--rfg-likert-count, 5) / 2);
+    right: calc(100% / var(--rfg-likert-count, 5) / 2);
+    height: 2px;
+    background: var(--rfg-border);
+  }
+  .rfg-likert-dot {
+    position: relative;
+  }
+}
+/* first / last point's text under the row (labels: "ends"; on phones also for the picture styles) */
+.rfg .rfg-likert-ends {
+  display: none;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--rfg-muted);
+}
+.rfg .rfg-likert-block.labels-ends .rfg-likert-ends {
+  display: flex;
+}
+.rfg .rfg-likert-block.labels-ends .rfg-likert-single .rfg-likert-text,
+.rfg .rfg-likert-block.labels-none .rfg-likert-single .rfg-likert-text {
+  display: none;
+}
+.rfg .rfg-likert-single:not(.is-dots) {
+  align-items: start;
+}
+/* several statements: a table, the points as columns */
+.rfg .rfg-likert-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+}
+.rfg .rfg-likert {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  th,
+  td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  thead th {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    text-align: center;
+    vertical-align: bottom;
+    width: calc(60% / var(--rfg-likert-count, 5));
+    background: var(--rfg-tint);
+    .rfg-likert-num {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+  }
+  thead .rfg-likert-corner {
+    width: auto;
+  }
+  tbody th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--rfg-text);
+    padding-left: 14px;
+  }
+  tbody tr.is-answered th {
+    color: var(--rfg-text);
+  }
+  tbody tr:hover {
+    background: var(--rfg-tint);
+  }
+  td {
+    text-align: center;
+  }
+  // in the table the column headers say what each point means
+  td .rfg-likert-text,
+  td .rfg-likert-num {
+    display: none;
+  }
+  td .rfg-likert-emoji {
+    font-size: 26px;
+  }
+  td .rfg-likert-img {
+    width: 44px;
+    height: 44px;
+  }
+  td .rfg-likert-chip {
+    min-width: 34px;
+    height: 34px;
+  }
+}
+
+/* ------------------------------------------------------------ ranking */
+.rfg .rfg-ranking-hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--rfg-muted);
+}
+.rfg .rfg-ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rfg .rfg-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--rfg-input-height);
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font-size: 15px;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  &.is-ranked {
+    padding: 0 6px 0 8px;
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary-soft);
+    cursor: grab;
+  }
+  &.is-dragging {
+    opacity: 0.4;
+  }
+  .rfg-rank-label {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.rfg .rfg-rank-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: inherit;
+  padding: 0 14px 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: inherit;
+  &:hover:not(:disabled) {
+    background: var(--rfg-tint);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+}
+.rfg .rfg-rank-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--rfg-primary);
+  color: var(--rfg-primary-contrast);
+  font-size: 13px;
+  font-weight: 700;
+  &.is-empty {
+    background: none;
+    border: 2px dashed var(--rfg-border-strong);
+  }
+}
+.rfg .rfg-rank-grip {
+  flex: none;
+  width: 8px;
+  height: 14px;
+  background-image: radial-gradient(circle, var(--rfg-muted) 1.2px, transparent 1.3px);
+  background-size: 4px 4px;
+  opacity: 0.7;
+}
+.rfg .rfg-rank-actions {
+  display: flex;
+  gap: 2px;
+  .rfg-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+    line-height: 1;
+  }
+}
+
+/* ------------------------------------------------------------ NPS */
+.rfg .rfg-scale-nps {
+  gap: 4px;
+  .rfg-scale-btn {
+    position: relative;
+    overflow: hidden;
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: var(--rfg-nps, transparent);
+      opacity: 0.85;
+    }
+  }
+  .rfg-nps-low {
+    --rfg-nps: #ef4444;
+  }
+  .rfg-nps-mid {
+    --rfg-nps: #f59e0b;
+  }
+  .rfg-nps-high {
+    --rfg-nps: #22c55e;
+  }
+}
+
+/* Narrow containers (phones, or a narrow preview) stack the columns. */
+@container rfg (max-width: 520px) {
+  .rfg .rfg-row {
+    display: flex;
+    flex-direction: column;
+  }
+  .rfg .rfg-col {
+    width: 100%;
+  }
+  .rfg {
+    --rfg-pad-y: 22px;
+    --rfg-pad-x: 18px;
+  }
+  .rfg .rfg-scale {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  // NPS keeps its 11 numbers on one line, smaller
+  .rfg .rfg-scale.rfg-scale-nps {
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 3px;
+    .rfg-scale-btn {
+      font-size: 13px;
+      padding: 0;
+    }
+  }
+  // a single Likert question: the points one under the other (faces, numbers and pictures stay in a row, their ends named below)
+  .rfg .rfg-likert-single:not(.is-dots) {
+    padding: 12px 6px;
+    gap: 4px;
+    .rfg-likert-emoji {
+      font-size: 28px;
+    }
+    .rfg-likert-img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+    }
+    .rfg-likert-chip {
+      min-width: 0;
+      width: 100%;
+      height: 38px;
+      padding: 0;
+    }
+    .rfg-likert-text {
+      display: none;
+    }
+  }
+  .rfg .rfg-likert-block.labels-all .rfg-likert-single:not(.is-dots) + .rfg-likert-ends {
+    display: flex;
+  }
+  // a stacked list needs its texts, whatever "labels" says
+  .rfg .rfg-likert-block .rfg-likert-single.is-dots .rfg-likert-text {
+    display: inline;
+  }
+  .rfg .rfg-likert-block.labels-ends .rfg-likert-single.is-dots + .rfg-likert-ends {
+    display: none;
+  }
+  .rfg .rfg-likert-single.is-dots {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px;
+    &::before {
+      display: none;
+    }
+    .rfg-likert-point {
+      flex-direction: row;
+      gap: 12px;
+      padding: 8px;
+      text-align: left;
+      border-radius: calc(var(--rfg-radius) * 0.8);
+      &.is-checked {
+        background: var(--rfg-primary-soft);
+      }
+    }
+  }
+  // a Likert table: one card per statement, the points as a list
+  .rfg .rfg-likert-wrap {
+    border: 0;
+    overflow: visible;
+  }
+  .rfg .rfg-likert {
+    thead {
+      display: none;
+    }
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+    tbody tr {
+      margin-bottom: 10px;
+      border: 1px solid var(--rfg-border);
+      border-radius: var(--rfg-radius);
+      padding: 6px;
+    }
+    tbody tr:hover {
+      background: none;
+    }
+    tbody th,
+    td {
+      border: 0;
+      padding: 4px 8px;
+    }
+    tbody th {
+      padding: 6px 8px 8px;
+    }
+    td .rfg-likert-text,
+    td .rfg-likert-num {
+      display: inline;
+    }
+    td .rfg-likert-point {
+      flex-direction: row;
+      gap: 12px;
+      padding: 6px 4px;
+      text-align: left;
+    }
+    td {
+      text-align: left;
+    }
+  }
+  .rfg .rfg-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-pictures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rfg .rfg-calendar {
+    max-width: none;
+  }
+  .rfg .rfg-items-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-modal-head,
+  .rfg .rfg-modal-body,
+  .rfg .rfg-modal-foot {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
+/* The step list moves above the form and the table turns into stacked cards on small containers. */
+@container rfg (max-width: 760px) {
+  .rfg .rfg-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-flow.is-right {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-flow.is-right .rfg-steps-nav {
+    order: 0;
+    border-left: 0;
+  }
+  .rfg .rfg-steps-nav {
+    border-right: 0;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg .rfg-steps-sticky {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .rfg .rfg-steps {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .rfg .rfg-steps li {
+    flex: none;
+  }
+  .rfg .rfg-step-item {
+    width: auto;
+    white-space: nowrap;
+    padding: 12px 14px;
+    border-bottom: 0;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    &.is-current {
+      border-bottom-color: var(--rfg-primary);
+    }
+  }
+  .rfg .rfg-flow-main {
+    padding: 22px 18px 26px;
+  }
+  .rfg .rfg-table-head {
+    display: none;
+  }
+  .rfg .rfg-table-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+  .rfg .rfg-cell::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg .rfg-cell-actions::before {
+    content: none;
+  }
+  .rfg .rfg-cell-actions {
+    align-items: flex-start;
+  }
+  .rfg.rfg-layout-sidebar > .rfg-header,
+  .rfg.rfg-layout-sidebar > .rfg-lang,
+  .rfg.rfg-layout-sidebar > .rfg-brand .rfg-logo {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+}
+
+// ------------------------------------------------------------------ footer (sits under the form card, outside it)
+.rfg-footer {
+  --rfg-footer-bg: transparent;
+  --rfg-footer-text: var(--rfg-text);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--rfg-max-width, 640px);
+  margin: 24px auto 0;
+  padding: 0 4px;
+  color: var(--rfg-footer-text);
+  font-family: var(--rfg-font);
+  font-size: 13px;
+  line-height: 1.55;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  .rfg-footer-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  &.rfg-footer-center .rfg-footer-inner {
+    align-items: center;
+    text-align: center;
+  }
+  &.rfg-footer-right .rfg-footer-inner {
+    align-items: flex-end;
+    text-align: right;
+  }
+  p {
+    margin: 0;
+    opacity: 0.85;
+    white-space: pre-line;
+  }
+  .rfg-footer-copy {
+    font-size: 12px;
+    opacity: 0.65;
+  }
+  .rfg-footer-logo {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.9;
+  }
+  a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+  .rfg-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  &.rfg-footer-center .rfg-footer-links,
+  &.rfg-footer-center .rfg-footer-social {
+    justify-content: center;
+  }
+  &.rfg-footer-right .rfg-footer-links,
+  &.rfg-footer-right .rfg-footer-social {
+    justify-content: flex-end;
+  }
+  .rfg-footer-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid color-mix(in srgb, var(--rfg-footer-text) 28%, transparent);
+    }
+    a:hover {
+      text-decoration: none;
+      background: color-mix(in srgb, var(--rfg-footer-text) 12%, transparent);
+    }
+  }
+  &.rfg-footer-card {
+    --rfg-footer-text: var(--rfg-text);
+    padding: 22px 28px;
+    border-radius: calc(var(--rfg-radius, 10px) * 1.6);
+    background: var(--rfg-footer-bg, var(--rfg-bg));
+    border: 1px solid color-mix(in srgb, var(--rfg-text) 12%, transparent);
+  }
+  &.rfg-footer-card:not([style*='--rfg-footer-bg']) {
+    background: var(--rfg-bg);
+  }
+  &.rfg-footer-bar {
+    max-width: none;
+    margin-top: 32px;
+    padding: 26px max(20px, calc((100% - var(--rfg-max-width, 640px)) / 2));
+    background: var(--rfg-footer-bg);
+  }
+  &.rfg-footer-bar:not([style*='--rfg-footer-bg']) {
+    background: color-mix(in srgb, var(--rfg-text) 92%, var(--rfg-bg));
+    --rfg-footer-text: var(--rfg-bg);
+  }
+}
+
+@keyframes rfg-step-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rfg-step-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rfg-step-slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Small screens: numbered steps lose their titles (written once under the dots) and shrink.
+@container rfg (max-width: 520px) {
+  .rfg .rfg-stepper-titles .rfg-stepper-name {
+    display: none;
+  }
+  .rfg .rfg-stepper-titles .rfg-stepper-caption {
+    display: block;
+  }
+  .rfg .rfg-stepper-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .rfg .rfg-stepper li + li::before {
+    top: 12px;
+    right: calc(50% + 16px);
+    left: calc(-50% + 16px);
+  }
+}
+
+/* Month, week and year pickers: a grid of buttons (months, years) or of week rows. */
+.rfg .rfg-period-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.rfg .rfg-period,
+.rfg .rfg-week-row {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--rfg-text);
+  cursor: pointer;
+  &:hover:not(:disabled):not(.is-picked) {
+    background: var(--rfg-tint);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  &.is-picked {
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    font-weight: 600;
+  }
+  &:disabled {
+    color: color-mix(in srgb, var(--rfg-text) 28%, transparent);
+    cursor: default;
+  }
+}
+.rfg .rfg-period {
+  min-height: 44px;
+  border-radius: var(--rfg-radius);
+  font-size: 14px;
+  text-transform: capitalize;
+  &.is-now:not(.is-picked) {
+    box-shadow: inset 0 0 0 1px var(--rfg-border-strong);
+    font-weight: 700;
+  }
+}
+.rfg .rfg-week-grid {
+  display: grid;
+  grid-template-columns: 34px repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.rfg .rfg-week-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  &.is-now:not(.is-picked) .rfg-week-no {
+    font-weight: 700;
+    color: var(--rfg-text);
+  }
+}
+.rfg .rfg-week-no {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rfg-muted);
+  text-align: center;
+}
+.rfg .rfg-week-row.is-picked .rfg-week-no {
+  color: inherit;
+}
+.rfg .rfg-week-day {
+  text-align: center;
+  &.is-out {
+    opacity: 0.45;
+  }
+}
+
+/* ------------------------------------------- "?" help, rich choices, more options */
+.rfg {
+  // a field's `tooltip`: the "?" sits after the label, outside the <label> element
+  .rfg-label-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .rfg-tipwrap {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  .rfg-tip-btn {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1.5px solid var(--rfg-border-strong);
+    border-radius: 50%;
+    background: var(--rfg-bg);
+    color: var(--rfg-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: none;
+    cursor: help;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover,
+    &[aria-expanded='true'] {
+      color: var(--rfg-primary);
+      border-color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      color: var(--rfg-primary);
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  // placed under the line the "?" is on (the label row, or the title row of a choice), never wider than it
+  .rfg-tip-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 40;
+    width: max-content;
+    max-width: min(300px, 100%);
+    padding: 8px 12px;
+    border-radius: calc(var(--rfg-radius) * 0.8);
+    background: #111827;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: normal;
+    text-align: start;
+    text-transform: none;
+    white-space: normal;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s, visibility 0.12s;
+
+    // a bridge over the gap, so the text stays open while the pointer moves onto it
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -10px;
+      height: 10px;
+    }
+  }
+  .rfg-tipwrap:hover > .rfg-tip-pop,
+  .rfg-tip-btn:focus-visible + .rfg-tip-pop,
+  .rfg-tipwrap.is-open > .rfg-tip-pop {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  // closed with Escape (or a second click) while still hovered / focused
+  .rfg-tipwrap > .rfg-tip-btn.is-dismissed + .rfg-tip-pop {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  // a choice with a badge, a logo, a link, help or a second line
+  .rfg-option-rich {
+    position: relative;
+    align-items: flex-start;
+    input {
+      margin-top: 2px;
+    }
+    // above its neighbours while its help is open
+    &:hover,
+    &:focus-within,
+    &:has(.rfg-tipwrap.is-open) {
+      z-index: 3;
+    }
+    .rfg-option-text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .rfg-option-head {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+    }
+    .rfg-option-title {
+      line-height: 1.35;
+    }
+    .rfg-option-desc {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--rfg-muted);
+    }
+  }
+  .rfg-option-img {
+    display: block;
+    flex: none;
+    width: auto;
+    height: auto;
+    max-width: min(100%, 180px);
+    max-height: 28px;
+    object-fit: contain;
+  }
+  // on a line of its own
+  .rfg-option-img-top,
+  .rfg-option-img-bottom {
+    align-self: flex-start;
+  }
+  .rfg-option-img-top {
+    margin-bottom: 4px;
+  }
+  .rfg-option-img-bottom {
+    margin-top: 6px;
+  }
+  .rfg-option-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--rfg-primary-soft);
+    color: var(--rfg-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .rfg-option-link {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    &:focus-visible {
+      outline: 2px solid var(--rfg-focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+  // cards with rich choices: a list of provider cards, the radio / tick on the left and a light background
+  .rfg-options-rich .rfg-option-card {
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 0;
+    padding: 16px 18px;
+    background: var(--rfg-tint);
+    border: 1.5px solid var(--rfg-border);
+    box-shadow: none;
+    &:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: var(--rfg-border-strong);
+    }
+    &.is-checked {
+      background: var(--rfg-bg);
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 1px var(--rfg-primary);
+    }
+    input {
+      position: static;
+      flex: none;
+      margin: 1px 0 0;
+    }
+    .rfg-option-title {
+      font-size: 15.5px;
+    }
+  }
+
+  // `config.visibleOptions`: "Show more options" / "Show fewer options"
+  .rfg-more-options {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    cursor: pointer;
+    &:hover span {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-choice-wrap > .rfg-more-options {
+    margin-top: 0;
+  }
+  .rfg-more-chevron {
+    transition: transform 0.2s;
+    &.is-open {
+      transform: rotate(180deg);
+    }
+  }
+
+  /* --------------------------------------- sidebar: progress rings, header, buttons */
+  .rfg-step-ring {
+    position: relative;
+    border: 0;
+    background: transparent;
+    svg {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+    }
+  }
+  .is-visited .rfg-step-ring,
+  .is-current .rfg-step-ring {
+    border: 0;
+    background: transparent;
+    color: var(--rfg-primary);
+  }
+  .rfg-ring-track {
+    fill: var(--rfg-bg);
+    stroke: var(--rfg-border-strong);
+    stroke-width: 2;
+  }
+  .rfg-ring-fill {
+    fill: none;
+    stroke: var(--rfg-primary);
+    stroke-width: 2.5;
+    transition: stroke-dashoffset 0.35s ease;
+  }
+  .rfg-ring-num {
+    position: relative;
+  }
+  .is-current .rfg-ring-num {
+    font-weight: 800;
+  }
+  .rfg-side-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    .rfg-btn {
+      flex: none;
+      width: 100%;
+    }
+  }
+  .rfg-side-link {
+    align-self: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  // under the form only on small screens (see below)
+  .rfg-side-actions-main {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rfg .rfg-ring-fill,
+  .rfg .rfg-more-chevron,
+  .rfg .rfg-tip-pop,
+  .rfg .rfg-tip-btn {
+    transition: none;
+  }
+}
+
+/* The step list is a strip on small screens: its buttons move under the form, where they stay reachable. */
+@container rfg (max-width: 760px) {
+  .rfg .rfg-side-actions-nav {
+    display: none;
+  }
+  .rfg .rfg-side-actions-main {
+    display: flex;
+    padding: 0;
+    margin-top: 14px;
+  }
 }
