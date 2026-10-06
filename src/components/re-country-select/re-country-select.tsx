@@ -16,6 +16,8 @@ export class ReCountrySelect {
   @Prop() zIndex: string;
   @Prop() inputDisplayKey: string;
   @Prop() showDialCode: boolean = false;
+  /** Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes. */
+  @Prop() language: string;
   @State() filteredCountries: any[] = []
   @State() dropdownVisible: boolean = false;
   @State() selectedCountry: any = null;
@@ -25,10 +27,27 @@ export class ReCountrySelect {
   @Event() selectedCountryChanged: EventEmitter<any>;
 
 
+  /** Country names in `language` when the browser can translate them, English otherwise. */
+  private localizedCountries(): any[] {
+    const language = this.language;
+    if (!language || language.toLowerCase().startsWith('en') || typeof (Intl as any).DisplayNames !== 'function') return countries;
+    try {
+      const names = new (Intl as any).DisplayNames([language], { type: 'region' });
+      return countries
+        .map(country => ({ ...country, englishName: country.name, name: names.of(String(country.code).toUpperCase()) || country.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, language));
+    } catch (e) {
+      return countries;
+    }
+  }
+
   componentWillLoad() {
-    this.availableCountries = countries;
+    this.availableCountries = this.localizedCountries();
     if (this.defaultValue) {
-      const selectedCountry = this.availableCountries.find(country => country.code === this.defaultValue);
+      const wanted = String(this.defaultValue).toLowerCase();
+      // the stored value can be the code, the name or the dial code depending on the field's `modelValueKey`
+      const selectedCountry = this.availableCountries.find(country => [country.code, country.name, country.englishName, country.dialCode].some(v => v && String(v).toLowerCase() === wanted));
+      if (!selectedCountry) return;
       this.selectCountry(null, selectedCountry);
     }
   }
@@ -42,7 +61,7 @@ export class ReCountrySelect {
     }
     const value = e.target.value.toLowerCase();
     const filteredCountries = this.availableCountries.filter(country => {
-      return country.name.toLowerCase().includes(value) || country.dialCode.toLowerCase().includes(value)
+      return country.name.toLowerCase().includes(value) || (country.englishName || '').toLowerCase().includes(value) || country.dialCode.toLowerCase().includes(value)
     });
     this.filteredCountries = filteredCountries;
     if (e.target.value) {
@@ -89,6 +108,7 @@ export class ReCountrySelect {
 
   @Listen('click', { target: 'document' })
   handleOutsideClick(event: MouseEvent) {
+    if (!this.countrySelectRef) return;
     if (!this.countrySelectRef.contains(event.target as Node)) {
       if (this.countrySelectRef.value) {
         this.countrySelectRef.value = '';

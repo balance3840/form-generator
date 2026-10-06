@@ -1,125 +1,95 @@
-re-form-generator {
-  re-country-select {
-    .country-select-input-wrapper {
-      position: relative;
+re-country-select {
+  display: block;
+
+  .country-select-input-wrapper {
+    position: relative;
+    width: 100%;
+    height: var(--rfg-input-height, 44px);
+
+    .dropdown-container {
+      position: absolute;
       width: 100%;
-      height: 43px;
+      max-height: 300px;
+    }
 
-      .dropdown-container {
-        position: absolute;
-        width: 100%;
-        max-height: 300px;
-        background: #fff;
+    .selected-country-wrapper {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      font-weight: normal;
+      pointer-events: none;
+      z-index: 1;
 
-        &::-webkit-scrollbar {
-          display: none;
-        }
-
-
-        .selected-country-wrapper {
-          position: relative;
-          font-size: 14px;
-          font-weight: normal;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-          display: block;
-
-          .selected-flag {
-            transform: translateY(-50%) scale(0.8);
-            width: 24px;
-            position: absolute;
-            left: 10px;
-            top: 20px;
-            display: block;
-          }
-
-          .selected-country-value {
-            position: absolute;
-            top: 11px;
-            left: 40px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: -webkit-fill-available;
-            text-wrap: nowrap;
-            margin-right: 5px;
-            display: block;
-          }
-
-          &.hidden {
-            display: none;
-          }
-        }
+      .selected-flag {
+        width: 22px;
+        flex: none;
       }
-
-      .country-search {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid #E3E8EB;
-        padding: 10px;
-        text-indent: 26px;
-        border-radius: 5px;
-        height: 43px;
-        font-family: unset;
-        text-indent: 26px;
-        background: #fafafa;
-
-        input::placeholder {
-          font-family: unset;
-        }
-
-        &.no-indent {
-          text-indent: 0px;
-        }
+      .selected-country-value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--rfg-text, #1f2937);
       }
-
-      input::placeholder {
-        font-family: 'Times-Roman';
-      }
-
-      .dropdown {
-        position: absolute;
-        top: 40px;
-        width: 100%;
-        border: 1px solid #E3E8EB;
-        background-color: white;
-        overflow-y: auto;
+      &.hidden {
         display: none;
       }
+    }
 
-      .dropdown-item {
-        padding: 10px;
-        cursor: pointer;
-        border: 0.5px solid #E3E8EB;
-        border-top: 0px;
-        background: #ffffff;
-        font-weight: normal;
+    .country-search {
+      width: 100%;
+      height: var(--rfg-input-height, 44px);
+      padding: 0 12px 0 44px;
+      font: inherit;
+      color: var(--rfg-text, #1f2937);
+      background: var(--rfg-bg, #fff);
+      border: 1px solid var(--rfg-border-strong, #d1d5db);
+      border-radius: var(--rfg-radius, 8px);
+      outline: none;
 
-        &:last-of-type {
-          border-bottom: 0px;
-        }
-
-        &:hover {
-          background: #f0f0f0;
-        }
+      &:focus {
+        border-color: var(--rfg-primary, #4f46e5);
+        box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
       }
-
-      .flag {
-        width: 20px;
-        height: 15px;
-        margin-right: 10px;
+      &.no-indent {
+        padding-left: 12px;
       }
+    }
 
-      .country-select-dropdown-wrapper {
-        overflow-y: scroll;
-        max-height: 200px;
-        border-bottom: 1px solid #E3E8EB;
-        border-bottom-left-radius: 5px;
-        border-bottom-right-radius: 5px;
-        &::-webkit-scrollbar {
-          display: none;
-        }
+    .country-select-dropdown-wrapper {
+      margin-top: 4px;
+      padding: 4px;
+      overflow-y: auto;
+      max-height: 220px;
+      background: var(--rfg-bg, #fff);
+      border: 1px solid var(--rfg-border-strong, #d1d5db);
+      border-radius: var(--rfg-radius, 8px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+
+      &.hidden {
+        display: none;
       }
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 10px;
+      cursor: pointer;
+      font-weight: normal;
+      border-radius: calc(var(--rfg-radius, 8px) * 0.6);
+
+      &:hover {
+        background: var(--rfg-tint, #f3f4f6);
+      }
+    }
+
+    .flag {
+      width: 20px;
+      height: 15px;
+      margin-right: 10px;
     }
   }
 }

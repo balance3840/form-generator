@@ -1,341 +1,762 @@
-$mobile-breakpoint: 480px;
-$tablet-breakpoint: 768px;
-
-.input {
-    &__description {
-        color: #6c757d;
-        font-size: 13px;
-        margin: 0;
-    }
+re-form-generator {
+  display: block;
+  container-type: inline-size;
+  container-name: rfg;
 }
 
-.re-form-generator {
-    width: calc(100% - 40px);
-    border: 1px solid #0000003b;
-    padding: 20px;
-    border-radius: 20px;
-    background: #FFFFFF;
+.rfg {
+  // ---- theme tokens (overridden inline by the `theme` prop) ----
+  --rfg-primary: #4f46e5;
+  --rfg-primary-contrast: #ffffff;
+  --rfg-bg: #ffffff;
+  --rfg-text: #1f2937;
+  --rfg-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --rfg-radius: 10px;
+  --rfg-gap: 20px;
+  --rfg-input-pad: 12px 14px;
+  --rfg-input-height: 44px;
+  --rfg-max-width: 640px;
+  --rfg-label-transform: none;
+  --rfg-label-spacing: 0;
+  --rfg-label-size: 14px;
+  --rfg-error: #e5484d;
 
-    .select-input {
-        position: relative;
-        appearance: none;
-        -webkit-appearance: none;
-        width: 100%;
-        font-size: 14px;
-        height: 44px;
-        padding: 0.675em 6em 0.675em 1em;
-        background-color: #fff;
-        border: 1px solid #caced1;
-        border-radius: 0.25rem;
-        color: #000;
-        cursor: pointer;
+  // ---- derived tokens ----
+  --rfg-border: color-mix(in srgb, var(--rfg-text) 16%, transparent);
+  --rfg-border-strong: color-mix(in srgb, var(--rfg-text) 32%, transparent);
+  --rfg-muted: color-mix(in srgb, var(--rfg-text) 62%, transparent);
+  --rfg-tint: color-mix(in srgb, var(--rfg-text) 5%, var(--rfg-bg));
+  --rfg-primary-soft: color-mix(in srgb, var(--rfg-primary) 12%, var(--rfg-bg));
+  --rfg-focus: color-mix(in srgb, var(--rfg-primary) 28%, transparent);
 
-        &::after,
-        &::before {
-            content: "";
-            position: absolute;
-            right: 1rem;
-            pointer-events: none;
-        }
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--rfg-max-width);
+  margin: 0 auto;
+  --rfg-pad-y: 32px;
+  --rfg-pad-x: 32px;
+  padding: var(--rfg-pad-y) var(--rfg-pad-x);
+  background: var(--rfg-bg);
+  color: var(--rfg-text);
+  font-family: var(--rfg-font);
+  font-size: 15px;
+  line-height: 1.5;
+  border-radius: calc(var(--rfg-radius) * 1.6);
 
-        &::before {
-            border-left: 0.3rem solid transparent;
-            border-right: 0.3rem solid transparent;
-            border-bottom: 0.3rem solid black;
-            top: 40%;
-        }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-        &::after {
-            border-left: 0.3rem solid transparent;
-            border-right: 0.3rem solid transparent;
-            border-top: 0.3rem solid black;
-            top: 55%;
-        }
+  &.rfg-card-bordered {
+    border: 1px solid var(--rfg-border);
+  }
+  &.rfg-card-shadow {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.08);
+  }
+  // Flat: no shadow, border or rounding, but the content keeps its breathing room.
+  &.rfg-card-flat {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  &.rfg-design {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  &.rfg-schema-error {
+    color: var(--rfg-error);
+  }
+
+  /* ------------------------------------------------- branding: cover + logo */
+  // The cover bleeds to the card edges (it cancels the card padding) and follows its rounded top corners.
+  .rfg-cover {
+    margin: calc(var(--rfg-pad-y) * -1) calc(var(--rfg-pad-x) * -1) calc(var(--rfg-pad-y) * 0.75);
+    background-color: var(--rfg-tint);
+    background-size: cover;
+    background-position: center;
+    border-radius: calc(var(--rfg-radius) * 1.6) calc(var(--rfg-radius) * 1.6) 0 0;
+  }
+  .rfg-card-flat .rfg-cover {
+    border-radius: 0;
+  }
+  .rfg-logo {
+    display: flex;
+    margin-bottom: calc(var(--rfg-gap) * 0.8);
+
+    img {
+      display: block;
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
     }
-
-    .group-title {
-        font-size: 24px;
-        padding-bottom: 6px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid #cbd5e1;
+    &.rfg-logo-center {
+      justify-content: center;
     }
-
-    textarea {
-        resize: none;
-        height: 90px;
-        font-size: 14px;
-        line-height: 17px;
-        color: #252733;
-        background: #FAFAFA;
-        padding: 12px;
-        border: 1px solid #E3E8EB;
-        border-radius: 5px;
-        width: 100%;
-        font-size: 14px;
-        color: #252733;
-        box-sizing: border-box;
-        font-family: inherit;
+    &.rfg-logo-right {
+      justify-content: flex-end;
     }
+  }
 
-    .input-text,
-    .input-email,
-    .input-date,
-    .input-month,
-    .input-number,
-    .input-datetime-local,
-    .input-tel,
-    .input-time,
-    .input-url,
-    .input-week,
-    .input-password,
-    .select-input {
-        background: #FAFAFA;
-        padding: 12px;
-        border: 1px solid #E3E8EB;
-        border-radius: 5px;
-        width: 100%;
-        font-size: 14px;
-        color: #252733;
-        box-sizing: border-box;
-        font-family: inherit;
-        height: 43px;
+  .rfg-step-title {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--rfg-text);
+  }
 
-        &.input-checkbox {
-            height: 18px;
-            width: 18px;
-            background-color: #eee;
-            margin: 0;
-        }
+  // "Other…" option: spans every column of the option grid and shows a text box when picked.
+  .rfg-other {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ------------------------------------------------------------ header */
+  .rfg-header {
+    margin-bottom: calc(var(--rfg-gap) * 1.4);
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
-
-    .row-container {
-        display: flex;
-        gap: 10px;
-        flex-grow: 12;
-
-        @media (max-width: $tablet-breakpoint) {
-            display: block;
-        }
-
-        @for $i from 1 through 12 {
-            .col-#{$i} {
-                width: calc((100% / 12) * #{$i});
-            }
-        }
-
-        // Mobile columns
-        @media (max-width: $tablet-breakpoint) {
-            @for $i from 1 through 12 {
-                .col-#{$i} {
-                    width: 100%;
-                }
-            }
-        }
-
+    p {
+      margin: 0;
+      color: var(--rfg-muted);
+      white-space: pre-line;
     }
+  }
 
-    .input__label {
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 20px;
-        margin-bottom: 12px;
-        display: inline-block;
+  /* ------------------------------------------------------------ layout */
+  // Top level: blocks stacked vertically.
+  .rfg-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--rfg-gap);
+  }
+
+  .rfg-field {
+    position: relative;
+    min-width: 0;
+  }
+
+  // A row of columns on a 12 unit grid. Each column is a vertical stack of fields.
+  .rfg-row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--rfg-gap) 16px;
+  }
+  .rfg-col {
+    grid-column: var(--rfg-start, auto) / span var(--rfg-span, 12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--rfg-gap);
+    min-width: 0;
+  }
+
+  .rfg-hidden {
+    display: none !important;
+  }
+
+  .rfg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rfg-label {
+    display: block;
+    font-size: var(--rfg-label-size);
+    font-weight: 600;
+    text-transform: var(--rfg-label-transform);
+    letter-spacing: var(--rfg-label-spacing);
+    line-height: 1.35;
+  }
+  .rfg-required {
+    color: var(--rfg-error);
+    margin-left: 3px;
+  }
+  .rfg-help {
+    font-size: 13px;
+    color: var(--rfg-muted);
+    margin-top: -2px;
+  }
+  .rfg-error {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--rfg-error);
+  }
+  .rfg-form-error {
+    margin-top: var(--rfg-gap);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-error);
+    text-align: center;
+  }
+
+  /* ------------------------------------------------------ text controls */
+  .rfg-control {
+    display: block;
+    width: 100%;
+    min-height: var(--rfg-input-height);
+    padding: var(--rfg-input-pad);
+    font: inherit;
+    font-size: 15px;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--rfg-text) 42%, transparent);
     }
-
-    .error-message {
-        font-size: 12px;
-        color: #FF6868;
+    &:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--rfg-text) 45%, transparent);
     }
-
-    /* Rounded sliders */
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 45px;
-        height: 25px;
-
-        input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+    &:focus {
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 3px var(--rfg-focus);
     }
-
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #83888F;
-        transition: .4s;
-        transition: .4s;
-
-        &:before {
-            position: absolute;
-            content: "";
-            height: 21px;
-            width: 21px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            transition: .4s;
-        }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
+  }
+  textarea.rfg-control {
+    resize: vertical;
+    min-height: 110px;
+  }
+  .rfg-input-color {
+    padding: 4px;
+    height: var(--rfg-input-height);
+    cursor: pointer;
+  }
+
+  &.rfg-input-filled .rfg-control,
+  &.rfg-input-filled .multi-select__header,
+  &.rfg-input-filled .country-select-input-wrapper .country-search {
+    background: var(--rfg-tint);
+    border-color: transparent;
+    &:focus {
+      background: var(--rfg-bg);
+      border-color: var(--rfg-primary);
+    }
+  }
+  // Underlined: a lighter, "borderless" look. Choice cards, scale buttons and uploads lose their boxes too.
+  &.rfg-input-underlined {
+    .rfg-control {
+      background: transparent;
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      padding-left: 2px;
+      padding-right: 2px;
+      &:focus {
+        box-shadow: none;
+      }
+    }
+    .rfg-select {
+      padding-right: 28px;
+    }
+    .rfg-select-wrap::after {
+      right: 4px;
+    }
+    .rfg-option {
+      border: 0;
+      border-radius: 0;
+      padding: 4px 0;
+      background: none;
+      &.is-checked {
+        background: none;
+        font-weight: 600;
+      }
+    }
+    .rfg-options {
+      gap: 4px;
+    }
+    .rfg-scale-btn {
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      background: transparent;
+      &.is-active {
+        background: transparent;
+        color: var(--rfg-primary);
+        border-color: var(--rfg-primary);
+      }
+    }
+    .multi-select__header,
+    .country-search {
+      border-width: 0 0 1.5px;
+      border-radius: 0;
+      background: transparent;
+    }
+    .file-dropzone {
+      border-radius: 0;
+    }
+    .rfg-range-value {
+      background: none;
+      padding: 0;
+    }
+  }
+
+  .rfg-select-wrap {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      width: 7px;
+      height: 7px;
+      margin-top: -6px;
+      border-right: 2px solid var(--rfg-muted);
+      border-bottom: 2px solid var(--rfg-muted);
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
+  }
+  .rfg-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 40px;
+    cursor: pointer;
+  }
+
+  /* --------------------------------------------- choices, checkbox, switch */
+  // `config.optionColumns` (1-4) lays the options out in columns; narrow containers fall back to one.
+  .rfg-options {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-opt-cols, 1), minmax(0, 1fr));
+    gap: 8px;
+  }
+  .rfg-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-primary);
+    }
+    &.is-checked {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    input {
+      margin: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--rfg-primary);
+      flex: none;
+    }
+  }
+  .rfg-single-check {
+    border: 0;
+    padding: 0;
+    background: none !important;
+    align-items: flex-start;
+    input {
+      margin-top: 2px;
+    }
+  }
+  .rfg-help-check {
+    margin: 4px 0 0 28px;
+  }
+
+  .rfg-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .rfg-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    flex: none;
+    cursor: pointer;
 
     input {
-        &:checked {
-            + {
-                .slider {
-                    background-color: #2196F3;
-
-                    &:before {
-                        transform: translateX(20px);
-                    }
-                }
-            }
-        }
-
-        &:focus {
-            + {
-                .slider {
-                    box-shadow: 0 0 1px #2196F3;
-                }
-            }
-        }
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
     }
+  }
+  .rfg-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--rfg-border-strong);
+    border-radius: 999px;
+    transition: background 0.2s;
 
-    .slider.round {
-        border-radius: 34px;
-
-        &:before {
-            border-radius: 50%;
-        }
+    &::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s;
     }
-
-    .input-group {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        padding: 0 0 16px 0;
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 20px;
-
-        &.hasErrors {
-
-            input,
-            .multi-select,
-            .select-input {
-                border: 1.5px solid #FF6868;
-                border-radius: 5px;
-            }
-
-            .file-field-container {
-                border: 1.5px solid #FF6868;
-                border-radius: 5px;
-            }
-        }
-
-        &.input-checkbox-container {
-            display: flex;
-            flex-direction: row-reverse;
-            align-items: center;
-            justify-content: start;
-            gap: 0.5rem;
-
-            .input__label {
-                margin-bottom: 0px;
-                margin-left: 6px;
-                font-weight: normal;
-            }
-
-            .error-message {
-                flex-basis: 100%;
-                position: absolute;
-                bottom: 0px;
-            }
-
-            &.hasErrors {
-                margin-bottom: 16px;
-            }
-        }
-
-        &.input-checkboxGroup-container {
-            .checkboxGroup {
-                .label {
-                    margin-bottom: 0px;
-                    margin-left: 6px;
-                    font-weight: normal;
-                }
-            }
-        }
-
-        &.two-columns {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-        }
+  }
+  .rfg-switch input:checked + .rfg-slider {
+    background: var(--rfg-primary);
+    &::before {
+      transform: translateX(20px);
     }
+  }
+  .rfg-switch input:focus-visible + .rfg-slider {
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
 
-    .submit-container {
-        display: flex;
-        margin-top: 16px;
+  /* -------------------------------------------------- rating, scale, range */
+  .rfg-rating {
+    display: flex;
+    gap: 4px;
+  }
+  .rfg-star {
+    padding: 2px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--rfg-border-strong);
+    transition: transform 0.12s, color 0.12s;
+    line-height: 0;
 
-        &__button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            background-color: #2196f3;
-            color: #ffffff;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            width: 100%;
-
-            &:hover {
-                background-color: #1565c0;
-            }
-        }
+    svg {
+      fill: transparent;
     }
-
-    .radioGroup {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-
-        &-element {
-            display: flex;
-            flex-direction: row;
-            gap: 0.5rem;
-            align-items: center;
-
-            .label {
-                font-weight: normal;
-            }
-        }
-
-        .input-radio {
-            padding: 2px;
-            margin: 0;
-        }
+    &.is-active {
+      color: #f5a623;
+      svg {
+        fill: currentColor;
+      }
     }
-
-    .hidden {
-        display: none;
+    &:hover:not(:disabled) {
+      transform: scale(1.12);
     }
+  }
 
-    .form-error-message {
-        display: flex;
-        justify-content: center;
-        align-items: center;
+  .rfg-scale {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-scale-count, 10), minmax(0, 1fr));
+    gap: 6px;
+  }
+  .rfg-scale-btn {
+    height: var(--rfg-input-height);
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: calc(var(--rfg-radius) * 0.8);
+    cursor: pointer;
+    transition: all 0.15s;
 
-        &__message {
-            color: #FF6868;
-            font-size: 12px;
-            font-weight: 700;
-        }
+    &:hover:not(:disabled) {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
     }
+    &.is-active {
+      background: var(--rfg-primary);
+      border-color: var(--rfg-primary);
+      color: var(--rfg-primary-contrast);
+    }
+  }
+  .rfg-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--rfg-muted);
+  }
+
+  .rfg-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .rfg-range {
+    flex: 1;
+    accent-color: var(--rfg-primary);
+    height: 6px;
+    cursor: pointer;
+  }
+  .rfg-range-value {
+    min-width: 48px;
+    text-align: center;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--rfg-primary-soft);
+    color: var(--rfg-primary);
+  }
+
+  /* ---------------------------------------------------- content blocks */
+  .rfg-heading {
+    margin-top: 8px;
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    h2 {
+      font-size: 22px;
+    }
+    h3 {
+      font-size: 17px;
+    }
+    p {
+      margin: 4px 0 0;
+      color: var(--rfg-muted);
+    }
+  }
+  .rfg-paragraph p {
+    margin: 0;
+    color: var(--rfg-muted);
+    white-space: pre-line;
+  }
+  .rfg-divider {
+    border: 0;
+    border-top: 1px solid var(--rfg-border);
+    margin: 4px 0;
+  }
+
+  /* ----------------------------------------------------------- errors */
+  .rfg-has-error {
+    .rfg-control,
+    .multi-select__header,
+    .country-search,
+    .rfg-option,
+    .file-field-container,
+    .rfg-scale-btn {
+      border-color: var(--rfg-error);
+    }
+  }
+
+  /* ------------------------------------------------------ steps/progress */
+  .rfg-progress {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-progress-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rfg-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--rfg-tint);
+    overflow: hidden;
+  }
+  .rfg-progress-bar {
+    height: 100%;
+    background: var(--rfg-primary);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  /* ----------------------------------------------------------- buttons */
+  .rfg-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: calc(var(--rfg-gap) * 1.2);
+
+    .rfg-recaptcha {
+      flex-basis: 100%;
+    }
+  }
+  .rfg-btn {
+    min-height: var(--rfg-input-height);
+    padding: 0 24px;
+    font: inherit;
+    font-weight: 600;
+    border-radius: var(--rfg-radius);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.05s, background 0.15s;
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-btn-primary {
+    flex: 1;
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    &:hover:not(:disabled) {
+      filter: brightness(0.92);
+    }
+  }
+  &.rfg-btnw-auto .rfg-btn-primary {
+    flex: none;
+  }
+  &.rfg-btn-outline .rfg-btn-primary {
+    background: transparent;
+    color: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+      filter: none;
+    }
+  }
+  /* ----------------------------------------------------- language switcher */
+  .rfg-lang {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: calc(var(--rfg-gap) * 0.8);
+  }
+  .rfg-lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    background: transparent;
+    border: 1px solid var(--rfg-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      color: var(--rfg-text);
+      border-color: var(--rfg-border-strong);
+    }
+    &.is-active {
+      color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+      border-color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-flag {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .rfg-lang-select {
+    min-width: 170px;
+  }
+  .rfg-lang-dd {
+    min-height: 36px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 13px;
+  }
+
+  // Button alignment only matters when the button does not fill the width (buttonWidth: auto).
+  &.rfg-btna-center .rfg-actions {
+    justify-content: center;
+  }
+  &.rfg-btna-right .rfg-actions {
+    justify-content: flex-end;
+  }
+
+  .rfg-btn-secondary {
+    background: transparent;
+    color: var(--rfg-text);
+    border-color: var(--rfg-border-strong);
+    &:hover {
+      background: var(--rfg-tint);
+    }
+  }
+  .rfg-link {
+    border: 0;
+    background: none;
+    color: var(--rfg-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ------------------------------------------------------------ success */
+  .rfg-success {
+    text-align: center;
+    padding: 32px 8px;
+
+    &-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--rfg-primary-soft);
+      color: var(--rfg-primary);
+    }
+    &-message {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 16px;
+    }
+  }
+}
+
+/* Narrow containers (phones, or a narrow preview) stack the columns. */
+@container rfg (max-width: 520px) {
+  .rfg .rfg-row {
+    display: flex;
+    flex-direction: column;
+  }
+  .rfg .rfg-col {
+    width: 100%;
+  }
+  .rfg {
+    --rfg-pad-y: 22px;
+    --rfg-pad-x: 18px;
+  }
+  .rfg .rfg-scale {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .rfg .rfg-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

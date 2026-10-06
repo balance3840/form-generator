@@ -47,6 +47,7 @@ export class MultiSelect {
 
   @Listen('click', { target: 'document' })
   handleOutsideClick(event: MouseEvent) {
+    if (!this.multiSelectRef) return;
     if (!this.multiSelectRef.contains(event.target as Node)) {
       this.isOpen = false;
     }

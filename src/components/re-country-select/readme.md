@@ -7,15 +7,16 @@
 
 ## Properties
 
-| Property          | Attribute           | Description | Type      | Default     |
-| ----------------- | ------------------- | ----------- | --------- | ----------- |
-| `defaultValue`    | `default-value`     |             | `string`  | `undefined` |
-| `disabled`        | `disabled`          |             | `any`     | `undefined` |
-| `inputDisplayKey` | `input-display-key` |             | `string`  | `undefined` |
-| `inputOptions`    | `input-options`     |             | `any`     | `undefined` |
-| `modelKey`        | `model-key`         |             | `string`  | `undefined` |
-| `showDialCode`    | `show-dial-code`    |             | `boolean` | `false`     |
-| `zIndex`          | `z-index`           |             | `string`  | `undefined` |
+| Property          | Attribute           | Description                                                                                             | Type      | Default     |
+| ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------- | --------- | ----------- |
+| `defaultValue`    | `default-value`     |                                                                                                         | `string`  | `undefined` |
+| `disabled`        | `disabled`          |                                                                                                         | `any`     | `undefined` |
+| `inputDisplayKey` | `input-display-key` |                                                                                                         | `string`  | `undefined` |
+| `inputOptions`    | `input-options`     |                                                                                                         | `any`     | `undefined` |
+| `language`        | `language`          | Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes. | `string`  | `undefined` |
+| `modelKey`        | `model-key`         |                                                                                                         | `string`  | `undefined` |
+| `showDialCode`    | `show-dial-code`    |                                                                                                         | `boolean` | `false`     |
+| `zIndex`          | `z-index`           |                                                                                                         | `string`  | `undefined` |
 
 
 ## Events

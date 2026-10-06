@@ -15,6 +15,10 @@ export namespace Components {
         "disabled": any;
         "inputDisplayKey": string;
         "inputOptions": any;
+        /**
+          * Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes.
+         */
+        "language": string;
         "modelKey": string;
         "showDialCode": boolean;
         "zIndex": string;
@@ -28,14 +32,45 @@ export namespace Components {
         "textTitle": string;
     }
     interface ReFormGenerator {
+        /**
+          * Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`.
+         */
         "action": any;
+        /**
+          * Used by the builder: shows every field, ignores logic and disables interaction.
+         */
+        "designMode": boolean;
         "formId": string;
+        "getLanguage": () => Promise<string>;
+        "getValues": () => Promise<{ [key: string]: any; }>;
+        /**
+          * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher. Without it the language is picked from `schema.i18n` (browser language if available, else the default).
+         */
+        "language": string;
+        /**
+          * v1 compatibility: field mapping. Prefer `action.mapping`.
+         */
         "mapping": any;
+        /**
+          * Initial values, keyed by field `model`.
+         */
         "model": any;
+        "reset": () => Promise<void>;
+        /**
+          * The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string.
+         */
         "schema": any;
+        /**
+          * Switches the form to `language` (must be one of the document's languages, or a built-in one).
+         */
+        "setLanguage": (language: string) => Promise<void>;
         "submit": () => Promise<any>;
-        "updateValue": (key: any, value: any) => Promise<void>;
-        "validate": () => Promise<any>;
+        /**
+          * Theme object (or preset id / JSON string). Overrides `schema.theme`.
+         */
+        "theme": any;
+        "updateValue": (key: string, value: any) => Promise<void>;
+        "validate": () => Promise<{ [key: string]: string[]; }>;
     }
     interface ReMultiSelect {
         "defaultOptions": any;
@@ -108,6 +143,7 @@ declare global {
         "submitted": any;
         "validationError": any;
         "valueChanged": any;
+        "languageChanged": { language: string };
     }
     interface HTMLReFormGeneratorElement extends Components.ReFormGenerator, HTMLStencilElement {
         addEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -158,6 +194,10 @@ declare namespace LocalJSX {
         "disabled"?: any;
         "inputDisplayKey"?: string;
         "inputOptions"?: any;
+        /**
+          * Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes.
+         */
+        "language"?: string;
         "modelKey"?: string;
         "onSelectedCountryChanged"?: (event: ReCountrySelectCustomEvent<any>) => void;
         "showDialCode"?: boolean;
@@ -173,15 +213,43 @@ declare namespace LocalJSX {
         "textTitle"?: string;
     }
     interface ReFormGenerator {
+        /**
+          * Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`.
+         */
         "action"?: any;
+        /**
+          * Used by the builder: shows every field, ignores logic and disables interaction.
+         */
+        "designMode"?: boolean;
         "formId"?: string;
+        /**
+          * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher. Without it the language is picked from `schema.i18n` (browser language if available, else the default).
+         */
+        "language"?: string;
+        /**
+          * v1 compatibility: field mapping. Prefer `action.mapping`.
+         */
         "mapping"?: any;
+        /**
+          * Initial values, keyed by field `model`.
+         */
         "model"?: any;
         "onHandleSubmit"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        /**
+          * Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop).
+         */
+        "onLanguageChanged"?: (event: ReFormGeneratorCustomEvent<{ language: string }>) => void;
         "onSubmitted"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValidationError"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValueChanged"?: (event: ReFormGeneratorCustomEvent<any>) => void;
+        /**
+          * The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string.
+         */
         "schema"?: any;
+        /**
+          * Theme object (or preset id / JSON string). Overrides `schema.theme`.
+         */
+        "theme"?: any;
     }
     interface ReMultiSelect {
         "defaultOptions"?: any;

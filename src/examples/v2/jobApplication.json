@@ -1,0 +1,249 @@
+{
+  "version": 2,
+  "fields": [
+    {
+      "type": "heading",
+      "id": "heading_1",
+      "label": "Job application form",
+      "config": {
+        "level": "h2"
+      }
+    },
+    {
+      "type": "columns",
+      "id": "row_esrf61",
+      "config": {
+        "align": "start",
+        "justify": "start"
+      },
+      "columns": [
+        {
+          "id": "col_e1kqf2",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "name",
+              "inputType": "text",
+              "inputName": "name",
+              "visible": true,
+              "label": "Name",
+              "model": "applicantName",
+              "readonly": false,
+              "disabled": false,
+              "placeholder": "John",
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required",
+                  "params": [
+                    "First name is a required field"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "col_noxsa3",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "lastName",
+              "inputType": "text",
+              "inputName": "lastName",
+              "visible": true,
+              "label": "Last name",
+              "model": "applicantLastName",
+              "readonly": false,
+              "disabled": false,
+              "placeholder": "Doe",
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required",
+                  "params": [
+                    "Last name is a required field"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "input",
+      "id": "email",
+      "inputType": "email",
+      "inputName": "email",
+      "visible": true,
+      "label": "Email",
+      "model": "applicantEmail",
+      "readonly": false,
+      "disabled": false,
+      "placeholder": "john.doe@email.com",
+      "validationType": "string",
+      "validations": [
+        {
+          "name": "required",
+          "params": [
+            "Email is a required field"
+          ]
+        },
+        {
+          "name": "email",
+          "params": [
+            "The email is not in the right format"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "columns",
+      "id": "row_x5rhs4",
+      "config": {
+        "align": "start",
+        "justify": "start"
+      },
+      "columns": [
+        {
+          "id": "col_sh5ie5",
+          "span": 6,
+          "fields": [
+            {
+              "type": "select",
+              "id": "position",
+              "inputName": "position",
+              "visible": true,
+              "label": "What position are you applying for?",
+              "model": "apllicationPosition",
+              "readonly": false,
+              "disabled": false,
+              "placeholder": "Please select a position...",
+              "defaultValue": "",
+              "validationType": "number",
+              "validations": [
+                {
+                  "name": "required"
+                }
+              ],
+              "options": [
+                {
+                  "label": "Chief Executive Officer (CEO)",
+                  "value": 1,
+                  "group": "Vacant positions"
+                },
+                {
+                  "label": "Chief Technology Officer (CTO)",
+                  "value": 2,
+                  "group": "Vacant positions"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "col_1ab5i6",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "availableDate",
+              "inputType": "date",
+              "inputName": "availableDate",
+              "visible": true,
+              "label": "Available date",
+              "model": "availableDate",
+              "readonly": false,
+              "disabled": false,
+              "validationType": "date",
+              "validations": [
+                {
+                  "name": "required",
+                  "params": [
+                    "Available date is required"
+                  ]
+                },
+                {
+                  "name": "max",
+                  "params": [
+                    "2024-02-20",
+                    "You should be available before the the 20th of February"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "id": "heading_2",
+      "label": "Personal references",
+      "config": {
+        "level": "h2"
+      }
+    },
+    {
+      "type": "columns",
+      "id": "row_nh5t97",
+      "config": {
+        "align": "start",
+        "justify": "start"
+      },
+      "columns": [
+        {
+          "id": "col_adwex8",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "referenceName",
+              "inputType": "text",
+              "inputName": "referenceName",
+              "placeholder": "Martin",
+              "visible": true,
+              "label": "First name",
+              "model": "referenceName",
+              "readonly": false,
+              "disabled": false,
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "col_hzgnx9",
+          "span": 6,
+          "fields": [
+            {
+              "type": "input",
+              "id": "referenceLastName",
+              "inputType": "text",
+              "inputName": "referenceLastName",
+              "placeholder": "Martin",
+              "visible": true,
+              "label": "Last name",
+              "model": "referenceLastName",
+              "readonly": false,
+              "disabled": false,
+              "validationType": "string",
+              "validations": [
+                {
+                  "name": "required"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

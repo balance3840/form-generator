@@ -5,10 +5,10 @@ re-file-input-field {
 
     .file-dropzone {
       width: 100%;
-      height: 16rem;
-      border: 1px dashed #E3E8EB;
-      border-radius: 5px;
-      background-color: #FAFAFA;
+      min-height: 11rem;
+      border: 1.5px dashed var(--rfg-border-strong, #d1d5db);
+      border-radius: var(--rfg-radius, 8px);
+      background-color: var(--rfg-tint, #f9fafb);
       cursor: pointer;
       display: flex;
       flex-direction: column;
@@ -16,28 +16,14 @@ re-file-input-field {
       justify-content: center;
       transition: background-color 0.3s, border-color 0.3s;
 
-      &.hover {
-        background-color: #e5e7eb;
-        border-color: #9ca3af;
-    
-        .dropzone-icon,
-        .dropzone-text,
-        .dropzone-subtext {
-          color: #252733;
-        }
-      }
-
+      &.hover,
       &:hover {
-        background-color: #f9fafb;
-      }
+        background-color: var(--rfg-primary-soft, #eef2ff);
+        border-color: var(--rfg-primary, #4f46e5);
 
-      &:hover .dropzone-icon {
-        color: #9ca3af;
-      }
-
-      &:hover .dropzone-text,
-      &:hover .dropzone-subtext {
-        color: #6b7280;
+        .dropzone-icon {
+          color: var(--rfg-primary, #4f46e5);
+        }
       }
 
       &.dark {
@@ -70,13 +56,13 @@ re-file-input-field {
         width: 2rem;
         height: 2rem;
         margin-bottom: 1rem;
-        color: #6b7280;
+        color: var(--rfg-muted, #6b7280);
         transition: color 0.3s;
       }
 
       .dropzone-text {
         margin-bottom: 0.5rem;
-        color: #6b7280;
+        color: var(--rfg-muted, #6b7280);
         transition: color 0.3s;
         display: flex;
         gap: 8px;
@@ -87,7 +73,7 @@ re-file-input-field {
         .file-element {
           display: flex;
           gap: 8px;
-          color: #252733;
+          color: var(--rfg-text, #1f2937);
         }
 
       }
@@ -98,7 +84,7 @@ re-file-input-field {
 
       .dropzone-subtext {
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--rfg-muted, #6b7280);
         transition: color 0.3s;
       }
 
@@ -106,7 +92,7 @@ re-file-input-field {
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background-color: #FF6868;
+        background-color: var(--rfg-error, #e5484d);
         color: white;
         text-align: center;
         line-height: 20px;
