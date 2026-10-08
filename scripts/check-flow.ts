@@ -2,7 +2,7 @@
  * Checks the flow engine (repeaters, scoped logic, rule states, defaults, i18n of nested blocks).
  * Run with: npx tsx scripts/check-flow.ts
  */
-import { FormField, blankItem, computeStates, defaultValues, flattenFields, getByPath, itemInstances, setByPath } from '../src/utils/schema';
+import { FormField, blankItem, childLists, computeStates, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, itemInstances, setByPath, withChildList, withDraft } from '../src/utils/schema';
 import { BUILT_IN_UI, UI_KEYS, collectTranslatables, localizeDocument } from '../src/utils/i18n';
 
 let failures = 0;
@@ -83,6 +83,25 @@ check('collects nested labels, option descriptions, presets, settings', ['field.
 const da = localizeDocument(doc, 'da');
 const roomsDa: any = da.fields[0];
 check('localizes nested + presets + descriptions + settings', roomsDa.fields[1].fields[0].label === 'Enhed' && roomsDa.config.presets[0].label === 'Køkken' && (da.fields[1] as any).options[0].description === 'Om A' && da.settings!.nextButtonText === 'Næste');
+
+// tabs and dialogs
+const tabs: FormField = { type: 'tabs', id: 'tb', tabs: [{ id: 't1', label: 'Units', fields: [input('a', 'alpha')] }, { id: 't2', label: 'Notes', fields: [input('b', 'beta', { logic: { action: 'hide', match: 'all', conditions: [{ field: 'alpha', operator: 'equals', value: 'x' }] } })] }] };
+const dialog: FormField = { type: 'modal', id: 'dlg', label: 'Dialog', fields: [input('d1', 'state'), input('d2', 'why', { logic: { action: 'show', match: 'all', conditions: [{ field: 'state', operator: 'equals', value: 'bad' }] } })] };
+check('tabs expose one list per tab', childLists(tabs).map(l => l.id).join() === 't1,t2');
+check('withChildList edits one tab', (withChildList(tabs, 't2', []).tabs![1].fields.length === 0) && withChildList(tabs, 't2', []).tabs![0].fields.length === 1);
+check('tab fields are transparent, dialog is opaque', flattenFields([tabs, dialog], true).map(f => f.id).join() === 'a,b,dlg' && flattenFields([dialog], true, true).length === 3);
+const tabStates = computeStates([input('alpha0', 'alpha'), tabs], { alpha: 'x' });
+check('rules work across tabs', tabStates.visible['b'] === false && tabStates.visible['a'] === true);
+let withDraftValues: any = withDraft({ name: 'kept' }, { state: 'bad', units: [{ a: 1 }] });
+check('draft keys are kept apart and read back', withDraftValues['__draft.state'] === 'bad' && draftObject(withDraftValues).state === 'bad' && withDraftValues.name === 'kept' && !('name' in draftObject(withDraftValues)));
+check('clearing the draft', Object.keys(withDraft(withDraftValues, {})).join() === 'name');
+const instances = draftFields(dialog.fields!);
+check('dialog fields live in the draft namespace', instances[0].model === '__draft.state' && instances[0].id === 'd1~draft' && instances[0]._key === 'state');
+const dialogStates: any = { visible: {}, disabled: {}, required: {} };
+evaluateStates(instances, withDraftValues, { ...withDraftValues, ...draftObject(withDraftValues) }, dialogStates);
+check('dialog rules read the dialog answers', dialogStates.visible['d2~draft'] === true && (evaluateStates(instances, {}, { state: 'ok' }, (dialogStates.visible = {}, dialogStates)), dialogStates.visible['d2~draft'] === false));
+const docTabs: any = { version: 2, fields: [tabs], settings: {}, i18n: { defaultLanguage: 'en', languages: ['en', 'da'], translations: { da: { 'field.tb.tab.t1': 'Enheder' } } } };
+check('tab labels are translatable', collectTranslatables(docTabs).some(t => t.key === 'field.tb.tab.t1') && (localizeDocument(docTabs, 'da').fields[0] as any).tabs[0].label === 'Enheder');
 
 const english = Object.keys(BUILT_IN_UI.en);
 Object.keys(BUILT_IN_UI).forEach(lang => {

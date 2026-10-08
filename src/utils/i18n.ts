@@ -271,23 +271,23 @@ const DA = pack([
 ]);
 
 // Texts added after the positional tables above. These are written per language with explicit keys, so adding more never shifts anything.
-const EXTRA_KEYS = ['ui.itemTitle', 'ui.addItem', 'ui.noItems', 'ui.saveExit', 'ui.savedAt', 'ui.signHere', 'ui.clearSignature', 'ui.stepsNav', 'ui.done', 'ui.showFirstError', 'validation.minItems', 'validation.maxItems'];
+const EXTRA_KEYS = ['ui.itemTitle', 'ui.addItem', 'ui.noItems', 'ui.saveExit', 'ui.savedAt', 'ui.signHere', 'ui.clearSignature', 'ui.stepsNav', 'ui.done', 'ui.showFirstError', 'validation.minItems', 'validation.maxItems', 'ui.cancel', 'ui.confirm', 'ui.save', 'ui.close', 'ui.edit', 'ui.duplicate', 'ui.moveUp', 'ui.moveDown', 'ui.itemOptions', 'ui.dragToReorder', 'ui.sign', 'ui.type', 'ui.search', 'ui.selectedCount'];
 const extra = (values: string[]): Dict => {
   const out: Dict = {};
   EXTRA_KEYS.forEach((key, i) => (out[key] = values[i]));
   return out;
 };
 const EXTRA: { [language: string]: Dict } = {
-  en: extra(['Item {n}', 'Add', 'Nothing added yet', 'Save and exit', 'Saved at {time}', 'Sign here', 'Clear', 'Steps', 'Done', 'Show the first one', '{label}: add at least {0}', '{label}: add at most {0}']),
-  es: extra(['Elemento {n}', 'Añadir', 'Todavía no se ha añadido nada', 'Guardar y salir', 'Guardado a las {time}', 'Firma aquí', 'Borrar', 'Pasos', 'Hecho', 'Mostrar el primero', '{label}: añade al menos {0}', '{label}: añade como máximo {0}']),
-  fr: extra(['Élément {n}', 'Ajouter', 'Rien n’a encore été ajouté', 'Enregistrer et quitter', 'Enregistré à {time}', 'Signez ici', 'Effacer', 'Étapes', 'Terminé', 'Afficher le premier', '{label} : ajoutez-en au moins {0}', '{label} : ajoutez-en au plus {0}']),
-  de: extra(['Eintrag {n}', 'Hinzufügen', 'Noch nichts hinzugefügt', 'Speichern und beenden', 'Gespeichert um {time}', 'Hier unterschreiben', 'Löschen', 'Schritte', 'Fertig', 'Zum ersten springen', '{label}: mindestens {0} hinzufügen', '{label}: höchstens {0} hinzufügen']),
-  it: extra(['Elemento {n}', 'Aggiungi', 'Ancora nulla di aggiunto', 'Salva ed esci', 'Salvato alle {time}', 'Firma qui', 'Cancella', 'Passaggi', 'Fatto', 'Vai al primo', '{label}: aggiungi almeno {0}', '{label}: aggiungi al massimo {0}']),
-  pt: extra(['Item {n}', 'Adicionar', 'Ainda não foi adicionado nada', 'Guardar e sair', 'Guardado às {time}', 'Assine aqui', 'Limpar', 'Passos', 'Concluído', 'Mostrar o primeiro', '{label}: adicione pelo menos {0}', '{label}: adicione no máximo {0}']),
-  nl: extra(['Item {n}', 'Toevoegen', 'Nog niets toegevoegd', 'Opslaan en afsluiten', 'Opgeslagen om {time}', 'Teken hier uw handtekening', 'Wissen', 'Stappen', 'Klaar', 'Toon de eerste', '{label}: voeg er minimaal {0} toe', '{label}: voeg er maximaal {0} toe']),
-  pl: extra(['Pozycja {n}', 'Dodaj', 'Nic jeszcze nie dodano', 'Zapisz i wyjdź', 'Zapisano o {time}', 'Podpisz tutaj', 'Wyczyść', 'Kroki', 'Gotowe', 'Pokaż pierwszy', '{label}: dodaj co najmniej {0}', '{label}: dodaj najwyżej {0}']),
-  ca: extra(['Element {n}', 'Afegeix', 'Encara no s’ha afegit res', 'Desa i surt', 'Desat a les {time}', 'Signa aquí', 'Esborra', 'Passos', 'Fet', 'Mostra el primer', '{label}: afegeix-ne almenys {0}', '{label}: afegeix-ne com a màxim {0}']),
-  da: extra(['Element {n}', 'Tilføj', 'Intet tilføjet endnu', 'Gem og afslut', 'Gemt kl. {time}', 'Underskriv her', 'Ryd', 'Trin', 'Færdig', 'Vis den første', '{label}: tilføj mindst {0}', '{label}: tilføj højst {0}']),
+  en: extra(['Item {n}', 'Add', 'Nothing added yet', 'Save and exit', 'Saved at {time}', 'Sign here', 'Clear', 'Steps', 'Done', 'Show the first one', '{label}: add at least {0}', '{label}: add at most {0}', 'Cancel', 'Confirm', 'Save', 'Close', 'Edit', 'Duplicate', 'Move up', 'Move down', 'Options', 'Drag to reorder', 'Sign', 'Type', 'Search', '{n} selected']),
+  es: extra(['Elemento {n}', 'Añadir', 'Todavía no se ha añadido nada', 'Guardar y salir', 'Guardado a las {time}', 'Firma aquí', 'Borrar', 'Pasos', 'Hecho', 'Mostrar el primero', '{label}: añade al menos {0}', '{label}: añade como máximo {0}', 'Cancelar', 'Confirmar', 'Guardar', 'Cerrar', 'Editar', 'Duplicar', 'Subir', 'Bajar', 'Opciones', 'Arrastra para reordenar', 'Firmar', 'Tipo', 'Buscar', '{n} seleccionados']),
+  fr: extra(['Élément {n}', 'Ajouter', 'Rien n’a encore été ajouté', 'Enregistrer et quitter', 'Enregistré à {time}', 'Signez ici', 'Effacer', 'Étapes', 'Terminé', 'Afficher le premier', '{label} : ajoutez-en au moins {0}', '{label} : ajoutez-en au plus {0}', 'Annuler', 'Confirmer', 'Enregistrer', 'Fermer', 'Modifier', 'Dupliquer', 'Monter', 'Descendre', 'Options', 'Glisser pour réorganiser', 'Signer', 'Type', 'Rechercher', '{n} sélectionnés']),
+  de: extra(['Eintrag {n}', 'Hinzufügen', 'Noch nichts hinzugefügt', 'Speichern und beenden', 'Gespeichert um {time}', 'Hier unterschreiben', 'Löschen', 'Schritte', 'Fertig', 'Zum ersten springen', '{label}: mindestens {0} hinzufügen', '{label}: höchstens {0} hinzufügen', 'Abbrechen', 'Bestätigen', 'Speichern', 'Schließen', 'Bearbeiten', 'Duplizieren', 'Nach oben', 'Nach unten', 'Optionen', 'Zum Sortieren ziehen', 'Unterschreiben', 'Typ', 'Suchen', '{n} ausgewählt']),
+  it: extra(['Elemento {n}', 'Aggiungi', 'Ancora nulla di aggiunto', 'Salva ed esci', 'Salvato alle {time}', 'Firma qui', 'Cancella', 'Passaggi', 'Fatto', 'Vai al primo', '{label}: aggiungi almeno {0}', '{label}: aggiungi al massimo {0}', 'Annulla', 'Conferma', 'Salva', 'Chiudi', 'Modifica', 'Duplica', 'Sposta su', 'Sposta giù', 'Opzioni', 'Trascina per riordinare', 'Firma', 'Tipo', 'Cerca', '{n} selezionati']),
+  pt: extra(['Item {n}', 'Adicionar', 'Ainda não foi adicionado nada', 'Guardar e sair', 'Guardado às {time}', 'Assine aqui', 'Limpar', 'Passos', 'Concluído', 'Mostrar o primeiro', '{label}: adicione pelo menos {0}', '{label}: adicione no máximo {0}', 'Cancelar', 'Confirmar', 'Guardar', 'Fechar', 'Editar', 'Duplicar', 'Subir', 'Descer', 'Opções', 'Arraste para reordenar', 'Assinar', 'Tipo', 'Pesquisar', '{n} selecionados']),
+  nl: extra(['Item {n}', 'Toevoegen', 'Nog niets toegevoegd', 'Opslaan en afsluiten', 'Opgeslagen om {time}', 'Teken hier uw handtekening', 'Wissen', 'Stappen', 'Klaar', 'Toon de eerste', '{label}: voeg er minimaal {0} toe', '{label}: voeg er maximaal {0} toe', 'Annuleren', 'Bevestigen', 'Opslaan', 'Sluiten', 'Bewerken', 'Dupliceren', 'Omhoog', 'Omlaag', 'Opties', 'Sleep om te ordenen', 'Ondertekenen', 'Type', 'Zoeken', '{n} geselecteerd']),
+  pl: extra(['Pozycja {n}', 'Dodaj', 'Nic jeszcze nie dodano', 'Zapisz i wyjdź', 'Zapisano o {time}', 'Podpisz tutaj', 'Wyczyść', 'Kroki', 'Gotowe', 'Pokaż pierwszy', '{label}: dodaj co najmniej {0}', '{label}: dodaj najwyżej {0}', 'Anuluj', 'Potwierdź', 'Zapisz', 'Zamknij', 'Edytuj', 'Duplikuj', 'W górę', 'W dół', 'Opcje', 'Przeciągnij, aby zmienić kolejność', 'Podpisz', 'Typ', 'Szukaj', 'Wybrano: {n}']),
+  ca: extra(['Element {n}', 'Afegeix', 'Encara no s’ha afegit res', 'Desa i surt', 'Desat a les {time}', 'Signa aquí', 'Esborra', 'Passos', 'Fet', 'Mostra el primer', '{label}: afegeix-ne almenys {0}', '{label}: afegeix-ne com a màxim {0}', 'Cancel·la', 'Confirma', 'Desa', 'Tanca', 'Edita', 'Duplica', 'Mou amunt', 'Mou avall', 'Opcions', 'Arrossega per reordenar', 'Signa', 'Tipus', 'Cerca', '{n} seleccionats']),
+  da: extra(['Element {n}', 'Tilføj', 'Intet tilføjet endnu', 'Gem og afslut', 'Gemt kl. {time}', 'Underskriv her', 'Ryd', 'Trin', 'Færdig', 'Vis den første', '{label}: tilføj mindst {0}', '{label}: tilføj højst {0}', 'Annuller', 'Bekræft', 'Gem', 'Luk', 'Rediger', 'Dupliker', 'Flyt op', 'Flyt ned', 'Indstillinger', 'Træk for at sortere', 'Underskriv', 'Type', 'Søg', '{n} valgt']),
 };
 
 /** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
@@ -376,7 +376,7 @@ export type Translatable = {
   multiline?: boolean;
 };
 
-const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel', 'addLabel', 'itemLabel', 'itemMeta', 'emptyText'];
+const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel', 'addLabel', 'itemLabel', 'itemMeta', 'emptyText', 'presetLabel', 'presetCustomLabel', 'confirmLabel', 'cancelLabel', 'editTitle', 'signLabel', 'tooltip', 'hint'];
 const CONFIG_LABELS: { [k: string]: string } = {
   minLabel: 'Left label',
   maxLabel: 'Right label',
@@ -388,6 +388,14 @@ const CONFIG_LABELS: { [k: string]: string } = {
   itemLabel: 'Item title',
   itemMeta: 'Item summary',
   emptyText: 'Text when empty',
+  presetLabel: 'Type picker label (dialog)',
+  presetCustomLabel: 'Type picker “custom” entry',
+  confirmLabel: 'Dialog “confirm” button',
+  cancelLabel: 'Dialog “cancel” button',
+  editTitle: 'Dialog title when editing',
+  signLabel: '“Sign” button',
+  tooltip: 'Help tooltip',
+  hint: 'Hint inside the box',
 };
 const SETTINGS_TEXT: [string, string, boolean?][] = [
   ['submitButtonText', 'Submit button'],
@@ -426,13 +434,14 @@ export function collectTranslatables(doc: FormDocument): Translatable[] {
     if (field.type === 'columns') return;
     const group = fieldName(field);
     const id = field.id;
-    const titleLike = ['heading', 'section', 'callout', 'pageBreak', 'button'].includes(field.type);
-    add(`field.${id}.label`, field.label, group, field.type === 'heading' || field.type === 'section' || field.type === 'callout' ? 'Title' : field.type === 'pageBreak' ? 'Step title' : field.type === 'button' ? 'Button text' : 'Question');
+    const titleLike = ['heading', 'section', 'callout', 'pageBreak', 'button', 'modal'].includes(field.type);
+    add(`field.${id}.label`, field.label, group, field.type === 'heading' || field.type === 'section' || field.type === 'callout' || field.type === 'modal' ? 'Title' : field.type === 'pageBreak' ? 'Step title' : field.type === 'button' ? 'Button text' : 'Question');
     add(`field.${id}.checkboxLabel`, field.checkboxLabel, group, 'Checkbox text');
     add(`field.${id}.helpText`, field.helpText, group, titleLike && field.type !== 'button' ? 'Subtitle' : 'Help text', true);
     add(`field.${id}.placeholder`, field.placeholder, group, 'Placeholder');
     add(`field.${id}.content`, field.content, group, 'Text', true);
     CONFIG_TEXT.forEach(k => add(`field.${id}.config.${k}`, field.config && field.config[k], group, CONFIG_LABELS[k]));
+    (field.tabs || []).forEach(tab => add(`field.${id}.tab.${tab.id}`, tab.label, group, `Tab “${tab.label}”`));
     (field.options || []).forEach((option: any) => {
       add(`field.${id}.option.${String(option.value)}`, option.label, group, `Option “${option.label}”`);
       add(`field.${id}.optionDesc.${String(option.value)}`, option.description, group, `Description of “${option.label}”`, true);
@@ -466,7 +475,8 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
     }
     const id = field.id;
     const next: FormField = { ...field };
-    if (field.type === 'section' || field.type === 'repeater') next.fields = (field.fields || []).map(localizeField);
+    if (field.type === 'section' || field.type === 'repeater' || field.type === 'modal') next.fields = (field.fields || []).map(localizeField);
+    if (field.type === 'tabs') next.tabs = (field.tabs || []).map(tab => ({ ...tab, label: tr(`field.${id}.tab.${tab.id}`, tab.label), fields: (tab.fields || []).map(localizeField) }));
     (['label', 'checkboxLabel', 'helpText', 'placeholder', 'content'] as const).forEach(prop => {
       if (typeof field[prop] === 'string') next[prop] = tr(`field.${id}.${prop}`, field[prop]);
     });

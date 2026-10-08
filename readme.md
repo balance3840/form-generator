@@ -73,12 +73,12 @@ Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g
 | --- | --- |
 | `input` | `inputType`: `text email number tel url password date time datetime-local month week color checkbox` (`checkbox` uses `checkboxLabel`) |
 | `textarea` | |
-| `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer). `config.optionStyle: "cards"` shows each choice as a card with a title and an optional option `description`; on a radio group `config.autoAdvance` goes to the next step as soon as an answer is picked |
+| `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer). `config.optionStyle: "cards"` shows each choice as a card with a title and an optional option `description`, `"chips"` as small pills you switch on and off (a checkbox group as chips is a multi-pick); `config.optionsFrom: { field, labelKey }` takes the choices from the items of a repeating group (e.g. the units of this room); on a radio group `config.autoAdvance` goes to the next step as soon as an answer is picked |
 | `toggle` | on/off switch (`validationType: "boolean"`) |
 | `address` | address search with short labels ("Street 5, 2200 City"). `config.provider`: `osm` (OpenStreetMap, worldwide, free, no key, light use), `google` (Places API New), `mapbox`, `geoapify`, `dk` (Danish official register, Dataforsyningen) or `custom` (your own `source`, as in `search`). Keyed providers take `config.apiKey` (it is visible in the page: restrict it to your domain). `config.countries` (ISO codes, e.g. `["dk"]`) and `config.city` narrow the search, `config.multiple` allows several picks (use `validationType: "array"`), `config.answer` is what is saved: `text` (default), `id` or `both` (`{ id, label }`). Floors and doors are only available from providers that have them (e.g. `dk`) |
 | `search` | live search against your own endpoint, with removable chips when `config.multiple`. `config.source`: `{ url: "https://…?q={q}", resultsPath, labelKey, labelTemplate, valueKey, minChars, debounce, headers }`. The answer is the `valueKey` of the pick (a list when `multiple`, so use `validationType: "array"`). The endpoint must return JSON and allow requests from your site (CORS). **Step by step search** (street → number → floor/door): add `source.drill: { typeKey: "type", expandTypes: ["vejnavn", "adgangsadresse"] }`. Results of those types open the next level when picked (the box is filled with their text and searched again; a result that equals the box text is the answer), other types are final. `source.extraKey` shows a small note next to a result, `source.labelTemplate` builds a short label from several fields |
 | `countrySelect` | `showDialCode`, `modelValueKey` (`code` by default, or `name` / `dialCode`), `defaultValue` |
-| `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos) |
+| `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos), `config.fileStyle: "block"` makes that button a full-width dashed bar |
 | `rating` | `config: { max }` |
 | `scale` | `config: { min, max, minLabel, maxLabel }` |
 | `slider` | `config: { min, max, step, unit }` |
@@ -87,9 +87,11 @@ Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g
 | `pageBreak` | splits the form into steps. Its `label` is the title of the step that starts after it, `helpText` its description (the first step's are `settings.firstStepTitle` / `firstStepDescription`). It can have `logic` to skip the whole step |
 | `section` | a titled card around other fields (`fields`). `config`: `style` (`card` or `plain`), `collapsible`, `startCollapsed`. See [App-like flows](#app-like-flows) |
 | `repeater` | a group people can add several of (tenants, rooms, meters…). The answer is a list of objects. See [App-like flows](#app-like-flows) |
+| `tabs` | switch between groups of fields: `tabs: [{ id, label, fields }]`, `config.style` (`line` or `pills`). The tab with an error opens by itself |
+| `modal` | a dialog (pop-up form) that a button opens with the `openModal` action: `label` (title), `fields`, `config.confirmLabel` / `cancelLabel` / `confirmActions`. See [Dialogs](#dialogs) |
 | `button` | a button that runs `config.actions`, see [Buttons and actions](#buttons-and-actions) |
 | `callout` | a message box: `label` (title), `content`, `config.tone` (`info success warning danger`). Combine with `logic` to show it only when it applies |
-| `signature` | a box to sign in (finger, pen, mouse). The answer is a PNG data URL. `config.height`, `config.hint` |
+| `signature` | a box to sign in (finger, pen, mouse). The answer is a PNG data URL. `config.height`, `config.hint`. `config.mode: "dialog"` shows a grey box with a button (`signLabel`) that opens the signing pad in a dialog and then shows the signature |
 
 ### Layout: rows and columns
 
@@ -152,7 +154,9 @@ Everything below is plain JSON, so a form can behave like a small application.
 
 **Steps.** A `pageBreak` starts a new step. `settings.stepsLayout: "sidebar"` shows a list of the steps next to the form (a strip on small screens), with a tick on the steps that are filled in; the default is a progress bar. `settings.stepNavigation`: `visited` (default: steps already visited), `free` (any step) or `locked` (only back). `settings.nextButtonText` can use `{next}` (title of the next step): `"{next} →"`. `settings.saveDraft: true` keeps the answers in this browser (`draftKey` names the slot; files are not kept) and shows a "Save and exit" button (`exitText`, `exitUrl`); the draft is removed after a successful submit.
 
-**Sections.** `{ "type": "section", "label": "Dates", "fields": [ … ] }` groups fields in a card. Rows can sit inside sections.
+**Sections.** `{ "type": "section", "label": "Dates", "fields": [ … ] }` groups fields in a card. Rows can sit inside sections. `config.badge` puts a round number ("1") next to the title, `config.tooltip` adds a "?" icon with a help text, and a section with a `disable` rule is greyed out and unusable (a numbered checklist that unlocks step by step). A section without fields is just a card with a title.
+
+**Tabs.** `{ "type": "tabs", "tabs": [ { "id": "a", "label": "Units", "fields": [ … ] }, … ] }`. Answers of all tabs are part of the same form; rules can use fields of other tabs.
 
 **Repeating groups.** The answer is a list of objects, one per item:
 
@@ -173,6 +177,29 @@ Everything below is plain JSON, so a form can behave like a small application.
 - **`layout: "table"`**: the first child must be a `columns` row; its columns become the table columns (the headers are their labels). Anything after that row appears under the row, only while it has something to show (e.g. defect details of a unit that is "Damaged").
 - **`presets`**: `[{ "label": "Kitchen", "description": "…", "values": { "name": "Kitchen", "units": [ { "unit": "Stove" } ] } }]`. The add button then opens these choices and the new item starts with the `values` (nested lists included).
 
+**Small cards, dialogs and pages for items.** Besides `cards` (the fields inline) and `table`, a repeater can show its items as small cards (`layout: "grid"`, `columns`, or any layout with `itemOpen` other than `inline`). A card has a title (`itemLabel`), a summary line (`itemMeta`; `{count:defects|No defects|1 defect|# defects}` picks a text by the number of items in a nested group, `{key}` of an array lists its entries), an optional **Done** button (`doneField`: a yes/no answer of the item) and a ⋮ menu. Config:
+
+| | |
+| --- | --- |
+| `itemOpen` | `inline` (default for cards), `modal` (clicking a card edits it in a dialog) or `page` (the item replaces the list, with a Back link, `backLabel`; its fields can use tabs and buttons) |
+| `addMode` | `inline` (a blank item is added) or `modal` (a dialog with the item's fields asks first: `addTitle`, `editTitle`, `confirmLabel`, `cancelLabel`) |
+| `itemMenu` | the ⋮ menu: any of `edit duplicate up down remove` (default for small cards: all) |
+| `sortable` | drag small cards to reorder them (default on) |
+
+Fields of an item can be `config.dialogOnly` (only in the item's dialog, e.g. the type of a meter) or `config.hideInDialog` (left out of it, e.g. a "+" button in a table row).
+
+### Dialogs
+
+A `modal` block is a form in a pop-up. It is placed anywhere (typically inside the item or step whose answers it needs) and opened by a button with `{ "type": "openModal", "modal": "<block id>", "values": { … } }`. What people type stays in the dialog (it is not part of the answers) until they confirm; then the block's `config.confirmActions` run, and they can use it as `{draft:key}`:
+
+```json
+{ "type": "modal", "id": "stateDialog", "label": "Set the condition of everything",
+  "fields": [ { "type": "radioGroup", "id": "s", "model": "state", "label": "Condition", "options": [ … ], "validations": [{ "name": "required" }] } ],
+  "config": { "confirmLabel": "Set condition", "confirmActions": [ { "type": "setAll", "field": "units", "key": "condition", "value": "{draft:state}" } ] } }
+```
+
+Fields inside a dialog are validated when it is confirmed. Names used by buttons, actions and `optionsFrom` are looked up from the item the block sits in outward, so "units" inside a room means that room's units.
+
 **Buttons and actions.** `{ "type": "button", "label": "Review report", "config": { "variant": "outline", "actions": [ { "type": "emit", "name": "review" } ] } }`. `variant`: `primary secondary outline ghost danger`; `size: "large"`; `align`: `start center end stretch`; `icon`: `arrow-right arrow-left plus check download`. Give a button `logic` to show it or to `disable` it while something is missing. Actions run in order and stop at the first one that cannot continue:
 
 | Action | |
@@ -180,11 +207,19 @@ Everything below is plain JSON, so a form can behave like a small application.
 | `next` / `back` | move between steps (`next` checks the current step first) |
 | `goto` | `{ "type": "goto", "step": "<page break id>" or "start", "validate": true }` |
 | `set` | `{ "type": "set", "field": "model", "value": "x" }` (inside an item: a field of the same item first) |
-| `add` | `{ "type": "add", "field": "tenants", "values": { … } }` adds an item |
+| `add` | `{ "type": "add", "field": "tenants", "values": { … } }` adds an item (through its dialog when the group has `addMode: "modal"`). In `values`, `{key}` is an answer of the item the button is in: a "+" in a unit row can open the defect dialog with `{ "units": ["{unit}"] }` |
+| `setAll` | `{ "type": "setAll", "field": "units", "key": "condition", "value": "Good" }` sets one answer on every item of a group |
+| `openModal` | `{ "type": "openModal", "modal": "<block id>", "values": { … } }` opens a [dialog](#dialogs) |
 | `submit` / `reset` | send / start over. A page with its own `submit` button hides the built-in submit button |
 | `link` | `{ "type": "link", "url": "https://…", "newTab": true }` (http, https, mailto, tel or relative) |
 | `emit` | fires the `formAction` event `{ name, field, values }` so your own code can react |
 | `saveDraft` / `exit` | save progress / save and fire `exit` (then open `settings.exitUrl`) |
+
+### Room-list style flows (type picker, global vs. per-item tools)
+
+- **Add dialog with a type picker**: `presets` on a repeater with `addMode: 'modal'` shows the presets first; `uniqueKey` keeps names unique ("Kitchen 2"), `dialogContent: 'marked'` limits the dialog to fields marked `dialogOnly`.
+- **Global vs. per-item actions**: the same button works at two levels. `setAll` takes a nested path (`field: 'rooms.units'`) to change every item of every row; inside an item the plain path only touches that item. A step-level list (e.g. `allDefects`) can use `optionsFrom: { field: 'rooms.units', labelKey, groupKey }` with `searchable` to pick items from all rows, grouped.
+- **Item pages**: an open item shows everything inside it, tabs and sections included; the rest of the step steps aside. `closeItem` returns to the list (e.g. a "Mark as done" button: `set done` then `closeItem`).
 
 ### Theme
 

@@ -27,6 +27,10 @@ export namespace Components {
     }
     interface ReFileInputField {
         /**
+          * With `compact`: the button spans the whole width (a dashed "add photo" bar).
+         */
+        "block": boolean;
+        /**
           * A small "add" button instead of the big drop area (use with `preview` for photos).
          */
         "compact": boolean;
@@ -331,6 +335,10 @@ declare namespace LocalJSX {
         "zIndex"?: string;
     }
     interface ReFileInputField {
+        /**
+          * With `compact`: the button spans the whole width (a dashed "add photo" bar).
+         */
+        "block"?: boolean;
         /**
           * A small "add" button instead of the big drop area (use with `preview` for photos).
          */

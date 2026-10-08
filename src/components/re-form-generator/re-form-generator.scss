@@ -889,6 +889,9 @@ re-form-generator {
     .rfg-section-head {
       padding: 16px 20px;
       border-bottom: 1px solid var(--rfg-border);
+      &:last-child {
+        border-bottom: 0;
+      }
     }
     .rfg-section-body {
       padding: 20px;
@@ -1364,6 +1367,527 @@ re-form-generator {
     color: var(--rfg-muted);
   }
 
+  /* ------------------------------------------------ numbered cards, help icon */
+  .rfg-section-head {
+    gap: 14px;
+    justify-content: flex-start;
+    .rfg-chevron {
+      margin-left: auto;
+    }
+  }
+  .rfg-section-titles {
+    flex: 1;
+    min-width: 0;
+  }
+  .rfg-badge {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--rfg-tint);
+    border: 1px solid var(--rfg-border);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .rfg-tip {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: 2px;
+    cursor: help;
+    outline: none;
+
+    &::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
+      z-index: 30;
+      width: max-content;
+      max-width: 280px;
+      padding: 8px 12px;
+      border-radius: calc(var(--rfg-radius) * 0.8);
+      background: #111827;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+      text-align: left;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s;
+    }
+    &:hover::after,
+    &:focus::after {
+      opacity: 1;
+    }
+  }
+  // a block that is switched off by a rule (the next numbered card until this one is done)
+  .rfg-section.is-locked {
+    opacity: 0.5;
+    filter: grayscale(0.3);
+    user-select: none;
+  }
+
+  /* --------------------------------------------------------------- tabs */
+  .rfg-tablist {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--rfg-gap);
+    border-bottom: 1px solid var(--rfg-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .rfg-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    margin-bottom: -1px;
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--rfg-muted);
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover {
+      color: var(--rfg-text);
+    }
+    &.is-active {
+      color: var(--rfg-text);
+      border-bottom-color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-tabs-pills .rfg-tablist {
+    gap: 8px;
+    border-bottom: 0;
+    .rfg-tab {
+      padding: 8px 16px;
+      margin: 0;
+      border: 1px solid var(--rfg-border-strong);
+      border-radius: 999px;
+      &.is-active {
+        color: var(--rfg-primary-contrast);
+        background: var(--rfg-primary);
+        border-color: var(--rfg-primary);
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------- dialogs */
+  .rfg-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8vh 16px 16px;
+    overflow-y: auto;
+    background: rgba(17, 24, 39, 0.5);
+    animation: rfg-fade 0.15s ease;
+  }
+  .rfg-modal {
+    width: 100%;
+    max-width: 640px;
+    background: var(--rfg-bg);
+    color: var(--rfg-text);
+    border-radius: calc(var(--rfg-radius) * 1.6);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    animation: rfg-pop 0.18s ease;
+  }
+  .rfg-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg-modal-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .rfg-modal-body {
+    padding: 24px 28px;
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+  .rfg-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 28px;
+    border-top: 1px solid var(--rfg-border);
+  }
+  @keyframes rfg-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rfg-pop {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+  }
+
+  /* ------------------------------------------- small cards, grid, item page */
+  .rfg-items-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-cols, 2), minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+  .rfg-grid-add {
+    display: flex;
+    .rfg-add {
+      flex: 1;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .rfg-add-btn {
+      flex: 1;
+      min-height: 120px;
+    }
+    .rfg-presets {
+      grid-column: auto;
+    }
+  }
+  .rfg-ccard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 16px 16px 16px;
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-border-strong);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    &.has-errors {
+      border-color: var(--rfg-error);
+    }
+    &.is-drop {
+      border-color: var(--rfg-primary);
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-ccard-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .rfg-grip {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    color: var(--rfg-muted);
+    cursor: grab;
+  }
+  .rfg-ccard-title {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--rfg-text);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &:hover {
+      color: var(--rfg-primary);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+      border-radius: 4px;
+    }
+  }
+  .rfg-ccard-meta {
+    padding: 0 0 6px 28px;
+    text-align: left;
+    font: inherit;
+    color: var(--rfg-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .rfg-done-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    background: var(--rfg-bg);
+    border: 1.5px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    &.is-done {
+      color: #fff;
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+
+  // ⋮ menu
+  .rfg-menu-wrap {
+    position: relative;
+    flex: none;
+  }
+  .rfg-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 40;
+    min-width: 170px;
+    padding: 6px;
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: var(--rfg-radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  }
+  .rfg-menu-item {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    text-align: left;
+    font: inherit;
+    font-size: 14px;
+    color: var(--rfg-text);
+    background: none;
+    border: 0;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    cursor: pointer;
+    &:hover {
+      background: var(--rfg-tint);
+    }
+    &.is-danger {
+      color: var(--rfg-error);
+    }
+  }
+
+  // an item opened as its own page
+  .rfg-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    margin-bottom: 8px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+  .rfg-detail-title {
+    margin: 0 0 var(--rfg-gap);
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  &.rfg-has-detail {
+    // (the blocks around an item that is open as a page are not rendered at all, see renderBlocks)
+    .rfg-actions,
+    .rfg-form-error {
+      display: none;
+    }
+  }
+
+  /* ----------------------------------------------------- field variants */
+  .rfg-plain {
+    padding: 8px 2px;
+    font-weight: 500;
+    min-height: var(--rfg-input-height);
+    display: flex;
+    align-items: center;
+  }
+  // a select that looks like a button (the condition of a unit)
+  .rfg-select-pill {
+    &::after {
+      display: none;
+    }
+    .rfg-select {
+      min-height: 40px;
+      padding: 0 14px;
+      text-align: center;
+      text-align-last: center;
+      font-weight: 600;
+      color: var(--rfg-primary);
+      border-radius: var(--rfg-radius);
+      background: var(--rfg-bg);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  }
+  .rfg-options-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .rfg-option-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+    &.is-checked {
+      color: var(--rfg-primary);
+      font-weight: 600;
+      border-width: 2px;
+      padding: 5px 13px;
+    }
+    &.is-checked::after {
+      content: '×';
+      margin-left: 4px;
+      font-size: 16px;
+      line-height: 1;
+    }
+  }
+  .rfg-sign-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 140px;
+    padding: 16px;
+    background: var(--rfg-tint);
+    border: 1px solid var(--rfg-border);
+    border-radius: var(--rfg-radius);
+  }
+  .rfg-sign-img {
+    max-width: 100%;
+    max-height: 120px;
+    background: var(--rfg-bg);
+    border-radius: calc(var(--rfg-radius) * 0.7);
+  }
+  .rfg-sign-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .rfg-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .rfg-btn-sm {
+    min-height: 38px;
+    padding: 0 18px;
+  }
+  // finished steps are green ticks
+  .is-done .rfg-step-dot {
+    border-color: #16a34a;
+    background: #16a34a;
+  }
+
+  /* --------------------------------------------- grouped / searchable choices */
+  .rfg-choice-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .rfg-choice-count {
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  .rfg-options-grouped {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .rfg-option-group-title {
+    margin-bottom: 6px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .rfg-options-list {
+    display: grid;
+    grid-template-columns: repeat(var(--rfg-opt-cols, 1), minmax(0, 1fr));
+    gap: 2px 16px;
+  }
+  // plain checkboxes: just a box and a label, no frames
+  .rfg-options-plain,
+  .rfg-options-list {
+    .rfg-option {
+      padding: 5px 2px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      &:hover {
+        background: var(--rfg-tint);
+      }
+    }
+  }
+  .rfg-options-plain .rfg-option.is-checked {
+    background: none;
+  }
+
   /* ------------------------------------------------------------ success */
   .rfg-success {
     text-align: center;
@@ -1405,6 +1929,15 @@ re-form-generator {
   }
   .rfg .rfg-options {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-items-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-modal-head,
+  .rfg .rfg-modal-body,
+  .rfg .rfg-modal-foot {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 }
 

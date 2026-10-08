@@ -9,6 +9,7 @@
 
 | Property          | Attribute          | Description                                                                        | Type      | Default     |
 | ----------------- | ------------------ | ---------------------------------------------------------------------------------- | --------- | ----------- |
+| `block`           | `block`            | With `compact`: the button spans the whole width (a dashed "add photo" bar).       | `boolean` | `false`     |
 | `compact`         | `compact`          | A small "add" button instead of the big drop area (use with `preview` for photos). | `boolean` | `false`     |
 | `inputAttributes` | `input-attributes` |                                                                                    | `any`     | `undefined` |
 | `inputProps`      | `input-props`      |                                                                                    | `any`     | `undefined` |

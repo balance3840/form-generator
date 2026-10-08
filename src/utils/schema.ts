@@ -34,8 +34,10 @@ export type FormField = {
   layout?: { cols?: number; row?: string; group?: string; groupTitle?: string };
   /** For `type: "columns"`: a row of columns, each column a vertical stack of fields. */
   columns?: FormColumn[];
-  /** For `type: "section"` (a titled card of fields) and `type: "repeater"` (the fields every item has). */
+  /** For `type: "section"` (a titled card of fields), `"repeater"` (the fields every item has) and `"modal"` (the fields of a dialog). */
   fields?: FormField[];
+  /** For `type: "tabs"`: the tabs, each with its own fields. */
+  tabs?: FormTab[];
   /** One rule, or several: show / hide / enable / disable / require this field depending on other answers. */
   logic?: FieldLogic | FieldLogic[];
   config?: { [key: string]: any };
@@ -46,6 +48,7 @@ export type FormField = {
 };
 
 export type FormColumn = { id: string; span: number; fields: FormField[] };
+export type FormTab = { id: string; label: string; fields: FormField[] };
 
 export type FieldLogic = {
   action: 'show' | 'hide' | 'enable' | 'disable' | 'require';
@@ -68,12 +71,12 @@ export type FormDocument = {
 };
 
 /** Field types that only display content (or act) and never hold a value. */
-export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'callout', 'button'];
+export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'tabs', 'modal', 'callout', 'button'];
 
 export const isLayoutType = (type: string) => LAYOUT_TYPES.includes(type);
 
 /** Blocks that contain other fields. */
-export const GROUP_TYPES = ['columns', 'section', 'repeater'];
+export const GROUP_TYPES = ['columns', 'section', 'tabs', 'repeater', 'modal'];
 export const isGroup = (field: { type: string }) => GROUP_TYPES.includes(field.type);
 
 /**
@@ -82,14 +85,16 @@ export const isGroup = (field: { type: string }) => GROUP_TYPES.includes(field.t
  */
 export function childLists(field: FormField): { id: string; fields: FormField[] }[] {
   if (field.type === 'columns') return (field.columns || []).map(c => ({ id: c.id, fields: c.fields || [] }));
-  if (field.type === 'section' || field.type === 'repeater') return [{ id: field.id, fields: field.fields || [] }];
+  if (field.type === 'tabs') return (field.tabs || []).map(t => ({ id: t.id, fields: t.fields || [] }));
+  if (field.type === 'section' || field.type === 'repeater' || field.type === 'modal') return [{ id: field.id, fields: field.fields || [] }];
   return [];
 }
 
 /** Returns `field` with the list `listId` replaced. */
 export function withChildList(field: FormField, listId: string, fields: FormField[]): FormField {
   if (field.type === 'columns') return { ...field, columns: (field.columns || []).map(c => (c.id === listId ? { ...c, fields } : c)) };
-  if ((field.type === 'section' || field.type === 'repeater') && field.id === listId) return { ...field, fields };
+  if (field.type === 'tabs') return { ...field, tabs: (field.tabs || []).map(t => (t.id === listId ? { ...t, fields } : t)) };
+  if ((field.type === 'section' || field.type === 'repeater' || field.type === 'modal') && field.id === listId) return { ...field, fields };
   return field;
 }
 
@@ -224,16 +229,17 @@ export const isContainer = (field: { type: string }) => field.type === 'columns'
 
 /**
  * Depth first list of every field. Rows and sections are included before their children unless `leaves` is set.
- * A repeater holds a value (a list of items) so it counts as a leaf; its item fields are only listed with `deep`.
+ * A repeater holds a value (a list of items) and a dialog keeps its answers apart, so both count as leaves; the fields inside
+ * them are only listed with `deep`.
  */
 export function flattenFields(fields: FormField[], leaves = false, deep = false): FormField[] {
   const out: FormField[] = [];
   const walk = (list: FormField[]) =>
     list.forEach(field => {
-      if (field.type === 'columns' || field.type === 'section') {
+      if (field.type === 'columns' || field.type === 'section' || field.type === 'tabs') {
         if (!leaves) out.push(field);
         childLists(field).forEach(l => walk(l.fields));
-      } else if (field.type === 'repeater') {
+      } else if (field.type === 'repeater' || field.type === 'modal') {
         out.push(field);
         if (deep) walk(field.fields || []);
       } else {
@@ -303,7 +309,8 @@ export function instantiate(fields: FormField[], modelPrefix: string, suffix: st
     }
     if (f.type === 'columns') next.columns = (f.columns || []).map(c => ({ ...c, id: `${c.id}${suffix}`, fields: instantiate(c.fields || [], modelPrefix, suffix) }));
     else if (f.type === 'section') next.fields = instantiate(f.fields || [], modelPrefix, suffix);
-    // a repeater inside an item keeps its template: its own items are expanded from its path later
+    else if (f.type === 'tabs') next.tabs = (f.tabs || []).map(t => ({ ...t, id: `${t.id}${suffix}`, fields: instantiate(t.fields || [], modelPrefix, suffix) }));
+    // a repeater (or dialog) inside an item keeps its template: its items are expanded from its path later
     return next;
   });
 }
@@ -418,7 +425,9 @@ function ensureIds(fields: FormField[]): FormField[] {
     if (!next.id) next.id = uid();
     if (isContainer(next)) {
       next.columns = (next.columns || []).map(column => ({ ...column, id: column.id || uid('col'), span: column.span || 6, fields: ensureIds(column.fields || []) }));
-    } else if (next.type === 'section') {
+    } else if (next.type === 'tabs') {
+      next.tabs = (next.tabs || []).map(t => ({ ...t, id: t.id || uid('tab'), label: t.label || '', fields: ensureIds(t.fields || []) }));
+    } else if (next.type === 'section' || next.type === 'modal') {
       next.fields = ensureIds(next.fields || []);
     } else if (next.type === 'repeater') {
       next.fields = ensureIds(next.fields || []);
@@ -488,22 +497,20 @@ export function evaluateCondition(condition: LogicCondition, values: { [key: str
 export type FieldStates = { visible: { [id: string]: boolean }; disabled: { [id: string]: boolean }; required: { [id: string]: boolean } };
 
 /**
- * Evaluates every field's logic for the given values: is it shown, disabled, required. Fields are evaluated in order
- * (rows and sections included) and a field hidden by logic counts as "empty" for the fields that depend on it. Hiding a
- * row or section hides everything in it, disabling one disables it all. Fields inside a repeater are evaluated once per
- * item (their ids are `<id>~<item>`), and their conditions can use the other fields of the same item.
+ * Evaluates the logic of `fields` (shown / disabled / required, by field id) into `states`. `scope` is what conditions can
+ * read (the form's answers, plus the item's own answers inside a repeater); `values` are the real answers, used to find the
+ * items of repeaters.
  */
-export function computeStates(fields: FormField[], values: { [key: string]: any }): FieldStates {
-  const states: FieldStates = { visible: {}, disabled: {}, required: {} };
-  const walk = (list: FormField[], parentVisible: boolean, parentDisabled: boolean, scope: { [key: string]: any }) =>
+export function evaluateStates(fields: FormField[], values: { [key: string]: any }, scope: { [key: string]: any }, states: FieldStates, parentVisible = true, parentDisabled = false) {
+  const walk = (list: FormField[], visibleSoFar: boolean, disabledSoFar: boolean, current: { [key: string]: any }) =>
     list.forEach(field => {
-      let visible = parentVisible && field.visible !== false;
-      let disabled = parentDisabled;
+      let visible = visibleSoFar && field.visible !== false;
+      let disabled = disabledSoFar;
       let required = false;
       logicRules(field).forEach(rule => {
         const conditions = (rule.conditions || []).filter(c => c.field);
         if (!conditions.length) return;
-        const results = conditions.map(c => evaluateCondition(c, scope));
+        const results = conditions.map(c => evaluateCondition(c, current));
         const matched = rule.match === 'any' ? results.some(Boolean) : results.every(Boolean);
         if (rule.action === 'hide') {
           if (matched) visible = false;
@@ -520,20 +527,62 @@ export function computeStates(fields: FormField[], values: { [key: string]: any 
       states.visible[field.id] = visible;
       states.disabled[field.id] = disabled || field.disabled === true;
       states.required[field.id] = required;
-      if (!visible && field.model) delete scope[(field._key as string) || field.model];
-      if (field.type === 'columns') (field.columns || []).forEach(column => walk(column.fields || [], visible, disabled, scope));
-      else if (field.type === 'section') walk(field.fields || [], visible, disabled, scope);
+      if (!visible && field.model) delete current[(field._key as string) || field.model];
+      if (field.type === 'columns') (field.columns || []).forEach(column => walk(column.fields || [], visible, disabled, current));
+      else if (field.type === 'section') walk(field.fields || [], visible, disabled, current);
+      else if (field.type === 'tabs') (field.tabs || []).forEach(tab => walk(tab.fields || [], visible, disabled, current));
       else if (field.type === 'repeater') {
-        itemInstances(field, values).forEach(item => walk(item.fields, visible, disabled, { ...scope, ...(getByPath(values, item.model) || {}) }));
+        itemInstances(field, values).forEach(item => walk(item.fields, visible, disabled, { ...current, ...(getByPath(values, item.model) || {}) }));
       }
     });
-  walk(fields, true, false, { ...values });
+  walk(fields, parentVisible, parentDisabled, scope);
+}
+
+/**
+ * Evaluates every field's logic for the given values: is it shown, disabled, required. Fields are evaluated in order
+ * (rows, sections and tabs included) and a field hidden by logic counts as "empty" for the fields that depend on it. Hiding a
+ * block hides everything in it, disabling one disables it all. Fields inside a repeater are evaluated once per item (their
+ * ids are `<id>~<item>`), and their conditions can use the other fields of the same item. The fields of a dialog are not
+ * part of the form: see `DRAFT`.
+ */
+export function computeStates(fields: FormField[], values: { [key: string]: any }): FieldStates {
+  const states: FieldStates = { visible: {}, disabled: {}, required: {} };
+  evaluateStates(fields, values, { ...values }, states);
   return states;
 }
 
 /** Which fields are visible for the given values (see `computeStates`). */
 export function computeVisibility(fields: FormField[], values: { [key: string]: any }): { [id: string]: boolean } {
   return computeStates(fields, values).visible;
+}
+
+/* --------------------------------------------------------------- dialog answers */
+
+/**
+ * The answers typed in a dialog (an "add item" form, a block of type `modal`) are kept apart from the form's answers under
+ * keys that start with `__draft.` until the dialog is confirmed. The fields of the dialog are instantiated with this prefix.
+ */
+export const DRAFT = '__draft';
+export const DRAFT_SUFFIX = '~draft';
+export const draftFields = (fields: FormField[]) => instantiate(fields, DRAFT, DRAFT_SUFFIX);
+
+/** The dialog's answers as a plain object (`{ type: "x" }`). */
+export function draftObject(values: { [key: string]: any }): { [key: string]: any } {
+  const out: { [key: string]: any } = {};
+  Object.keys(values).forEach(key => {
+    if (key.startsWith(`${DRAFT}.`)) out[key.slice(DRAFT.length + 1)] = values[key];
+  });
+  return out;
+}
+
+/** `values` with the dialog's answers replaced by `draft` (pass `{}` to clear them). */
+export function withDraft(values: { [key: string]: any }, draft: { [key: string]: any }): { [key: string]: any } {
+  const out: { [key: string]: any } = {};
+  Object.keys(values).forEach(key => {
+    if (!key.startsWith(`${DRAFT}.`)) out[key] = values[key];
+  });
+  Object.keys(draft).forEach(key => (out[`${DRAFT}.${key}`] = draft[key]));
+  return out;
 }
 
 /** Minimal HTML sanitizer so labels can keep simple formatting (<b>, <a>, ...) safely. */

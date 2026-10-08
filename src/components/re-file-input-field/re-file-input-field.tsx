@@ -19,6 +19,8 @@ export class ReFileInputField {
   @Prop() preview: boolean = false;
   /** A small "add" button instead of the big drop area (use with `preview` for photos). */
   @Prop() compact: boolean = false;
+  /** With `compact`: the button spans the whole width (a dashed "add photo" bar). */
+  @Prop() block: boolean = false;
   @Event() selectedFileChanged: EventEmitter<any>;
 
   private thumbs = new Map<File, string>();
@@ -124,7 +126,7 @@ export class ReFileInputField {
     this.isHovered ? dropzoneClass += 'hover' : '';
     if (this.compact) {
       return (
-        <div class="file-compact">
+        <div class={`file-compact ${this.block ? 'is-block' : ''}`}>
           {this.preview && this.renderThumbs()}
           <button type="button" class="file-compact-btn" onClick={() => this.fileInputField.click()}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">

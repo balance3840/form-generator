@@ -191,3 +191,12 @@ re-file-input-field .file-compact input[type='file'] {
 re-file-input-field .file-compact .file-thumbs {
   margin: 0 0 10px;
 }
+
+re-file-input-field .file-compact.is-block {
+  align-items: stretch;
+  .file-compact-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 56px;
+  }
+}

@@ -658,7 +658,7 @@ export class ReFormGenerator {
     this.activeTabs = tabs;
     // an item that opens as a page: open the first one with an error
     const first = keys.map(k => k.match(/^([^[]+)\[(\d+)\]/)).find(Boolean);
-    const repeater = first && this.fieldByModel(first[1]);
+    const repeater = first && this.registry[first[1]];
     if (first && repeater && this.isCompact(repeater) && this.openMode(repeater) === 'page') this.openItems = { ...this.openItems, [first[1]]: Number(first[2]) };
   }
 
@@ -1687,7 +1687,7 @@ export class ReFormGenerator {
   private resolveModel(key: string, source?: FormField): string {
     for (const p of this.prefixChain(this.scopePrefix(source))) {
       const model = p ? `${p}.${key}` : key;
-      if (this.fieldByModel(model) || getByPath(this.values, model) !== undefined) return model;
+      if (this.registry[model] || getByPath(this.values, model) !== undefined) return model;
     }
     return key;
   }
@@ -1774,7 +1774,7 @@ export class ReFormGenerator {
           requestAnimationFrame(() => this.el.scrollIntoView && this.el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
           break;
         case 'add': {
-          const repeater = this.fieldByModel(this.resolveModel(action.field, source));
+          const repeater = this.registry[this.resolveModel(action.field, source)];
           if (repeater) this.startAdd(repeater, this.fillValue(action.values || {}, ctx));
           break;
         }
@@ -1983,7 +1983,7 @@ export class ReFormGenerator {
       const current = this.answerOf(modal.repeater);
       const list = Array.isArray(current) ? current : [];
       this.forgetItemState(modal.repeater);
-      const repeater = this.fieldByModel(modal.repeater);
+      const repeater = this.registry[modal.repeater];
       const uniqueKey = repeater && repeater.config && repeater.config.uniqueKey;
       if (uniqueKey && draft[uniqueKey]) draft[uniqueKey] = this.uniqueValue(repeater, draft[uniqueKey], modal.kind === 'edit' ? modal.index : -1);
       this.setValueByModel(modal.repeater, modal.kind === 'add' ? [...list, draft] : list.map((item: any, i: number) => (i === modal.index ? draft : item)));
@@ -1997,7 +1997,7 @@ export class ReFormGenerator {
   /** The type picker at the top of an add dialog: the group's presets, plus an entry for a custom one. */
   private renderPresetPicker(modal: ModalState) {
     if (!modal.presets || modal.kind !== 'add') return null;
-    const repeater = modal.repeater ? this.fieldByModel(modal.repeater) : undefined;
+    const repeater = modal.repeater ? this.registry[modal.repeater] : undefined;
     const config = (repeater && repeater.config) || {};
     const custom = config.presetCustom !== false;
     return (
@@ -2044,7 +2044,7 @@ export class ReFormGenerator {
     ) : (
       <div class="rfg-grid">
         {this.renderPresetPicker(modal)}
-        {this.renderBlocks(this.modalInstances(modal), false, true)}
+        {this.renderBlocks(this.modalInstances(modal))}
       </div>
     );
     return (
@@ -2177,7 +2177,7 @@ export class ReFormGenerator {
   /** Picking a type in an add dialog fills in that preset (a name, a checklist…). A name the person typed themselves is kept. */
   private applyPreset(choice: string) {
     const modal = this.modal;
-    const repeater = modal && modal.repeater ? this.fieldByModel(modal.repeater) : undefined;
+    const repeater = modal && modal.repeater ? this.registry[modal.repeater] : undefined;
     if (!modal || !repeater || !modal.presets) return;
     const config = repeater.config || {};
     const nameKey = config.presetNameKey || config.uniqueKey || 'name';

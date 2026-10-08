@@ -23,8 +23,22 @@ export class ReSignaturePad {
   private dirty = false;
   private last: { x: number; y: number } = null;
 
+  private observer: ResizeObserver = null;
+  private sizedWidth = 0;
+
   componentDidLoad() {
     this.setup();
+    // The box is often created while its step is hidden (width 0) and only gets its real size later,
+    // so it is sized again whenever its width changes.
+    if (typeof ResizeObserver !== 'undefined' && this.canvas) {
+      this.observer = new ResizeObserver(() => this.setup());
+      this.observer.observe(this.canvas);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.observer) this.observer.disconnect();
+    this.observer = null;
   }
 
   @Watch('value')
@@ -34,11 +48,15 @@ export class ReSignaturePad {
     else if (this.value && !this.dirty) this.paint(this.value);
   }
 
+  /** Sizes the drawing surface to the box on screen (and keeps what was already drawn). */
   private setup() {
     if (!this.canvas) return;
     const ratio = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    this.canvas.width = Math.max(1, Math.round(rect.width * ratio));
+    const width = Math.round(this.canvas.getBoundingClientRect().width);
+    if (width < 2 || width === this.sizedWidth) return; // hidden, or nothing changed
+    const keep = this.dirty && this.canvas.width > 1 ? this.canvas.toDataURL('image/png') : this.value;
+    this.sizedWidth = width;
+    this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.max(1, Math.round(this.height * ratio));
     const ctx = this.canvas.getContext('2d');
     ctx.scale(ratio, ratio);
@@ -46,7 +64,8 @@ export class ReSignaturePad {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = getComputedStyle(this.canvas).color || '#111';
-    if (this.value) this.paint(this.value);
+    this.dirty = false;
+    if (keep) this.paint(keep);
   }
 
   private paint(src: string) {
