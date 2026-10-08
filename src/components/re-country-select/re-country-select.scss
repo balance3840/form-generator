@@ -6,15 +6,22 @@ re-country-select {
     width: 100%;
     height: var(--rfg-input-height, 44px);
 
+    // above the fields after it while it is open (a field's own z-index comes in through the `zIndex` prop)
+    position: relative;
+    &.is-open {
+      z-index: 60 !important;
+    }
     .dropdown-container {
-      position: absolute;
+      position: relative;
       width: 100%;
-      max-height: 300px;
+      height: var(--rfg-input-height, 44px);
     }
 
     .selected-country-wrapper {
       position: absolute;
-      inset: 0;
+      top: 0;
+      inset-inline: 0 36px;
+      height: var(--rfg-input-height, 44px);
       display: flex;
       align-items: center;
       gap: 10px;
@@ -41,7 +48,8 @@ re-country-select {
     .country-search {
       width: 100%;
       height: var(--rfg-input-height, 44px);
-      padding: 0 12px 0 44px;
+      padding: 0;
+      padding-inline: 44px 36px;
       font: inherit;
       color: var(--rfg-text, #1f2937);
       background: var(--rfg-bg, #fff);
@@ -54,12 +62,34 @@ re-country-select {
         box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
       }
       &.no-indent {
-        padding-left: 12px;
+        padding-inline-start: 12px;
       }
     }
 
+    // the same arrow as the other dropdowns
+    .country-chevron {
+      position: absolute;
+      inset-inline-end: 16px;
+      top: calc(var(--rfg-input-height, 44px) / 2);
+      width: 7px;
+      height: 7px;
+      margin-top: -6px;
+      border-right: 2px solid var(--rfg-muted, #6b7280);
+      border-bottom: 2px solid var(--rfg-muted, #6b7280);
+      transform: rotate(45deg);
+      pointer-events: none;
+      transition: transform 0.15s;
+    }
+    &.is-open .country-chevron {
+      margin-top: -2px;
+      transform: rotate(-135deg);
+    }
+
+    // placed with inline fixed coordinates (see placePanel) so dialogs and scroll areas cannot clip it
     .country-select-dropdown-wrapper {
-      margin-top: 4px;
+      position: fixed;
+      z-index: 1;
+      margin-top: 0;
       padding: 4px;
       overflow-y: auto;
       max-height: 220px;
@@ -72,6 +102,11 @@ re-country-select {
         display: none;
       }
     }
+    .dropdown-empty {
+      padding: 12px 10px;
+      color: var(--rfg-muted, #6b7280);
+      font-size: 14px;
+    }
 
     .dropdown-item {
       display: flex;
@@ -81,15 +116,30 @@ re-country-select {
       font-weight: normal;
       border-radius: calc(var(--rfg-radius, 8px) * 0.6);
 
-      &:hover {
+      &:hover,
+      &.is-active {
         background: var(--rfg-tint, #f3f4f6);
+      }
+      &.is-selected {
+        background: var(--rfg-primary-soft, #eef2ff);
+        color: var(--rfg-primary, #4f46e5);
+        font-weight: 600;
+      }
+      .country-name {
+        flex: 1;
+        min-width: 0;
+      }
+      .country-dial {
+        margin-left: 8px;
+        color: var(--rfg-muted, #6b7280);
+        font-weight: normal;
       }
     }
 
     .flag {
       width: 20px;
       height: 15px;
-      margin-right: 10px;
+      margin-inline-end: 10px;
     }
   }
 }

@@ -107,6 +107,45 @@ re-form-generator {
     }
   }
 
+  // Hero cover: the logo, title and description sit on top of the image.
+  .rfg-brand-hero .rfg-cover {
+    display: flex;
+    align-items: flex-end;
+    padding: 24px 32px;
+    margin-bottom: calc(var(--rfg-gap) * 0.9);
+    color: #ffffff;
+
+    .rfg-hero-content {
+      width: 100%;
+    }
+    .rfg-logo {
+      margin-bottom: 14px;
+    }
+    .rfg-header {
+      margin: 0;
+      padding: 0;
+    }
+    .rfg-header h1,
+    .rfg-header p {
+      color: #ffffff;
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+    }
+  }
+  &.rfg-head-center {
+    .rfg-header,
+    .rfg-page-head {
+      text-align: center;
+    }
+    .rfg-brand-hero .rfg-hero-content {
+      text-align: center;
+    }
+  }
+  .rfg-header h1,
+  .rfg-page-title,
+  .rfg-heading {
+    font-family: var(--rfg-heading-font, var(--rfg-font));
+  }
+
   .rfg-step-title {
     text-transform: none;
     letter-spacing: 0;
@@ -267,6 +306,42 @@ re-form-generator {
       border-color: var(--rfg-primary);
     }
   }
+  // Filled: the frame of choice boxes, scale buttons and the upload area is replaced by the same soft tint.
+  &.rfg-input-filled {
+    .rfg-option:not(.rfg-option-card):not(.rfg-option-chip),
+    .rfg-scale-btn {
+      background: var(--rfg-tint);
+      border-color: transparent;
+      &:hover {
+        border-color: var(--rfg-primary);
+      }
+      &.is-checked,
+      &.is-active {
+        background: var(--rfg-primary-soft);
+        border-color: var(--rfg-primary);
+      }
+    }
+    .rfg-option-chip {
+      background: var(--rfg-tint);
+      border-color: transparent;
+      &.is-checked {
+        background: var(--rfg-primary-soft);
+        border-color: var(--rfg-primary);
+      }
+    }    // "plain" and grouped lists stay frameless in every look
+    .rfg-options-plain .rfg-option:not(.rfg-option-card):not(.rfg-option-chip),
+    .rfg-options-list .rfg-option:not(.rfg-option-card):not(.rfg-option-chip) {
+      background: none;
+      border-color: transparent;
+      &:hover {
+        background: var(--rfg-tint);
+      }
+      &.is-checked {
+        background: none;
+        border-color: transparent;
+      }
+    }
+  }
   // Underlined: a lighter, "borderless" look. Choice cards, scale buttons and uploads lose their boxes too.
   &.rfg-input-underlined {
     .rfg-control {
@@ -280,12 +355,14 @@ re-form-generator {
       }
     }
     .rfg-select {
-      padding-right: 28px;
+      padding-inline-end: 28px;
     }
     .rfg-select-wrap::after {
-      right: 4px;
+      right: auto;
+      inset-inline-end: 4px;
     }
-    .rfg-option {
+    // the underlined look removes the frame of plain "boxes"; cards and chips keep theirs
+    .rfg-option:not(.rfg-option-card):not(.rfg-option-chip) {
       border: 0;
       border-radius: 0;
       padding: 4px 0;
@@ -373,7 +450,7 @@ re-form-generator {
     &::after {
       content: '';
       position: absolute;
-      right: 16px;
+      inset-inline-end: 16px;
       top: 50%;
       width: 7px;
       height: 7px;
@@ -387,8 +464,14 @@ re-form-generator {
   .rfg-select {
     appearance: none;
     -webkit-appearance: none;
-    padding-right: 40px;
+    padding-inline-end: 40px;
     cursor: pointer;
+  }
+
+  // A field with an open list (country, multi-select, search) rises above its neighbours, whichever way the list opens.
+  // Fields are layered so earlier ones sit above later ones (lists open downwards); an upward list needs the opposite.
+  .rfg-field:has(.country-select-input-wrapper.is-open, .multi-select.is-open, .search-list) {
+    z-index: 500 !important;
   }
 
   /* --------------------------------------------- choices, checkbox, switch */
@@ -555,11 +638,49 @@ re-form-generator {
     align-items: center;
     gap: 14px;
   }
-  .rfg-range {
+  .rfg-range,
+  .rfg-range.rfg-control {
+    background: none;
+    border: 0;
+    padding: 0;
+    min-height: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
     flex: 1;
     accent-color: var(--rfg-primary);
     height: 6px;
     cursor: pointer;
+  }
+  // the track and thumb are drawn here so every theme (outlined, filled, underlined) shows the same slider
+  .rfg-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--rfg-text) 14%, transparent);
+  }
+  .rfg-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--rfg-text) 14%, transparent);
+  }
+  .rfg-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border: 3px solid var(--rfg-bg);
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  .rfg-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--rfg-bg);
+    border-radius: 50%;
+    background: var(--rfg-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   }
   .rfg-range-value {
     min-width: 48px;
@@ -942,27 +1063,74 @@ re-form-generator {
   }
 
   /* -------------------------------------------------------- option cards */
+  // Cards: big selectable tiles. The native control becomes a round / square tick in the corner,
+  // the title is larger and the whole tile lifts and glows when picked.
   .rfg-options-cards {
-    gap: 10px;
+    gap: 12px;
   }
   .rfg-option-card {
-    align-items: flex-start;
-    padding: 14px 16px;
+    position: relative;
+    align-items: center;
+    min-height: 68px;
+    padding: 16px;
+    padding-inline: 18px 52px;
+    border-width: 1.5px;
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
 
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    &.is-checked {
+      background: var(--rfg-primary-soft);
+      box-shadow: 0 0 0 1px var(--rfg-primary), 0 6px 18px color-mix(in srgb, var(--rfg-primary) 18%, transparent);
+    }
+    &:focus-within {
+      outline: 2px solid var(--rfg-focus);
+      outline-offset: 2px;
+    }
     input {
-      margin-top: 3px;
+      appearance: none;
+      -webkit-appearance: none;
+      position: absolute;
+      top: 50%;
+      inset-inline-end: 16px;
+      margin: -11px 0 0;
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--rfg-border-strong);
+      border-radius: 50%;
+      background: var(--rfg-bg);
+      transition: all 0.15s;
+    }
+    input[type='checkbox'] {
+      border-radius: 7px;
+    }
+    input:checked {
+      border-color: var(--rfg-primary);
+      background-color: var(--rfg-primary);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+      background-size: 70%;
+      background-position: center;
+      background-repeat: no-repeat;
     }
     .rfg-option-text {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
       min-width: 0;
     }
     .rfg-option-title {
+      font-size: 16px;
       font-weight: 600;
+      line-height: 1.3;
     }
     .rfg-option-desc {
       font-size: 13px;
+      line-height: 1.45;
       color: var(--rfg-muted);
     }
   }
@@ -1772,6 +1940,9 @@ re-form-generator {
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     }
   }
+  .rfg-options-chips[role='radiogroup'] .rfg-option-chip.is-checked::after {
+    content: none;
+  }
   .rfg-options-chips {
     display: flex;
     flex-wrap: wrap;
@@ -1886,6 +2057,10 @@ re-form-generator {
   }
   .rfg-options-plain .rfg-option.is-checked {
     background: none;
+    font-weight: 600;
+  }
+  .rfg-options-plain {
+    gap: 2px 16px;
   }
 
   /* ------------------------------------------------------------ success */
@@ -2002,5 +2177,115 @@ re-form-generator {
   .rfg.rfg-layout-sidebar > .rfg-brand .rfg-logo {
     margin-left: 18px;
     margin-right: 18px;
+  }
+}
+
+// ------------------------------------------------------------------ footer (sits under the form card, outside it)
+.rfg-footer {
+  --rfg-footer-bg: transparent;
+  --rfg-footer-text: var(--rfg-text);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--rfg-max-width, 640px);
+  margin: 24px auto 0;
+  padding: 0 4px;
+  color: var(--rfg-footer-text);
+  font-family: var(--rfg-font);
+  font-size: 13px;
+  line-height: 1.55;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  .rfg-footer-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  &.rfg-footer-center .rfg-footer-inner {
+    align-items: center;
+    text-align: center;
+  }
+  &.rfg-footer-right .rfg-footer-inner {
+    align-items: flex-end;
+    text-align: right;
+  }
+  p {
+    margin: 0;
+    opacity: 0.85;
+    white-space: pre-line;
+  }
+  .rfg-footer-copy {
+    font-size: 12px;
+    opacity: 0.65;
+  }
+  .rfg-footer-logo {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.9;
+  }
+  a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+  .rfg-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  &.rfg-footer-center .rfg-footer-links,
+  &.rfg-footer-center .rfg-footer-social {
+    justify-content: center;
+  }
+  &.rfg-footer-right .rfg-footer-links,
+  &.rfg-footer-right .rfg-footer-social {
+    justify-content: flex-end;
+  }
+  .rfg-footer-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid color-mix(in srgb, var(--rfg-footer-text) 28%, transparent);
+    }
+    a:hover {
+      text-decoration: none;
+      background: color-mix(in srgb, var(--rfg-footer-text) 12%, transparent);
+    }
+  }
+  &.rfg-footer-card {
+    --rfg-footer-text: var(--rfg-text);
+    padding: 22px 28px;
+    border-radius: calc(var(--rfg-radius, 10px) * 1.6);
+    background: var(--rfg-footer-bg, var(--rfg-bg));
+    border: 1px solid color-mix(in srgb, var(--rfg-text) 12%, transparent);
+  }
+  &.rfg-footer-card:not([style*='--rfg-footer-bg']) {
+    background: var(--rfg-bg);
+  }
+  &.rfg-footer-bar {
+    max-width: none;
+    margin-top: 32px;
+    padding: 26px max(20px, calc((100% - var(--rfg-max-width, 640px)) / 2));
+    background: var(--rfg-footer-bg);
+  }
+  &.rfg-footer-bar:not([style*='--rfg-footer-bg']) {
+    background: color-mix(in srgb, var(--rfg-text) 92%, var(--rfg-bg));
+    --rfg-footer-text: var(--rfg-bg);
   }
 }

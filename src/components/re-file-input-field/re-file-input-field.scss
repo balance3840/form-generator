@@ -200,3 +200,9 @@ re-file-input-field .file-compact.is-block {
     min-height: 56px;
   }
 }
+
+// The native input only opens the file chooser (the label around it is the click target). Without this it showed
+// "Choose file / No file chosen" inside the drop area.
+re-file-input-field .file-field-container input.hidden {
+  display: none;
+}

@@ -68,7 +68,43 @@ export type FormDocument = {
   action?: { [key: string]: any };
   /** Languages and translations, see utils/i18n.ts */
   i18n?: { [key: string]: any };
+  /** A footer shown under the form, like the footer of a website. */
+  footer?: FormFooter;
 };
+
+export type FooterLink = { label: string; url: string; newTab?: boolean };
+export type FooterSocial = { type: string; url: string };
+
+/** Footer of the form: text, links (privacy, terms…), social icons and a copyright line. */
+export type FormFooter = {
+  enabled?: boolean;
+  /** `plain` sits on the page, `card` is a second card under the form, `bar` is a full-width coloured strip. */
+  style?: 'plain' | 'card' | 'bar';
+  align?: 'left' | 'center' | 'right';
+  /** Short text, e.g. an address or a sentence about the company. Line breaks are kept. */
+  text?: string;
+  links?: FooterLink[];
+  social?: FooterSocial[];
+  /** e.g. "© 2026 Acme ApS". `{year}` becomes the current year. */
+  copyright?: string;
+  logo?: string;
+  logoHeight?: number;
+  /** Own colours; by default the footer follows the theme. */
+  backgroundColor?: string;
+  textColor?: string;
+};
+
+export const SOCIAL_NETWORKS: { value: string; label: string }[] = [
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'x', label: 'X (Twitter)' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'website', label: 'Website' },
+];
 
 /** Field types that only display content (or act) and never hold a value. */
 export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'tabs', 'modal', 'callout', 'button'];

@@ -376,7 +376,24 @@ export type Translatable = {
   multiline?: boolean;
 };
 
-const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel', 'addLabel', 'itemLabel', 'itemMeta', 'emptyText', 'presetLabel', 'presetCustomLabel', 'confirmLabel', 'cancelLabel', 'editTitle', 'signLabel', 'tooltip', 'hint'];
+const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel', 'addLabel', 'itemLabel', 'itemMeta', 'emptyText', 'presetLabel', 'presetCustomLabel', 'confirmLabel', 'cancelLabel', 'addTitle', 'editTitle', 'backLabel', 'signLabel', 'tooltip', 'hint'];
+/**
+ * Preset values are data ({ name: 'Kitchen', units: [{ unit: 'Ceiling' }] }), but some of it is text people read. A repeater lists
+ * the property names that hold such text in `config.presetTextKeys` (['name', 'unit']); only those strings are translatable.
+ */
+function mapPresetText(values: any, keys: string[], path: string, fn: (path: string, text: string) => string): any {
+  if (Array.isArray(values)) return values.map((v, i) => mapPresetText(v, keys, `${path}.${i}`, fn));
+  if (values && typeof values === 'object') {
+    const next: { [k: string]: any } = {};
+    Object.keys(values).forEach(k => {
+      const v = values[k];
+      next[k] = typeof v === 'string' ? (keys.includes(k) ? fn(`${path}.${k}`, v) : v) : mapPresetText(v, keys, `${path}.${k}`, fn);
+    });
+    return next;
+  }
+  return values;
+}
+
 const CONFIG_LABELS: { [k: string]: string } = {
   minLabel: 'Left label',
   maxLabel: 'Right label',
@@ -392,7 +409,9 @@ const CONFIG_LABELS: { [k: string]: string } = {
   presetCustomLabel: 'Type picker “custom” entry',
   confirmLabel: 'Dialog “confirm” button',
   cancelLabel: 'Dialog “cancel” button',
+  addTitle: 'Dialog title when adding',
   editTitle: 'Dialog title when editing',
+  backLabel: '“Back” link of an open item',
   signLabel: '“Sign” button',
   tooltip: 'Help tooltip',
   hint: 'Hint inside the box',
@@ -428,6 +447,12 @@ export function collectTranslatables(doc: FormDocument): Translatable[] {
   add('description', doc.description, 'Form', 'Description', true);
   const s = doc.settings || {};
   SETTINGS_TEXT.forEach(([key, label, multiline]) => add(`settings.${key}`, s[key], 'Form', label, !!multiline));
+  const footer = doc.footer;
+  if (footer) {
+    add('footer.text', footer.text, 'Footer', 'Footer text', true);
+    (footer.links || []).forEach((l, i) => add(`footer.link.${i}`, l.label, 'Footer', `Footer link ${i + 1}`));
+    add('footer.copyright', footer.copyright, 'Footer', 'Copyright line');
+  }
 
   // every block, repeater items included (rows only hold other fields)
   flattenFields(doc.fields, false, true).forEach(field => {
@@ -449,6 +474,8 @@ export function collectTranslatables(doc: FormDocument): Translatable[] {
     ((field.config && field.config.presets) || []).forEach((preset: any, i: number) => {
       add(`field.${id}.preset.${i}.label`, preset.label, group, `Choice “${preset.label}”`);
       add(`field.${id}.preset.${i}.description`, preset.description, group, `Description of “${preset.label}”`, true);
+      const textKeys: string[] = (field.config && field.config.presetTextKeys) || [];
+      if (textKeys.length && preset.values) mapPresetText(preset.values, textKeys, `field.${id}.preset.${i}.value`, (path, text) => (add(path, text, group, `“${preset.label}”: ${text}`), text));
     });
     Array.from(new Set((field.options || []).map((o: any) => o.group).filter(Boolean))).forEach((g: any) => add(`field.${id}.group.${g}`, g, group, `Option group “${g}”`));
     (field.validations || []).forEach(rule => {
@@ -497,7 +524,15 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
     if (field.config && Array.isArray(field.config.presets)) {
       next.config = {
         ...(next.config || field.config),
-        presets: field.config.presets.map((p: any, i: number) => ({ ...p, label: tr(`field.${id}.preset.${i}.label`, p.label), ...(typeof p.description === 'string' ? { description: tr(`field.${id}.preset.${i}.description`, p.description) } : {}) })),
+        presets: field.config.presets.map((p: any, i: number) => {
+          const textKeys: string[] = field.config!.presetTextKeys || [];
+          return {
+            ...p,
+            label: tr(`field.${id}.preset.${i}.label`, p.label),
+            ...(typeof p.description === 'string' ? { description: tr(`field.${id}.preset.${i}.description`, p.description) } : {}),
+            ...(textKeys.length && p.values ? { values: mapPresetText(p.values, textKeys, `field.${id}.preset.${i}.value`, (path, text) => tr(path, text)) } : {}),
+          };
+        }),
       };
     }
     if (field.validations) {
@@ -519,7 +554,15 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
     if (typeof s[k] === 'string') settings[k] = tr(`settings.${k}`, s[k]);
   });
 
-  return { ...doc, title: tr('title', doc.title), description: tr('description', doc.description), settings, fields: doc.fields.map(localizeField) };
+  const footer = doc.footer
+    ? {
+        ...doc.footer,
+        text: typeof doc.footer.text === 'string' ? tr('footer.text', doc.footer.text) : doc.footer.text,
+        copyright: typeof doc.footer.copyright === 'string' ? tr('footer.copyright', doc.footer.copyright) : doc.footer.copyright,
+        links: (doc.footer.links || []).map((l, i) => ({ ...l, label: tr(`footer.link.${i}`, l.label) })),
+      }
+    : undefined;
+  return { ...doc, title: tr('title', doc.title), description: tr('description', doc.description), settings, ...(footer ? { footer } : {}), fields: doc.fields.map(localizeField) };
 }
 
 /** How much of the form is translated into `language` (0-1). */

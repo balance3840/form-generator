@@ -4,7 +4,7 @@ import set from 'lodash/set';
 import { createYupSchema, getValidationErrors } from '../../utils/utils';
 import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, isLayoutType, itemInstances, rowLayout, sanitizeHtml, setByPath, withDraft } from '../../utils/schema';
 import { loadDocument } from '../../utils/migrate';
-import { FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
+import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
 import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
 import { CaptchaController, captchaConfig, captchaProvider, hasWidget, mountCaptcha } from '../../utils/captcha';
 import { I18nConfig, availableLanguages, createTranslator, languageInfo, localizeDocument, matchLanguage, resolveLanguage } from '../../utils/i18n';
@@ -1137,6 +1137,7 @@ export class ReFormGenerator {
             modelKey={model}
             defaultValue={value}
             zIndex={String(zIndex)}
+            noResultsText={this.tr('ui.noResults')}
             inputDisplayKey={field.inputDisplayKey}
             showDialCode={field.showDialCode}
           ></re-country-select>
@@ -1283,7 +1284,7 @@ export class ReFormGenerator {
 
       case 'radioGroup':
         return (
-          <div class={`rfg-options ${this.cardsOf(field) ? 'rfg-options-cards' : ''} ${this.chipsOf(field) ? 'rfg-options-chips' : ''}`} role="radiogroup" style={{ '--rfg-opt-cols': String((field.config && field.config.optionColumns) || 1) }}>
+          <div class={`rfg-options ${this.cardsOf(field) ? 'rfg-options-cards' : ''} ${this.chipsOf(field) ? 'rfg-options-chips' : ''} ${field.config && field.config.optionStyle === 'plain' ? 'rfg-options-plain' : ''}`} role="radiogroup" style={{ '--rfg-opt-cols': String((field.config && field.config.optionColumns) || 1) }}>
             {this.optionsOf(field).map((option, i) => {
               const checked = !(this.others[model] && this.others[model].on) && value !== undefined && value !== null && String(value) === String(option.value);
               return (
@@ -2098,7 +2099,13 @@ export class ReFormGenerator {
 
   /** The title of an item: `config.itemLabel` filled in, or "Item 3". */
   private itemTitle(repeater: FormField, item: { model: string }, n: number) {
-    return this.fillItem(String((repeater.config && repeater.config.itemLabel) || ''), item, n) || this.tr('ui.itemTitle', { n });
+    // a template like "{type} ({name})" must not leave "()" behind when the name is empty
+    const filled = this.fillItem(String((repeater.config && repeater.config.itemLabel) || ''), item, n)
+      .replace(/\(\s*\)|\[\s*\]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[\s,;:·–-]+|[\s,;:·–-]+$/g, '')
+      .trim();
+    return filled || this.tr('ui.itemTitle', { n });
   }
 
   /** Items shown as small cards (a grid, or a list) that open in a dialog or as a page, instead of as a form. */
@@ -2691,21 +2698,121 @@ export class ReFormGenerator {
     return out.trim();
   }
 
-  /** Cover image (edge to edge) and logo, from `theme.cover` / `theme.logo`. */
-  private renderBranding(theme: FormTheme) {
+  /** Cover image (edge to edge) and logo, from `theme.cover` / `theme.logo`. With `coverStyle: 'hero'` the title sits on the cover. */
+  private renderBranding(theme: FormTheme, header?: any) {
     if (this.designMode) return null;
     const cover = safeImageUrl(theme.cover);
     const logo = safeImageUrl(theme.logo);
     if (!cover && !logo) return null;
-    return (
-      <div class="rfg-brand">
-        {cover && <div class="rfg-cover" role="presentation" style={{ backgroundImage: `url("${cover}")`, height: `${theme.coverHeight || 160}px` }}></div>}
-        {logo && (
-          <div class={`rfg-logo rfg-logo-${theme.logoAlign || 'left'}`}>
-            <img src={logo} alt="" style={{ height: `${theme.logoHeight || 40}px` }} />
-          </div>
+    const hero = !!cover && theme.coverStyle === 'hero';
+    const overlay = Math.max(0, Math.min(80, Number(theme.coverOverlay) || 0)) / 100;
+    const link = theme.logoLink ? this.safeUrl(theme.logoLink) : '';
+    const logoImg = logo && <img src={logo} alt={theme.logoAlt || ''} style={{ height: `${theme.logoHeight || 40}px` }} />;
+    const logoBlock = logo && (
+      <div class={`rfg-logo rfg-logo-${theme.logoAlign || 'left'}`}>
+        {link ? (
+          <a href={link} rel="noopener" target={/^https?:/i.test(link) ? '_blank' : undefined}>
+            {logoImg}
+          </a>
+        ) : (
+          logoImg
         )}
       </div>
+    );
+    return (
+      <div class={`rfg-brand ${hero ? 'rfg-brand-hero' : ''}`}>
+        {cover && (
+          <div
+            class="rfg-cover"
+            role="presentation"
+            style={{
+              backgroundImage: `${overlay ? `linear-gradient(rgba(0,0,0,${overlay}), rgba(0,0,0,${overlay})), ` : ''}url("${cover}")`,
+              backgroundPosition: `center ${theme.coverPosition || 'center'}`,
+              [hero ? 'minHeight' : 'height']: `${theme.coverHeight || 160}px`,
+            }}
+          >
+            {hero && (
+              <div class="rfg-hero-content">
+                {logoBlock}
+                {header}
+              </div>
+            )}
+          </div>
+        )}
+        {!hero && logoBlock}
+      </div>
+    );
+  }
+
+  private static SOCIAL_PATHS: { [type: string]: string } = {
+    facebook: 'M14 9h3V5h-3a4 4 0 0 0-4 4v2H7v4h3v6h4v-6h3l1-4h-4V9z',
+    instagram: 'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM17.5 6.5h.01',
+    linkedin: 'M5 9v10M5 5v.01M10 19v-6a3 3 0 0 1 6 0v6M10 9v10',
+    x: 'M4 4l16 16M20 4L4 20',
+    youtube: 'M3 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zM10 9l5 3-5 3z',
+    tiktok: 'M14 3v11a4 4 0 1 1-4-4M14 3c0 3 2 5 5 5',
+    email: 'M3 6h18v12H3zM3 7l9 7 9-7',
+    phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
+    website: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  };
+
+  private socialUrl(type: string, url: string): string {
+    const value = String(url || '').trim();
+    if (!value) return '';
+    if (type === 'email' && !/^mailto:/i.test(value)) return `mailto:${value}`;
+    if (type === 'phone' && !/^tel:/i.test(value)) return `tel:${value.replace(/\s+/g, '')}`;
+    return this.safeUrl(value);
+  }
+
+  /** The footer under the form (see `FormFooter`): logo, text, links, social icons and a copyright line. */
+  private renderFooter(theme: FormTheme) {
+    const footer = this.doc.footer;
+    if (this.designMode || !footer || footer.enabled === false) return null;
+    const links = (footer.links || []).filter(l => l && l.label && this.safeUrl(l.url));
+    const social = (footer.social || []).filter(l => l && this.socialUrl(l.type, l.url));
+    const logo = safeImageUrl(footer.logo);
+    const copyright = (footer.copyright || '').replace(/\{year\}/gi, String(new Date().getFullYear()));
+    if (!footer.text && !links.length && !social.length && !logo && !copyright) return null;
+    const style: { [key: string]: string } = { ...themeToCssVars(theme) };
+    // plain footers sit on the page, so by default they take the readable colour for the page (or its image)
+    const mode = pageMode(theme);
+    const onPage = mode === 'image' ? ((theme.pageOverlay || 0) >= 25 ? '#ffffff' : contrastColor('#808080')) : contrastColor(mode === 'gradient' ? pageGradientStops(theme)[0].color : theme.pageBackground || '#f3f4f6');
+    if (!footer.textColor && (footer.style || 'plain') === 'plain') style['--rfg-footer-text'] = onPage;
+    if (footer.backgroundColor) style['--rfg-footer-bg'] = footer.backgroundColor;
+    if (footer.textColor) style['--rfg-footer-text'] = footer.textColor;
+    const align = footer.align || 'center';
+    const kind = footer.style || 'plain';
+    return (
+      <footer class={`rfg-footer rfg-footer-${kind} rfg-footer-${align}`} style={style}>
+        <div class="rfg-footer-inner">
+          {logo && <img class="rfg-footer-logo" src={logo} alt="" style={{ height: `${footer.logoHeight || 28}px` }} />}
+          {footer.text && <p class="rfg-footer-text">{footer.text}</p>}
+          {links.length > 0 && (
+            <nav class="rfg-footer-links" aria-label="Footer">
+              {links.map((l, i) => {
+                const url = this.safeUrl(l.url);
+                return (
+                  <a key={i} href={url} {...(l.newTab || /^https?:/i.test(url) ? { target: '_blank', rel: 'noopener' } : {})}>
+                    {l.label}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+          {social.length > 0 && (
+            <div class="rfg-footer-social">
+              {social.map((l, i) => (
+                <a key={i} href={this.socialUrl(l.type, l.url)} aria-label={l.type} rel="noopener" target={/^https?:/i.test(l.url) ? '_blank' : undefined}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d={ReFormGenerator.SOCIAL_PATHS[l.type] || ReFormGenerator.SOCIAL_PATHS.website}></path>
+                  </svg>
+                </a>
+              ))}
+            </div>
+          )}
+          {copyright && <p class="rfg-footer-copy">{copyright}</p>}
+        </div>
+      </footer>
     );
   }
 
@@ -2835,6 +2942,7 @@ export class ReFormGenerator {
       `rfg-input-${theme.inputStyle}`,
       `rfg-card-${theme.cardStyle}`,
       `rfg-btn-${theme.buttonStyle}`,
+      `rfg-head-${theme.headerAlign || 'left'}`,
       `rfg-btnw-${theme.buttonWidth}`,
       `rfg-btna-${theme.buttonAlign || 'left'}`,
       this.designMode ? 'rfg-design' : '',
@@ -2939,9 +3047,7 @@ export class ReFormGenerator {
       <Host>
         <div class={`${rootClass} ${isSteps && sidebar ? 'rfg-layout-sidebar' : ''} ${Object.keys(this.openItems).length ? 'rfg-has-detail' : ''}`} style={style} {...rootAttrs} {...(this.designMode ? ({ inert: '' } as any) : {})}>
           {theme.customCss && <style innerHTML={theme.customCss}></style>}
-          {this.renderBranding(theme)}
-          {this.renderSwitcher()}
-          {header}
+          {theme.coverStyle === 'hero' && safeImageUrl(theme.cover) && !this.designMode ? [this.renderBranding(theme, header), this.renderSwitcher()] : [this.renderBranding(theme), this.renderSwitcher(), header]}
 
           {this.modal && this.renderModal()}
 
@@ -2975,6 +3081,7 @@ export class ReFormGenerator {
             ]
           )}
         </div>
+        {this.renderFooter(theme)}
       </Host>
     );
   }

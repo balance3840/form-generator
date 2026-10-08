@@ -24,8 +24,34 @@ export type FormTheme = {
   logo?: string;
   logoHeight?: number;
   logoAlign?: 'left' | 'center' | 'right';
+  logoAlt?: string;
+  /** Makes the logo a link (http(s), mailto:, relative). */
+  logoLink?: string;
   cover?: string;
   coverHeight?: number;
+  /** Which part of the cover image stays visible when it is cropped. */
+  coverPosition?: 'top' | 'center' | 'bottom';
+  /** 0-80: how much the cover is darkened (so a title on top stays readable). */
+  coverOverlay?: number;
+  /** `banner` sits above the title, `hero` puts the title and description on top of the cover. */
+  coverStyle?: 'banner' | 'hero';
+  /** What fills the page behind the form: a plain colour (`pageBackground`), a gradient or an image. Defaults to the image when one is set. */
+  pageMode?: 'color' | 'gradient' | 'image';
+  /** Colour stops of the gradient (2 or more, `pos` is 0-100). Replaces `pageGradientFrom` / `pageGradientTo` when set. */
+  pageGradientStops?: { color: string; pos?: number }[];
+  pageGradientFrom?: string;
+  pageGradientTo?: string;
+  /** Degrees, 0 = to top, 90 = to the right, 180 = to the bottom (linear gradients). */
+  pageGradientAngle?: number;
+  pageGradientType?: 'linear' | 'radial';
+  /** Background image of the page behind the form card (applied by the page or by `pageStyle()`). */
+  pageImage?: string;
+  pageImageFit?: 'cover' | 'tile' | 'contain';
+  /** 0-80: darkens the page image. */
+  pageOverlay?: number;
+  /** A separate font for titles (form title, step titles, headings). */
+  headingFont?: string;
+  headerAlign?: 'left' | 'center';
   customCss?: string;
 };
 
@@ -153,6 +179,7 @@ export function themeToCssVars(input: any): { [key: string]: string } {
     '--rfg-input-height': underlined ? '40px' : space.h,
     '--rfg-max-width': `${t.maxWidth}px`,
     'color-scheme': contrastColor(t.backgroundColor) === '#ffffff' ? 'dark' : 'light',
+    '--rfg-heading-font': t.headingFont && t.headingFont !== 'inherit' ? fontStack(t.headingFont) : 'var(--rfg-font)',
     '--rfg-label-transform': t.labelStyle === 'uppercase' ? 'uppercase' : 'none',
     '--rfg-label-spacing': t.labelStyle === 'uppercase' ? '0.06em' : '0',
     '--rfg-label-size': t.labelStyle === 'uppercase' ? '12px' : '14px',
@@ -169,4 +196,61 @@ export function safeImageUrl(url?: string): string | null {
   const value = url.trim();
   if (!/^(https?:\/\/|data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);base64,|\/|\.{1,2}\/)/i.test(value)) return null;
   return value.replace(/[\\\n\r"]/g, c => encodeURIComponent(c));
+}
+
+/** Which fill the page uses: an explicit `pageMode`, else the image when one is set, else the colour. */
+export function pageMode(input: any): 'color' | 'gradient' | 'image' {
+  const t = resolveTheme(input);
+  if (t.pageMode === 'color' || t.pageMode === 'gradient') return t.pageMode;
+  if (t.pageMode === 'image') return safeImageUrl(t.pageImage) ? 'image' : 'color';
+  return safeImageUrl(t.pageImage) ? 'image' : 'color';
+}
+
+/** The colour stops of a gradient page, with the older `pageGradientFrom` / `pageGradientTo` as a fallback. */
+export function pageGradientStops(input: any): { color: string; pos: number }[] {
+  const t = resolveTheme(input);
+  const raw = Array.isArray(t.pageGradientStops) ? t.pageGradientStops.filter(x => x && typeof x.color === 'string') : [];
+  const list = raw.length >= 2 ? raw : [{ color: t.pageGradientFrom || t.pageBackground || '#f3f4f6' }, { color: t.pageGradientTo || '#e0e7ff' }];
+  return list.map((stop, i) => ({ color: stop.color, pos: Number.isFinite(Number(stop.pos)) ? Math.max(0, Math.min(100, Number(stop.pos))) : Math.round((i / (list.length - 1)) * 100) }));
+}
+
+/** The `background-image` of a gradient page. */
+export function pageGradientCss(input: any): string {
+  const t = resolveTheme(input);
+  const stops = pageGradientStops(t).map(s => `${s.color} ${s.pos}%`).join(', ');
+  const angle = Number.isFinite(Number(t.pageGradientAngle)) ? Number(t.pageGradientAngle) : 160;
+  return t.pageGradientType === 'radial' ? `radial-gradient(circle at 50% 0%, ${stops})` : `linear-gradient(${angle}deg, ${stops})`;
+}
+
+/**
+ * CSS declarations for the page behind the form: the page colour, a gradient, or an image (`pageMode`,
+ * `pageGradient*`, `pageImage`, `pageImageFit`, `pageOverlay`). Used by the builder, the standalone page and any host page.
+ */
+export function pageStyle(input: any): { [key: string]: string } {
+  const t = resolveTheme(input);
+  const mode = pageMode(t);
+  const out: { [key: string]: string } = { 'background-color': t.pageBackground || '#f3f4f6' };
+  if (mode === 'gradient') {
+    out['background-color'] = pageGradientStops(t)[0].color;
+    out['background-image'] = pageGradientCss(t);
+    out['background-attachment'] = 'fixed';
+    return out;
+  }
+  const image = mode === 'image' ? safeImageUrl(t.pageImage) : null;
+  if (!image) return out;
+  const overlay = Math.max(0, Math.min(80, Number(t.pageOverlay) || 0)) / 100;
+  const layer = `url("${image}")`;
+  out['background-image'] = overlay ? `linear-gradient(rgba(0,0,0,${overlay}), rgba(0,0,0,${overlay})), ${layer}` : layer;
+  const fit = t.pageImageFit || 'cover';
+  out['background-size'] = fit === 'tile' ? 'auto' : fit;
+  out['background-repeat'] = fit === 'tile' ? 'repeat' : 'no-repeat';
+  out['background-position'] = 'center';
+  out['background-attachment'] = 'fixed';
+  return out;
+}
+
+/** The same as `pageStyle`, as one `style` attribute string. */
+export function pageStyleText(input: any): string {
+  const style = pageStyle(input);
+  return Object.keys(style).map(k => `${k}: ${style[k]}`).join('; ');
 }

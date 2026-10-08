@@ -62,7 +62,7 @@ re-multi-select {
       border: 1px solid var(--rfg-border-strong, #d1d5db);
       border-radius: var(--rfg-radius, 8px);
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
-      z-index: 20;
+      z-index: 1;
     }
 
     &__option {
@@ -80,15 +80,25 @@ re-multi-select {
       }
     }
 
-    & .arrow-up::before {
-      content: '▲';
-    }
-    & .arrow-down::before {
-      content: '▼';
-    }
+    // the same arrow as the other dropdowns (select, country, search)
     & .arrow {
-      font-size: 0.6rem;
-      color: var(--rfg-muted, #6b7280);
+      flex: none;
+      width: 7px;
+      height: 7px;
+      margin: -4px 0 0;
+      margin-inline-end: 4px;
+      border-right: 2px solid var(--rfg-muted, #6b7280);
+      border-bottom: 2px solid var(--rfg-muted, #6b7280);
+      transform: rotate(45deg);
+      transition: transform 0.15s;
+    }
+    &.is-open .arrow {
+      margin-top: 2px;
+      transform: rotate(-135deg);
+    }
+    // stays above the fields after it while the list is open
+    &.is-open {
+      z-index: 60;
     }
   }
 }

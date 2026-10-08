@@ -22,6 +22,10 @@ export namespace Components {
          */
         "language": string;
         "modelKey": string;
+        /**
+          * Shown when the search matches nothing.
+         */
+        "noResultsText": string;
         "showDialCode": boolean;
         "zIndex": string;
     }
@@ -330,6 +334,10 @@ declare namespace LocalJSX {
          */
         "language"?: string;
         "modelKey"?: string;
+        /**
+          * Shown when the search matches nothing.
+         */
+        "noResultsText"?: string;
         "onSelectedCountryChanged"?: (event: ReCountrySelectCustomEvent<any>) => void;
         "showDialCode"?: boolean;
         "zIndex"?: string;
