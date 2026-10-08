@@ -7,14 +7,16 @@
 
 ## Properties
 
-| Property          | Attribute          | Description | Type     | Default     |
-| ----------------- | ------------------ | ----------- | -------- | ----------- |
-| `inputAttributes` | `input-attributes` |             | `any`    | `undefined` |
-| `inputProps`      | `input-props`      |             | `any`    | `undefined` |
-| `modelKey`        | `model-key`        |             | `string` | `undefined` |
-| `placeholder`     | `placeholder`      |             | `string` | `undefined` |
-| `subTitle`        | `sub-title`        |             | `string` | `undefined` |
-| `textTitle`       | `text-title`       |             | `string` | `undefined` |
+| Property          | Attribute          | Description                                                                        | Type      | Default     |
+| ----------------- | ------------------ | ---------------------------------------------------------------------------------- | --------- | ----------- |
+| `compact`         | `compact`          | A small "add" button instead of the big drop area (use with `preview` for photos). | `boolean` | `false`     |
+| `inputAttributes` | `input-attributes` |                                                                                    | `any`     | `undefined` |
+| `inputProps`      | `input-props`      |                                                                                    | `any`     | `undefined` |
+| `modelKey`        | `model-key`        |                                                                                    | `string`  | `undefined` |
+| `placeholder`     | `placeholder`      |                                                                                    | `string`  | `undefined` |
+| `preview`         | `preview`          | Show a thumbnail for every chosen image.                                           | `boolean` | `false`     |
+| `subTitle`        | `sub-title`        |                                                                                    | `string`  | `undefined` |
+| `textTitle`       | `text-title`       |                                                                                    | `string`  | `undefined` |
 
 
 ## Events

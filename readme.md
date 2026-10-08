@@ -73,18 +73,23 @@ Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g
 | --- | --- |
 | `input` | `inputType`: `text email number tel url password date time datetime-local month week color checkbox` (`checkbox` uses `checkboxLabel`) |
 | `textarea` | |
-| `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer) |
+| `select`, `multiSelect`, `radioGroup`, `checkboxGroup` | `options: [{ label, value, group? }]` (`group` lists options together in a dropdown). For radio / checkbox groups: `config.optionColumns` (1-4) and `config.allowOther` + `config.otherLabel` add an "Other…" option with a text box (the typed text is the answer). `config.optionStyle: "cards"` shows each choice as a card with a title and an optional option `description`; on a radio group `config.autoAdvance` goes to the next step as soon as an answer is picked |
 | `toggle` | on/off switch (`validationType: "boolean"`) |
 | `address` | address search with short labels ("Street 5, 2200 City"). `config.provider`: `osm` (OpenStreetMap, worldwide, free, no key, light use), `google` (Places API New), `mapbox`, `geoapify`, `dk` (Danish official register, Dataforsyningen) or `custom` (your own `source`, as in `search`). Keyed providers take `config.apiKey` (it is visible in the page: restrict it to your domain). `config.countries` (ISO codes, e.g. `["dk"]`) and `config.city` narrow the search, `config.multiple` allows several picks (use `validationType: "array"`), `config.answer` is what is saved: `text` (default), `id` or `both` (`{ id, label }`). Floors and doors are only available from providers that have them (e.g. `dk`) |
 | `search` | live search against your own endpoint, with removable chips when `config.multiple`. `config.source`: `{ url: "https://…?q={q}", resultsPath, labelKey, labelTemplate, valueKey, minChars, debounce, headers }`. The answer is the `valueKey` of the pick (a list when `multiple`, so use `validationType: "array"`). The endpoint must return JSON and allow requests from your site (CORS). **Step by step search** (street → number → floor/door): add `source.drill: { typeKey: "type", expandTypes: ["vejnavn", "adgangsadresse"] }`. Results of those types open the next level when picked (the box is filled with their text and searched again; a result that equals the box text is the answer), other types are final. `source.extraKey` shows a small note next to a result, `source.labelTemplate` builds a short label from several fields |
 | `countrySelect` | `showDialCode`, `modelValueKey` (`code` by default, or `name` / `dialCode`), `defaultValue` |
-| `file` | `attributes: { accept, multiple }` |
+| `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos) |
 | `rating` | `config: { max }` |
 | `scale` | `config: { min, max, minLabel, maxLabel }` |
 | `slider` | `config: { min, max, step, unit }` |
 | `heading`, `paragraph`, `divider` | content blocks (`label` / `helpText`, `content`, `config.level`) |
 | `columns` | a **row** of columns, see [Layout](#layout-rows-and-columns) |
-| `pageBreak` | splits the form into steps with a progress bar. Its `label` is the title of the step that starts after it (the first step's title is `settings.firstStepTitle`) |
+| `pageBreak` | splits the form into steps. Its `label` is the title of the step that starts after it, `helpText` its description (the first step's are `settings.firstStepTitle` / `firstStepDescription`). It can have `logic` to skip the whole step |
+| `section` | a titled card around other fields (`fields`). `config`: `style` (`card` or `plain`), `collapsible`, `startCollapsed`. See [App-like flows](#app-like-flows) |
+| `repeater` | a group people can add several of (tenants, rooms, meters…). The answer is a list of objects. See [App-like flows](#app-like-flows) |
+| `button` | a button that runs `config.actions`, see [Buttons and actions](#buttons-and-actions) |
+| `callout` | a message box: `label` (title), `content`, `config.tone` (`info success warning danger`). Combine with `logic` to show it only when it applies |
+| `signature` | a box to sign in (finger, pen, mouse). The answer is a PNG data URL. `config.height`, `config.hint` |
 
 ### Layout: rows and columns
 
@@ -134,11 +139,52 @@ Rules that compare with another field take that field's `model` as their value, 
 
 ### Conditional logic
 
+
 ```json
 "logic": { "action": "show", "match": "all", "conditions": [{ "field": "attended", "operator": "equals", "value": "yes" }] }
 ```
 
-Operators: `equals not_equals contains not_contains gt lt empty not_empty`. `field` is another field's `model`. Hidden fields are not validated and not submitted.
+`action` is one of `show`, `hide`, `disable` (can't be edited while the rule matches), `enable` (can **only** be edited while it matches) and `require` (becomes required while it matches). Give `logic` a **list** of rules to combine several (every show/hide rule has to allow it). Operators: `equals not_equals contains not_contains gt lt empty not_empty`. `field` is another field's `model`. For lists (checkbox groups, repeaters) `gt` / `lt` compare the number of entries, so `{ "field": "tenants", "operator": "lt", "value": 1 }` means "no tenant added". Hidden fields are not validated and not submitted; fields switched off by a rule are not validated.
+
+### App-like flows
+
+Everything below is plain JSON, so a form can behave like a small application.
+
+**Steps.** A `pageBreak` starts a new step. `settings.stepsLayout: "sidebar"` shows a list of the steps next to the form (a strip on small screens), with a tick on the steps that are filled in; the default is a progress bar. `settings.stepNavigation`: `visited` (default: steps already visited), `free` (any step) or `locked` (only back). `settings.nextButtonText` can use `{next}` (title of the next step): `"{next} →"`. `settings.saveDraft: true` keeps the answers in this browser (`draftKey` names the slot; files are not kept) and shows a "Save and exit" button (`exitText`, `exitUrl`); the draft is removed after a successful submit.
+
+**Sections.** `{ "type": "section", "label": "Dates", "fields": [ … ] }` groups fields in a card. Rows can sit inside sections.
+
+**Repeating groups.** The answer is a list of objects, one per item:
+
+```json
+{
+  "type": "repeater", "id": "tenants", "model": "tenants",
+  "config": { "itemLabel": "Tenant #{n}", "addLabel": "Add tenant", "minItems": 1, "maxItems": 4, "collapsible": true },
+  "fields": [
+    { "type": "input", "id": "t_name", "model": "name", "label": "Name", "validations": [{ "name": "required", "params": [] }] },
+    { "type": "input", "id": "t_email", "model": "email", "inputType": "email", "label": "Email" }
+  ]
+}
+```
+
+→ `{ "tenants": [ { "name": "Anna", "email": "…" }, … ] }`. Config: `layout` (`cards` or `table`), `itemLabel` (`{n}` and `{key}` of an answer in the item), `addLabel`, `addStyle` (`button` or `dashed`), `emptyText`, `minItems` / `maxItems`, `allowAdd` / `allowRemove`, `collapsible` / `startCollapsed`, `presets`. A repeater can contain another repeater (the checklist of a room).
+
+- **Logic inside an item** uses the other fields of the same item by their key (`"condition"`), and still reaches normal fields. Errors are keyed by path (`tenants[0].email`).
+- **`layout: "table"`**: the first child must be a `columns` row; its columns become the table columns (the headers are their labels). Anything after that row appears under the row, only while it has something to show (e.g. defect details of a unit that is "Damaged").
+- **`presets`**: `[{ "label": "Kitchen", "description": "…", "values": { "name": "Kitchen", "units": [ { "unit": "Stove" } ] } }]`. The add button then opens these choices and the new item starts with the `values` (nested lists included).
+
+**Buttons and actions.** `{ "type": "button", "label": "Review report", "config": { "variant": "outline", "actions": [ { "type": "emit", "name": "review" } ] } }`. `variant`: `primary secondary outline ghost danger`; `size: "large"`; `align`: `start center end stretch`; `icon`: `arrow-right arrow-left plus check download`. Give a button `logic` to show it or to `disable` it while something is missing. Actions run in order and stop at the first one that cannot continue:
+
+| Action | |
+| --- | --- |
+| `next` / `back` | move between steps (`next` checks the current step first) |
+| `goto` | `{ "type": "goto", "step": "<page break id>" or "start", "validate": true }` |
+| `set` | `{ "type": "set", "field": "model", "value": "x" }` (inside an item: a field of the same item first) |
+| `add` | `{ "type": "add", "field": "tenants", "values": { … } }` adds an item |
+| `submit` / `reset` | send / start over. A page with its own `submit` button hides the built-in submit button |
+| `link` | `{ "type": "link", "url": "https://…", "newTab": true }` (http, https, mailto, tel or relative) |
+| `emit` | fires the `formAction` event `{ name, field, values }` so your own code can react |
+| `saveDraft` / `exit` | save progress / save and fire `exit` (then open `settings.exitUrl`) |
 
 ### Theme
 
@@ -205,7 +251,7 @@ Everything in a web page is readable by visitors, so treat anything you put in a
 
 ### Settings & action
 
-`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`.
+`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`, and for steps `stepsLayout stepNavigation firstStepTitle firstStepDescription nextButtonText saveDraft draftKey exitText exitUrl` (see [App-like flows](#app-like-flows)).
 
 `action` (optional): `endpoint httpMethod bearerToken headers formData webhookEndpoint recaptchaSiteKey mapping`. Without an endpoint the form just emits `submitted`.
 
@@ -220,8 +266,8 @@ Everything in a web page is readable by visitors, so treat anything you put in a
 | `language` | forces a language (e.g. `es`, `pt-BR`); see [Languages](#languages-i18n) |
 | `designMode` | used by the builder: shows every field, no logic, inert |
 
-Events: `submitted` (`{ values, response, error }`), `valueChanged`, `validationError`, `handleSubmit`, `languageChanged` (`{ language }`).
-Methods: `submit()`, `validate()`, `reset()`, `getValues()`, `updateValue(key, value)`, `setLanguage(code)`, `getLanguage()`.
+Events: `submitted` (`{ values, response, error }`), `valueChanged`, `validationError`, `handleSubmit`, `languageChanged` (`{ language }`), `formAction` (`{ name, field, values }`, from a button's `emit` action), `stepChanged` (`{ index, id, title }`), `draftSaved`, `exit`.
+Methods: `submit()`, `validate()`, `reset()`, `getValues()`, `updateValue(key, value)` (keys inside a repeater are paths like `tenants[0].email`), `goToStep(id, validate?)`, `setLanguage(code)`, `getLanguage()`.
 Slots: `field-label@<field id>` renders custom content under a field's label.
 
 ## Development
@@ -231,4 +277,5 @@ npm install
 npm start          # dev server with the demo page (src/index.html)
 npm run build      # build the package
 npm test
+npm run check:flow   # logic checks for repeaters, rules, defaults and translations (no browser needed)
 ```

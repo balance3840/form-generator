@@ -1,0 +1,58 @@
+re-signature-pad {
+  display: block;
+}
+
+.sig {
+  position: relative;
+
+  .sig-box {
+    position: relative;
+    width: 100%;
+    background: var(--rfg-bg, #fff);
+    border: 1px solid var(--rfg-border-strong, #c9ced6);
+    border-radius: var(--rfg-radius, 10px);
+    overflow: hidden;
+    touch-action: none;
+  }
+  .sig-canvas {
+    display: block;
+    width: 100%;
+    color: var(--rfg-text, #111);
+    cursor: crosshair;
+  }
+  .sig-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    color: var(--rfg-muted, #888);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .sig-line {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 34px;
+    border-bottom: 1px dashed var(--rfg-border-strong, #c9ced6);
+    pointer-events: none;
+  }
+  .sig-clear {
+    margin-top: 6px;
+    border: 0;
+    background: none;
+    padding: 2px 0;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rfg-primary, #4f46e5);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  &.is-disabled {
+    opacity: 0.6;
+  }
+}

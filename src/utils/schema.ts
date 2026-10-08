@@ -34,7 +34,10 @@ export type FormField = {
   layout?: { cols?: number; row?: string; group?: string; groupTitle?: string };
   /** For `type: "columns"`: a row of columns, each column a vertical stack of fields. */
   columns?: FormColumn[];
-  logic?: FieldLogic;
+  /** For `type: "section"` (a titled card of fields) and `type: "repeater"` (the fields every item has). */
+  fields?: FormField[];
+  /** One rule, or several: show / hide / enable / disable / require this field depending on other answers. */
+  logic?: FieldLogic | FieldLogic[];
   config?: { [key: string]: any };
   attributes?: { [key: string]: any };
   values?: { value: any; display?: string; group?: string }[];
@@ -45,7 +48,7 @@ export type FormField = {
 export type FormColumn = { id: string; span: number; fields: FormField[] };
 
 export type FieldLogic = {
-  action: 'show' | 'hide';
+  action: 'show' | 'hide' | 'enable' | 'disable' | 'require';
   match: 'all' | 'any';
   conditions: LogicCondition[];
 };
@@ -64,10 +67,41 @@ export type FormDocument = {
   i18n?: { [key: string]: any };
 };
 
-/** Field types that only display content and never hold a value. */
-export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns'];
+/** Field types that only display content (or act) and never hold a value. */
+export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'callout', 'button'];
 
 export const isLayoutType = (type: string) => LAYOUT_TYPES.includes(type);
+
+/** Blocks that contain other fields. */
+export const GROUP_TYPES = ['columns', 'section', 'repeater'];
+export const isGroup = (field: { type: string }) => GROUP_TYPES.includes(field.type);
+
+/**
+ * The lists of fields a block contains: the columns of a row, or the single list of a section / repeater (whose
+ * list id is the block's own id). Used by the builder to walk and edit the tree in one way for every kind of block.
+ */
+export function childLists(field: FormField): { id: string; fields: FormField[] }[] {
+  if (field.type === 'columns') return (field.columns || []).map(c => ({ id: c.id, fields: c.fields || [] }));
+  if (field.type === 'section' || field.type === 'repeater') return [{ id: field.id, fields: field.fields || [] }];
+  return [];
+}
+
+/** Returns `field` with the list `listId` replaced. */
+export function withChildList(field: FormField, listId: string, fields: FormField[]): FormField {
+  if (field.type === 'columns') return { ...field, columns: (field.columns || []).map(c => (c.id === listId ? { ...c, fields } : c)) };
+  if ((field.type === 'section' || field.type === 'repeater') && field.id === listId) return { ...field, fields };
+  return field;
+}
+
+/** The rules of a field's `logic` as a list (it can be one rule or several). */
+export function logicRules(field: { logic?: FieldLogic | FieldLogic[] }): FieldLogic[] {
+  return !field.logic ? [] : Array.isArray(field.logic) ? field.logic : [field.logic];
+}
+
+/** Stores one rule as an object (the usual shape) and several as a list. */
+export function packLogic(rules: FieldLogic[]): FieldLogic | FieldLogic[] | undefined {
+  return rules.length === 0 ? undefined : rules.length === 1 ? rules[0] : rules;
+}
 
 /**
  * Validation rules the generator understands (they map 1:1 to Yup methods) and the metadata the
@@ -185,22 +219,141 @@ function parseMaybeJson(input: any) {
 
 export type NormalizedDocument = { doc: FormDocument; legacy: boolean };
 
+/** A row of columns. (Sections and repeaters are `isGroup` too, but rows are the only ones that lay children out side by side.) */
 export const isContainer = (field: { type: string }) => field.type === 'columns';
 
-/** Depth first list of every field. Containers (`columns` rows) are included before their children unless `leaves` is set. */
-export function flattenFields(fields: FormField[], leaves = false): FormField[] {
+/**
+ * Depth first list of every field. Rows and sections are included before their children unless `leaves` is set.
+ * A repeater holds a value (a list of items) so it counts as a leaf; its item fields are only listed with `deep`.
+ */
+export function flattenFields(fields: FormField[], leaves = false, deep = false): FormField[] {
   const out: FormField[] = [];
   const walk = (list: FormField[]) =>
     list.forEach(field => {
-      if (isContainer(field)) {
+      if (field.type === 'columns' || field.type === 'section') {
         if (!leaves) out.push(field);
-        (field.columns || []).forEach(column => walk(column.fields || []));
+        childLists(field).forEach(l => walk(l.fields));
+      } else if (field.type === 'repeater') {
+        out.push(field);
+        if (deep) walk(field.fields || []);
       } else {
         out.push(field);
       }
     });
   walk(fields);
   return out;
+}
+
+/* ------------------------------------------------------------- repeater scope */
+
+/**
+ * Answers inside a repeater live at paths like `tenants[0].email` (`rooms[1].units[3].condition` when nested).
+ * Plain keys (no `[`) are ordinary top level answers.
+ */
+function parsePath(model: string): (string | number)[] {
+  const first = model.indexOf('[');
+  const out: (string | number)[] = [model.slice(0, first)];
+  const re = /\[(\d+)\](?:\.([^[\]]+))?/g;
+  re.lastIndex = first;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(model))) {
+    out.push(Number(m[1]));
+    if (m[2] !== undefined) out.push(m[2]);
+  }
+  return out;
+}
+
+export function getByPath(values: any, model: string): any {
+  if (!model || !values) return undefined;
+  if (model.indexOf('[') < 0) return values[model];
+  let current = values;
+  for (const token of parsePath(model)) {
+    if (current === undefined || current === null) return undefined;
+    current = current[token as any];
+  }
+  return current;
+}
+
+/** Returns a copy of `values` with `model` set (immutable, creates the lists / objects on the way). */
+export function setByPath(values: any, model: string, value: any): any {
+  if (model.indexOf('[') < 0) return { ...values, [model]: value };
+  const path = parsePath(model);
+  const assign = (node: any, i: number): any => {
+    const key = path[i];
+    // a missing level becomes a list when it is addressed by a number
+    const copy: any = Array.isArray(node) || (node == null && typeof key === 'number') ? [...(node || [])] : { ...(node || {}) };
+    copy[key] = i === path.length - 1 ? value : assign(node ? node[key] : undefined, i + 1);
+    return copy;
+  };
+  return assign(values, 0);
+}
+
+/**
+ * A copy of a repeater's item fields for one item: ids get a suffix and models become the item's path, so every
+ * input of every item is a normal field with its own id and answer. `_key` keeps the original (relative) key, which is
+ * what logic conditions and validation rules inside the item refer to.
+ */
+export function instantiate(fields: FormField[], modelPrefix: string, suffix: string): FormField[] {
+  return fields.map(f => {
+    const next: FormField = { ...f, id: `${f.id}${suffix}`, _suffix: suffix, _template: f.id, _prefix: modelPrefix };
+    if (f.model) {
+      next._key = f.model;
+      next.model = `${modelPrefix}.${f.model}`;
+      delete next.inputName;
+    }
+    if (f.type === 'columns') next.columns = (f.columns || []).map(c => ({ ...c, id: `${c.id}${suffix}`, fields: instantiate(c.fields || [], modelPrefix, suffix) }));
+    else if (f.type === 'section') next.fields = instantiate(f.fields || [], modelPrefix, suffix);
+    // a repeater inside an item keeps its template: its own items are expanded from its path later
+    return next;
+  });
+}
+
+export type RepeaterItem = { index: number; model: string; suffix: string; fields: FormField[] };
+
+/** The items of a repeater (a field or an instance of one) for the given values, each with its own copy of the fields. */
+export function itemInstances(repeater: FormField, values: { [key: string]: any }): RepeaterItem[] {
+  const list = getByPath(values, repeater.model as string);
+  const items = Array.isArray(list) ? list : [];
+  const suffix = (repeater._suffix as string) || '';
+  return items.map((_item: any, index: number) => {
+    const model = `${repeater.model}[${index}]`;
+    const itemSuffix = `${suffix}~${index}`;
+    return { index, model, suffix: itemSuffix, fields: instantiate(repeater.fields || [], model, itemSuffix) };
+  });
+}
+
+/** The starting answers of `fields` (default values; repeaters get their minimum number of blank items). */
+export function defaultValues(fields: FormField[]): { [key: string]: any } {
+  const out: { [key: string]: any } = {};
+  flattenFields(fields, true).forEach(field => {
+    if (!field.model || isLayoutType(field.type)) return;
+    if (field.type === 'repeater') {
+      out[field.model] = repeaterDefault(field);
+    } else if (field.defaultValue !== undefined) {
+      out[field.model] = deepClone(field.defaultValue);
+    } else if (field.type === 'slider') {
+      out[field.model] = (field.config && field.config.min) || 0;
+    }
+  });
+  return out;
+}
+
+/** A new item of `repeater` with the defaults of its fields, plus `extra` answers. */
+export function blankItem(repeater: FormField, extra: { [key: string]: any } = {}): { [key: string]: any } {
+  const item: { [key: string]: any } = { ...defaultValues(repeater.fields || []), ...deepClone(extra) };
+  // items given for a repeater inside this one start from its defaults too
+  flattenFields(repeater.fields || [], true)
+    .filter(f => f.type === 'repeater' && f.model && Array.isArray(extra[f.model]))
+    .forEach(nested => (item[nested.model as string] = extra[nested.model as string].map((inner: any) => blankItem(nested, inner))));
+  return item;
+}
+
+function repeaterDefault(repeater: FormField): any[] {
+  const given = Array.isArray(repeater.defaultValue) ? repeater.defaultValue : [];
+  const items = given.map((item: any) => blankItem(repeater, item));
+  const min = Number(repeater.config && repeater.config.minItems) || 0;
+  while (items.length < min) items.push(blankItem(repeater));
+  return items;
 }
 
 /** Horizontal placement helpers shared by the generator and the builder. */
@@ -265,6 +418,11 @@ function ensureIds(fields: FormField[]): FormField[] {
     if (!next.id) next.id = uid();
     if (isContainer(next)) {
       next.columns = (next.columns || []).map(column => ({ ...column, id: column.id || uid('col'), span: column.span || 6, fields: ensureIds(column.fields || []) }));
+    } else if (next.type === 'section') {
+      next.fields = ensureIds(next.fields || []);
+    } else if (next.type === 'repeater') {
+      next.fields = ensureIds(next.fields || []);
+      if (!next.model) next.model = next.inputName || next.id;
     } else if (!isLayoutType(next.type) && !next.model) {
       next.model = next.inputName || next.id;
     }
@@ -301,7 +459,7 @@ export function isEmptyValue(value: any): boolean {
 }
 
 export function evaluateCondition(condition: LogicCondition, values: { [key: string]: any }): boolean {
-  const actual = values[condition.field];
+  const actual = getByPath(values, condition.field);
   const expected = condition.value;
   const asArray = (v: any) => (Array.isArray(v) ? v.map(String) : [String(v ?? '')]);
   switch (condition.operator) {
@@ -313,10 +471,11 @@ export function evaluateCondition(condition: LogicCondition, values: { [key: str
       return Array.isArray(actual) ? asArray(actual).includes(String(expected)) : String(actual ?? '').toLowerCase().includes(String(expected ?? '').toLowerCase());
     case 'not_contains':
       return !evaluateCondition({ ...condition, operator: 'contains' }, values);
+    // a list (checkboxes, repeater items) is compared by its number of entries
     case 'gt':
-      return !isEmptyValue(actual) && Number(actual) > Number(expected);
+      return Array.isArray(actual) ? actual.length > Number(expected) : !isEmptyValue(actual) && Number(actual) > Number(expected);
     case 'lt':
-      return !isEmptyValue(actual) && Number(actual) < Number(expected);
+      return Array.isArray(actual) ? actual.length < Number(expected) : !isEmptyValue(actual) && Number(actual) < Number(expected);
     case 'empty':
       return isEmptyValue(actual);
     case 'not_empty':
@@ -326,32 +485,55 @@ export function evaluateCondition(condition: LogicCondition, values: { [key: str
   }
 }
 
+export type FieldStates = { visible: { [id: string]: boolean }; disabled: { [id: string]: boolean }; required: { [id: string]: boolean } };
+
 /**
- * Computes which fields are visible for the given values. Fields are evaluated in order (rows included), and a
- * field hidden by logic counts as "empty" for the fields that depend on it. Hiding a row hides everything in it.
+ * Evaluates every field's logic for the given values: is it shown, disabled, required. Fields are evaluated in order
+ * (rows and sections included) and a field hidden by logic counts as "empty" for the fields that depend on it. Hiding a
+ * row or section hides everything in it, disabling one disables it all. Fields inside a repeater are evaluated once per
+ * item (their ids are `<id>~<item>`), and their conditions can use the other fields of the same item.
  */
-export function computeVisibility(fields: FormField[], values: { [key: string]: any }): { [id: string]: boolean } {
-  const visibility: { [id: string]: boolean } = {};
-  const effective: { [key: string]: any } = { ...values };
-  const walk = (list: FormField[], parentVisible: boolean) =>
+export function computeStates(fields: FormField[], values: { [key: string]: any }): FieldStates {
+  const states: FieldStates = { visible: {}, disabled: {}, required: {} };
+  const walk = (list: FormField[], parentVisible: boolean, parentDisabled: boolean, scope: { [key: string]: any }) =>
     list.forEach(field => {
       let visible = parentVisible && field.visible !== false;
-      const logic = field.logic;
-      if (visible && logic && logic.conditions && logic.conditions.length) {
-        const results = logic.conditions.filter(c => c.field).map(c => evaluateCondition(c, effective));
-        if (results.length) {
-          const matched = logic.match === 'any' ? results.some(Boolean) : results.every(Boolean);
-          visible = logic.action === 'hide' ? !matched : matched;
+      let disabled = parentDisabled;
+      let required = false;
+      logicRules(field).forEach(rule => {
+        const conditions = (rule.conditions || []).filter(c => c.field);
+        if (!conditions.length) return;
+        const results = conditions.map(c => evaluateCondition(c, scope));
+        const matched = rule.match === 'any' ? results.some(Boolean) : results.every(Boolean);
+        if (rule.action === 'hide') {
+          if (matched) visible = false;
+        } else if (rule.action === 'disable') {
+          if (matched) disabled = true;
+        } else if (rule.action === 'enable') {
+          if (!matched) disabled = true;
+        } else if (rule.action === 'require') {
+          if (matched) required = true;
+        } else if (!matched) {
+          visible = false; // show
         }
+      });
+      states.visible[field.id] = visible;
+      states.disabled[field.id] = disabled || field.disabled === true;
+      states.required[field.id] = required;
+      if (!visible && field.model) delete scope[(field._key as string) || field.model];
+      if (field.type === 'columns') (field.columns || []).forEach(column => walk(column.fields || [], visible, disabled, scope));
+      else if (field.type === 'section') walk(field.fields || [], visible, disabled, scope);
+      else if (field.type === 'repeater') {
+        itemInstances(field, values).forEach(item => walk(item.fields, visible, disabled, { ...scope, ...(getByPath(values, item.model) || {}) }));
       }
-      visibility[field.id] = visible;
-      if (!visible && field.model) {
-        delete effective[field.model];
-      }
-      if (isContainer(field)) (field.columns || []).forEach(column => walk(column.fields || [], visible));
     });
-  walk(fields, true);
-  return visibility;
+  walk(fields, true, false, { ...values });
+  return states;
+}
+
+/** Which fields are visible for the given values (see `computeStates`). */
+export function computeVisibility(fields: FormField[], values: { [key: string]: any }): { [id: string]: boolean } {
+  return computeStates(fields, values).visible;
 }
 
 /** Minimal HTML sanitizer so labels can keep simple formatting (<b>, <a>, ...) safely. */

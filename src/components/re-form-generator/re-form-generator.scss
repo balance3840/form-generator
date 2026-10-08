@@ -200,11 +200,21 @@ re-form-generator {
     color: var(--rfg-error);
   }
   .rfg-form-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 12px;
     margin-top: var(--rfg-gap);
     font-size: 13px;
     font-weight: 600;
     color: var(--rfg-error);
     text-align: center;
+
+    .rfg-link {
+      font-size: 13px;
+      color: var(--rfg-error);
+    }
   }
 
   /* ------------------------------------------------------ text controls */
@@ -770,6 +780,590 @@ re-form-generator {
     text-underline-offset: 3px;
   }
 
+  /* ----------------------------------------------- buttons: variants, blocks */
+  .rfg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .rfg-btn-lg {
+    min-height: 56px;
+    padding: 0 28px;
+    font-size: 16px;
+  }
+  .rfg-bv-outline {
+    background: transparent;
+    color: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-bv-ghost {
+    background: transparent;
+    color: var(--rfg-primary);
+    padding: 0 12px;
+    &:hover:not(:disabled) {
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-bv-danger {
+    background: var(--rfg-error);
+    color: #fff;
+    &:hover:not(:disabled) {
+      filter: brightness(0.92);
+    }
+  }
+  // A button placed in the form (not the submit bar): sits on its own line and does not stretch unless asked to.
+  .rfg-button-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+
+    .rfg-btn-primary {
+      flex: none;
+    }
+    &.rfg-ba-center {
+      align-items: center;
+    }
+    &.rfg-ba-end {
+      align-items: flex-end;
+    }
+    &.rfg-ba-stretch {
+      align-items: stretch;
+    }
+    .rfg-help {
+      margin-top: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------ callout */
+  .rfg-callout {
+    --rfg-tone: var(--rfg-primary);
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--rfg-radius);
+    border: 1px solid color-mix(in srgb, var(--rfg-tone) 30%, transparent);
+    background: color-mix(in srgb, var(--rfg-tone) 9%, var(--rfg-bg));
+
+    &.rfg-callout-success {
+      --rfg-tone: #16a34a;
+    }
+    &.rfg-callout-warning {
+      --rfg-tone: #d97706;
+    }
+    &.rfg-callout-danger {
+      --rfg-tone: var(--rfg-error);
+    }
+    .rfg-callout-icon {
+      flex: none;
+      margin-top: 1px;
+      color: var(--rfg-tone);
+    }
+    .rfg-callout-title {
+      font-weight: 700;
+    }
+    .rfg-callout-text {
+      font-size: 14px;
+      white-space: pre-line;
+      color: color-mix(in srgb, var(--rfg-text) 85%, transparent);
+    }
+    .rfg-callout-title + .rfg-callout-text {
+      margin-top: 2px;
+    }
+  }
+
+  /* ------------------------------------------------------ section (card) */
+  .rfg-section {
+    min-width: 0;
+  }
+  .rfg-section-card {
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    overflow: hidden;
+
+    .rfg-section-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rfg-border);
+    }
+    .rfg-section-body {
+      padding: 20px;
+    }
+    &.is-closed .rfg-section-head {
+      border-bottom-color: transparent;
+    }
+  }
+  .rfg-section-plain {
+    .rfg-section-head {
+      padding: 0 0 12px;
+    }
+  }
+  .rfg-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    &.is-clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+  .rfg-section-title {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  .rfg-section-desc {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    color: var(--rfg-muted);
+  }
+  .rfg-chevron {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin: 0 4px 3px;
+    border-right: 2px solid var(--rfg-muted);
+    border-bottom: 2px solid var(--rfg-muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s;
+    &.is-open {
+      transform: rotate(45deg);
+    }
+  }
+
+  /* -------------------------------------------------------- option cards */
+  .rfg-options-cards {
+    gap: 10px;
+  }
+  .rfg-option-card {
+    align-items: flex-start;
+    padding: 14px 16px;
+
+    input {
+      margin-top: 3px;
+    }
+    .rfg-option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .rfg-option-title {
+      font-weight: 600;
+    }
+    .rfg-option-desc {
+      font-size: 13px;
+      color: var(--rfg-muted);
+    }
+  }
+
+  /* ------------------------------------------------------------ repeater */
+  .rfg-repeater-head {
+    margin-bottom: 10px;
+    .rfg-help {
+      margin-top: 2px;
+    }
+  }
+  .rfg-items {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .rfg-empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--rfg-muted);
+    font-size: 14px;
+    border: 1px dashed var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+  }
+  .rfg-item {
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    overflow: hidden;
+
+    &.has-errors {
+      border-color: var(--rfg-error);
+    }
+  }
+  .rfg-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 18px;
+    background: var(--rfg-tint);
+    &.is-clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+  .rfg-item-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rfg-item-meta {
+    flex: none;
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  .rfg-item-done {
+    flex: none;
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #15803d;
+    background: color-mix(in srgb, #16a34a 14%, var(--rfg-bg));
+  }
+  .rfg-item-actions {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+  }
+  .rfg-item-flag {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--rfg-error);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .rfg-item-body {
+    padding: 18px;
+    border-top: 1px solid var(--rfg-border);
+  }
+  .rfg-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    background: transparent;
+    color: var(--rfg-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    &:hover {
+      background: color-mix(in srgb, var(--rfg-error) 12%, transparent);
+      color: var(--rfg-error);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+
+  // "+ Add" under a repeater: a text button, or a dashed box.
+  .rfg-add {
+    margin-top: 12px;
+  }
+  .rfg-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary);
+    cursor: pointer;
+    border-radius: calc(var(--rfg-radius) * 0.7);
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-add-dashed .rfg-add-btn {
+    width: 100%;
+    min-height: 88px;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1.5px dashed var(--rfg-border-strong);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    transition: all 0.15s;
+    &:hover {
+      text-decoration: none;
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+  }
+  .rfg-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-tint);
+  }
+  .rfg-preset {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    text-align: left;
+    font: inherit;
+    color: var(--rfg-text);
+    background: var(--rfg-bg);
+    border: 1px solid var(--rfg-border-strong);
+    border-radius: var(--rfg-radius);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover {
+      border-color: var(--rfg-primary);
+      background: var(--rfg-primary-soft);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus);
+    }
+  }
+  .rfg-preset-title {
+    font-weight: 600;
+  }
+  .rfg-preset-desc {
+    font-size: 12.5px;
+    color: var(--rfg-muted);
+  }
+
+  /* --------------------------------------------------------- repeater table */
+  .rfg-table {
+    border: 1px solid var(--rfg-border);
+    border-radius: calc(var(--rfg-radius) * 1.3);
+    background: var(--rfg-bg);
+    overflow: hidden;
+  }
+  .rfg-table-head,
+  .rfg-table-row {
+    display: grid;
+    grid-template-columns: var(--rfg-table-cols);
+    gap: 12px;
+    align-items: center;
+    padding: 8px 14px;
+  }
+  .rfg-table-head {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: var(--rfg-tint);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg-table-row-wrap {
+    border-top: 1px solid var(--rfg-border);
+  }
+  .rfg-cell {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .rfg-field {
+      width: 100%;
+    }
+    .rfg-control {
+      min-height: 38px;
+      padding: 6px 10px;
+      font-size: 14px;
+    }
+    textarea.rfg-control {
+      min-height: 38px;
+    }
+    .rfg-readonly {
+      padding-left: 0;
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      font-weight: 500;
+      cursor: default;
+      text-overflow: ellipsis;
+    }
+  }
+  .rfg-cell-actions {
+    align-items: flex-end;
+  }
+  .rfg-table-detail {
+    padding: 14px 14px 16px;
+    border-top: 1px dashed var(--rfg-border);
+    background: color-mix(in srgb, var(--rfg-tint) 55%, var(--rfg-bg));
+  }
+
+  /* --------------------------------------------------- steps: sidebar layout */
+  &.rfg-layout-sidebar {
+    --rfg-pad-x: 0px;
+    --rfg-pad-y: 0px;
+    // `clip` keeps the rounded corners without making the card a scroll container (that would break the sticky step list)
+    overflow: clip;
+
+    > .rfg-header,
+    > .rfg-lang,
+    > .rfg-brand .rfg-logo {
+      margin-left: 32px;
+      margin-right: 32px;
+    }
+    > .rfg-header {
+      padding-top: 28px;
+    }
+    > .rfg-brand .rfg-logo {
+      padding-top: 24px;
+    }
+  }
+  .rfg-flow {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 420px;
+  }
+  .rfg-steps-nav {
+    border-right: 1px solid var(--rfg-border);
+    background: color-mix(in srgb, var(--rfg-tint) 60%, var(--rfg-bg));
+    display: flex;
+    flex-direction: column;
+  }
+  // the step list stays in view while a long step scrolls
+  .rfg-steps-sticky {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  .rfg-nav-top {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg-nav-exit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: var(--rfg-text);
+    cursor: pointer;
+    &:hover strong {
+      color: var(--rfg-primary);
+    }
+    small {
+      display: block;
+      font-size: 12px;
+      color: var(--rfg-muted);
+    }
+  }
+  .rfg-steps {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .rfg-step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 1px solid var(--rfg-border);
+    border-left: 3px solid transparent;
+    background: none;
+    font: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    color: var(--rfg-text);
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover:not(:disabled) {
+      background: var(--rfg-tint);
+    }
+    &:disabled {
+      cursor: default;
+      color: var(--rfg-muted);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: inset 0 0 0 3px var(--rfg-focus);
+    }
+    &.is-current {
+      font-weight: 700;
+      border-left-color: var(--rfg-primary);
+      background: var(--rfg-bg);
+    }
+  }
+  .rfg-step-dot {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--rfg-border-strong);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--rfg-muted);
+    background: var(--rfg-bg);
+    transition: all 0.15s;
+  }
+  .is-visited .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary);
+  }
+  .is-current .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .is-done .rfg-step-dot {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .rfg-step-name {
+    min-width: 0;
+  }
+  .rfg-flow-main {
+    min-width: 0;
+    padding: 28px 32px 32px;
+  }
+  .rfg-page-head {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-page-title {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .rfg-page-desc {
+    margin: 4px 0 0;
+    color: var(--rfg-muted);
+  }
+
   /* ------------------------------------------------------------ success */
   .rfg-success {
     text-align: center;
@@ -811,5 +1405,69 @@ re-form-generator {
   }
   .rfg .rfg-options {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The step list moves above the form and the table turns into stacked cards on small containers. */
+@container rfg (max-width: 760px) {
+  .rfg .rfg-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rfg .rfg-steps-nav {
+    border-right: 0;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  .rfg .rfg-steps-sticky {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .rfg .rfg-steps {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .rfg .rfg-steps li {
+    flex: none;
+  }
+  .rfg .rfg-step-item {
+    width: auto;
+    white-space: nowrap;
+    padding: 12px 14px;
+    border-bottom: 0;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    &.is-current {
+      border-bottom-color: var(--rfg-primary);
+    }
+  }
+  .rfg .rfg-flow-main {
+    padding: 22px 18px 26px;
+  }
+  .rfg .rfg-table-head {
+    display: none;
+  }
+  .rfg .rfg-table-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+  .rfg .rfg-cell::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg .rfg-cell-actions::before {
+    content: none;
+  }
+  .rfg .rfg-cell-actions {
+    align-items: flex-start;
+  }
+  .rfg.rfg-layout-sidebar > .rfg-header,
+  .rfg.rfg-layout-sidebar > .rfg-lang,
+  .rfg.rfg-layout-sidebar > .rfg-brand .rfg-logo {
+    margin-left: 18px;
+    margin-right: 18px;
   }
 }

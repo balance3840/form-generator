@@ -21,13 +21,17 @@
 
 ## Events
 
-| Event             | Description                                                                                                          | Type                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `handleSubmit`    |                                                                                                                      | `CustomEvent<any>`                   |
-| `languageChanged` | Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop). | `CustomEvent<{ language: string; }>` |
-| `submitted`       |                                                                                                                      | `CustomEvent<any>`                   |
-| `validationError` |                                                                                                                      | `CustomEvent<any>`                   |
-| `valueChanged`    |                                                                                                                      | `CustomEvent<any>`                   |
+| Event             | Description                                                                                                          | Type                                                         |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `draftSaved`      | Fires when the draft is saved (`settings.saveDraft`).                                                                | `CustomEvent<{ values: any; }>`                              |
+| `exit`            | Fires when the visitor leaves with "Save and exit" (`settings.exitUrl` is opened afterwards, if set).                | `CustomEvent<{ values: any; }>`                              |
+| `formAction`      | Fires when a button runs an `emit` action: `{ name, field, values }`. Use it to hook your own code to a button.      | `CustomEvent<{ name: string; field: string; values: any; }>` |
+| `handleSubmit`    |                                                                                                                      | `CustomEvent<any>`                                           |
+| `languageChanged` | Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop). | `CustomEvent<{ language: string; }>`                         |
+| `stepChanged`     | Fires when the visitor moves to another step: `{ index, id, title }`.                                                | `CustomEvent<{ index: number; id: string; title: string; }>` |
+| `submitted`       |                                                                                                                      | `CustomEvent<any>`                                           |
+| `validationError` |                                                                                                                      | `CustomEvent<any>`                                           |
+| `valueChanged`    |                                                                                                                      | `CustomEvent<any>`                                           |
 
 
 ## Methods
@@ -49,6 +53,23 @@ Type: `Promise<string>`
 #### Returns
 
 Type: `Promise<{ [key: string]: any; }>`
+
+
+
+### `goToStep(stepId: string, validate?: boolean) => Promise<boolean>`
+
+Goes to a step by its id (a page break's id, or `start` for the first step). Resolves to false if it could not.
+
+#### Parameters
+
+| Name       | Type      | Description |
+| ---------- | --------- | ----------- |
+| `stepId`   | `string`  |             |
+| `validate` | `boolean` |             |
+
+#### Returns
+
+Type: `Promise<boolean>`
 
 
 
@@ -124,6 +145,7 @@ Type: `Promise<{ [key: string]: string[]; }>`
 - [re-country-select](../re-country-select)
 - [re-search-select](../re-search-select)
 - [re-file-input-field](../re-file-input-field)
+- [re-signature-pad](../re-signature-pad)
 - [re-alert](../re-alert)
 
 ### Graph
@@ -133,6 +155,7 @@ graph TD;
   re-form-generator --> re-country-select
   re-form-generator --> re-search-select
   re-form-generator --> re-file-input-field
+  re-form-generator --> re-signature-pad
   re-form-generator --> re-alert
   style re-form-generator fill:#f9f,stroke:#333,stroke-width:4px
 ```

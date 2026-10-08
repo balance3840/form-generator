@@ -15,7 +15,23 @@ export class ReFileInputField {
   @Prop() inputAttributes: any;
   @Prop() inputProps: any;
   @Prop() modelKey: string;
+  /** Show a thumbnail for every chosen image. */
+  @Prop() preview: boolean = false;
+  /** A small "add" button instead of the big drop area (use with `preview` for photos). */
+  @Prop() compact: boolean = false;
   @Event() selectedFileChanged: EventEmitter<any>;
+
+  private thumbs = new Map<File, string>();
+
+  disconnectedCallback() {
+    this.thumbs.forEach(url => URL.revokeObjectURL(url));
+    this.thumbs.clear();
+  }
+
+  private thumbOf(file: File): string {
+    if (!this.thumbs.has(file)) this.thumbs.set(file, URL.createObjectURL(file));
+    return this.thumbs.get(file);
+  }
 
   handleFileFieldDragOver(e) {
     e.preventDefault();
@@ -68,8 +84,27 @@ export class ReFileInputField {
     )
   }
 
+  /** Thumbnails of the chosen images, each with a remove button. */
+  renderThumbs() {
+    const files = this.selectedFiles && this.selectedFiles.length ? Array.from(this.selectedFiles as FileList) : [];
+    if (!files.length) return null;
+    return (
+      <div class="file-thumbs">
+        {files.map(file => (
+          <div class="file-thumb" title={file.name}>
+            {file.type.startsWith('image/') ? <img src={this.thumbOf(file)} alt={file.name} /> : <span class="file-thumb-name">{file.name}</span>}
+            <button type="button" class="file-thumb-remove" aria-label={`Remove ${file.name}`} onClick={e => this.handleFileFieldClick(e, file)}>
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   handleFileFieldClick(e, file: File) {
     e.preventDefault();
+    e.stopPropagation();
     const currentFiles = Array.from(this.fileInputField.files);
     const newFileList = currentFiles.filter(currentFile => currentFile.name !== file.name);
     const dt = new DataTransfer()
@@ -87,7 +122,22 @@ export class ReFileInputField {
   render() {
     let dropzoneClass = 'file-dropzone ';
     this.isHovered ? dropzoneClass += 'hover' : '';
+    if (this.compact) {
+      return (
+        <div class="file-compact">
+          {this.preview && this.renderThumbs()}
+          <button type="button" class="file-compact-btn" onClick={() => this.fileInputField.click()}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span>{this.textTitle || 'Add file'}</span>
+          </button>
+          <input class="hidden" ref={el => (this.fileInputField = el)} onChange={e => this.handleFileFieldChange(e)} {...this.inputAttributes} {...this.inputProps} />
+        </div>
+      );
+    }
     return (
+      <div class="file-wrap">
       <div class="file-field-container" onClick={(e: any) => {
         if (e.target.className === 'remove-file') {
           e.preventDefault();
@@ -139,6 +189,8 @@ export class ReFileInputField {
             {...this.inputProps}
           />
         </label>
+      </div>
+      {this.preview && this.renderThumbs()}
       </div>
     );
   }

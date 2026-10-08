@@ -270,10 +270,41 @@ const DA = pack([
   "Fjern",
 ]);
 
-/** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
-export const BUILT_IN_UI: { [language: string]: Dict } = { en: EN, es: ES, fr: FR, de: DE, it: IT, pt: PT, nl: NL, pl: PL, ca: CA, da: DA };
+// Texts added after the positional tables above. These are written per language with explicit keys, so adding more never shifts anything.
+const EXTRA_KEYS = ['ui.itemTitle', 'ui.addItem', 'ui.noItems', 'ui.saveExit', 'ui.savedAt', 'ui.signHere', 'ui.clearSignature', 'ui.stepsNav', 'ui.done', 'ui.showFirstError', 'validation.minItems', 'validation.maxItems'];
+const extra = (values: string[]): Dict => {
+  const out: Dict = {};
+  EXTRA_KEYS.forEach((key, i) => (out[key] = values[i]));
+  return out;
+};
+const EXTRA: { [language: string]: Dict } = {
+  en: extra(['Item {n}', 'Add', 'Nothing added yet', 'Save and exit', 'Saved at {time}', 'Sign here', 'Clear', 'Steps', 'Done', 'Show the first one', '{label}: add at least {0}', '{label}: add at most {0}']),
+  es: extra(['Elemento {n}', 'Añadir', 'Todavía no se ha añadido nada', 'Guardar y salir', 'Guardado a las {time}', 'Firma aquí', 'Borrar', 'Pasos', 'Hecho', 'Mostrar el primero', '{label}: añade al menos {0}', '{label}: añade como máximo {0}']),
+  fr: extra(['Élément {n}', 'Ajouter', 'Rien n’a encore été ajouté', 'Enregistrer et quitter', 'Enregistré à {time}', 'Signez ici', 'Effacer', 'Étapes', 'Terminé', 'Afficher le premier', '{label} : ajoutez-en au moins {0}', '{label} : ajoutez-en au plus {0}']),
+  de: extra(['Eintrag {n}', 'Hinzufügen', 'Noch nichts hinzugefügt', 'Speichern und beenden', 'Gespeichert um {time}', 'Hier unterschreiben', 'Löschen', 'Schritte', 'Fertig', 'Zum ersten springen', '{label}: mindestens {0} hinzufügen', '{label}: höchstens {0} hinzufügen']),
+  it: extra(['Elemento {n}', 'Aggiungi', 'Ancora nulla di aggiunto', 'Salva ed esci', 'Salvato alle {time}', 'Firma qui', 'Cancella', 'Passaggi', 'Fatto', 'Vai al primo', '{label}: aggiungi almeno {0}', '{label}: aggiungi al massimo {0}']),
+  pt: extra(['Item {n}', 'Adicionar', 'Ainda não foi adicionado nada', 'Guardar e sair', 'Guardado às {time}', 'Assine aqui', 'Limpar', 'Passos', 'Concluído', 'Mostrar o primeiro', '{label}: adicione pelo menos {0}', '{label}: adicione no máximo {0}']),
+  nl: extra(['Item {n}', 'Toevoegen', 'Nog niets toegevoegd', 'Opslaan en afsluiten', 'Opgeslagen om {time}', 'Teken hier uw handtekening', 'Wissen', 'Stappen', 'Klaar', 'Toon de eerste', '{label}: voeg er minimaal {0} toe', '{label}: voeg er maximaal {0} toe']),
+  pl: extra(['Pozycja {n}', 'Dodaj', 'Nic jeszcze nie dodano', 'Zapisz i wyjdź', 'Zapisano o {time}', 'Podpisz tutaj', 'Wyczyść', 'Kroki', 'Gotowe', 'Pokaż pierwszy', '{label}: dodaj co najmniej {0}', '{label}: dodaj najwyżej {0}']),
+  ca: extra(['Element {n}', 'Afegeix', 'Encara no s’ha afegit res', 'Desa i surt', 'Desat a les {time}', 'Signa aquí', 'Esborra', 'Passos', 'Fet', 'Mostra el primer', '{label}: afegeix-ne almenys {0}', '{label}: afegeix-ne com a màxim {0}']),
+  da: extra(['Element {n}', 'Tilføj', 'Intet tilføjet endnu', 'Gem og afslut', 'Gemt kl. {time}', 'Underskriv her', 'Ryd', 'Trin', 'Færdig', 'Vis den første', '{label}: tilføj mindst {0}', '{label}: tilføj højst {0}']),
+};
 
-export const UI_KEYS = KEYS;
+/** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
+export const BUILT_IN_UI: { [language: string]: Dict } = {
+  en: { ...EN, ...EXTRA.en },
+  es: { ...ES, ...EXTRA.es },
+  fr: { ...FR, ...EXTRA.fr },
+  de: { ...DE, ...EXTRA.de },
+  it: { ...IT, ...EXTRA.it },
+  pt: { ...PT, ...EXTRA.pt },
+  nl: { ...NL, ...EXTRA.nl },
+  pl: { ...PL, ...EXTRA.pl },
+  ca: { ...CA, ...EXTRA.ca },
+  da: { ...DA, ...EXTRA.da },
+};
+
+export const UI_KEYS = Object.keys(BUILT_IN_UI.en);
 
 /* ------------------------------------------------------------------- lookup */
 
@@ -329,8 +360,8 @@ const fill = (template: string, vars?: { [key: string]: any }) => (vars ? templa
 export function createTranslator(language: string, i18n?: I18nConfig) {
   const lang = (language || 'en').toLowerCase();
   const overrides = (i18n && i18n.translations && (i18n.translations[language] || i18n.translations[matchLanguage(language, Object.keys(i18n.translations || {})) || ''])) || {};
-  const base = BUILT_IN_UI[lang] || BUILT_IN_UI[baseLanguage(lang)] || EN;
-  return (key: string, vars?: { [key: string]: any }) => fill(overrides[key] || base[key] || EN[key] || key, vars);
+  const base = BUILT_IN_UI[lang] || BUILT_IN_UI[baseLanguage(lang)] || BUILT_IN_UI.en;
+  return (key: string, vars?: { [key: string]: any }) => fill(overrides[key] || base[key] || BUILT_IN_UI.en[key] || key, vars);
 }
 
 /* --------------------------------------------------- translatable content */
@@ -345,8 +376,29 @@ export type Translatable = {
   multiline?: boolean;
 };
 
-const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel'];
-const CONFIG_LABELS: { [k: string]: string } = { minLabel: 'Left label', maxLabel: 'Right label', unit: 'Unit', title: 'Upload text', subTitle: 'Upload hint', otherLabel: '“Other” option' };
+const CONFIG_TEXT = ['minLabel', 'maxLabel', 'unit', 'title', 'subTitle', 'otherLabel', 'addLabel', 'itemLabel', 'itemMeta', 'emptyText'];
+const CONFIG_LABELS: { [k: string]: string } = {
+  minLabel: 'Left label',
+  maxLabel: 'Right label',
+  unit: 'Unit',
+  title: 'Upload text',
+  subTitle: 'Upload hint',
+  otherLabel: '“Other” option',
+  addLabel: '“Add” button',
+  itemLabel: 'Item title',
+  itemMeta: 'Item summary',
+  emptyText: 'Text when empty',
+};
+const SETTINGS_TEXT: [string, string, boolean?][] = [
+  ['submitButtonText', 'Submit button'],
+  ['successMessage', 'Thank-you message', true],
+  ['errorMessage', 'Error message', true],
+  ['formErrorMessage', 'Form error message'],
+  ['firstStepTitle', 'First step title'],
+  ['firstStepDescription', 'First step description'],
+  ['nextButtonText', 'Next button'],
+  ['exitText', '“Save and exit” button'],
+];
 
 const fieldName = (field: FormField) => (field.label || field.checkboxLabel || field.content || field.model || field.type || '').toString().replace(/<[^>]*>/g, '').slice(0, 60) || field.type;
 
@@ -367,22 +419,28 @@ export function collectTranslatables(doc: FormDocument): Translatable[] {
   add('title', doc.title, 'Form', 'Title');
   add('description', doc.description, 'Form', 'Description', true);
   const s = doc.settings || {};
-  add('settings.submitButtonText', s.submitButtonText, 'Form', 'Submit button');
-  add('settings.successMessage', s.successMessage, 'Form', 'Thank-you message', true);
-  add('settings.errorMessage', s.errorMessage, 'Form', 'Error message', true);
-  add('settings.formErrorMessage', s.formErrorMessage, 'Form', 'Form error message');
-  add('settings.firstStepTitle', s.firstStepTitle, 'Form', 'First step title');
+  SETTINGS_TEXT.forEach(([key, label, multiline]) => add(`settings.${key}`, s[key], 'Form', label, !!multiline));
 
-  flattenFields(doc.fields, true).forEach(field => {
+  // every block, repeater items included (rows only hold other fields)
+  flattenFields(doc.fields, false, true).forEach(field => {
+    if (field.type === 'columns') return;
     const group = fieldName(field);
     const id = field.id;
-    add(`field.${id}.label`, field.label, group, field.type === 'heading' ? 'Title' : 'Question');
+    const titleLike = ['heading', 'section', 'callout', 'pageBreak', 'button'].includes(field.type);
+    add(`field.${id}.label`, field.label, group, field.type === 'heading' || field.type === 'section' || field.type === 'callout' ? 'Title' : field.type === 'pageBreak' ? 'Step title' : field.type === 'button' ? 'Button text' : 'Question');
     add(`field.${id}.checkboxLabel`, field.checkboxLabel, group, 'Checkbox text');
-    add(`field.${id}.helpText`, field.helpText, group, field.type === 'heading' ? 'Subtitle' : 'Help text');
+    add(`field.${id}.helpText`, field.helpText, group, titleLike && field.type !== 'button' ? 'Subtitle' : 'Help text', true);
     add(`field.${id}.placeholder`, field.placeholder, group, 'Placeholder');
     add(`field.${id}.content`, field.content, group, 'Text', true);
     CONFIG_TEXT.forEach(k => add(`field.${id}.config.${k}`, field.config && field.config[k], group, CONFIG_LABELS[k]));
-    (field.options || []).forEach((option: any) => add(`field.${id}.option.${String(option.value)}`, option.label, group, `Option “${option.label}”`));
+    (field.options || []).forEach((option: any) => {
+      add(`field.${id}.option.${String(option.value)}`, option.label, group, `Option “${option.label}”`);
+      add(`field.${id}.optionDesc.${String(option.value)}`, option.description, group, `Description of “${option.label}”`, true);
+    });
+    ((field.config && field.config.presets) || []).forEach((preset: any, i: number) => {
+      add(`field.${id}.preset.${i}.label`, preset.label, group, `Choice “${preset.label}”`);
+      add(`field.${id}.preset.${i}.description`, preset.description, group, `Description of “${preset.label}”`, true);
+    });
     Array.from(new Set((field.options || []).map((o: any) => o.group).filter(Boolean))).forEach((g: any) => add(`field.${id}.group.${g}`, g, group, `Option group “${g}”`));
     (field.validations || []).forEach(rule => {
       const message = ruleMessage(field, rule);
@@ -408,6 +466,7 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
     }
     const id = field.id;
     const next: FormField = { ...field };
+    if (field.type === 'section' || field.type === 'repeater') next.fields = (field.fields || []).map(localizeField);
     (['label', 'checkboxLabel', 'helpText', 'placeholder', 'content'] as const).forEach(prop => {
       if (typeof field[prop] === 'string') next[prop] = tr(`field.${id}.${prop}`, field[prop]);
     });
@@ -418,7 +477,18 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
       });
     }
     if (field.options) {
-      next.options = field.options.map((o: any) => ({ ...o, label: tr(`field.${id}.option.${String(o.value)}`, o.label), ...(o.group ? { group: tr(`field.${id}.group.${o.group}`, o.group) } : {}) }));
+      next.options = field.options.map((o: any) => ({
+        ...o,
+        label: tr(`field.${id}.option.${String(o.value)}`, o.label),
+        ...(o.group ? { group: tr(`field.${id}.group.${o.group}`, o.group) } : {}),
+        ...(typeof o.description === 'string' ? { description: tr(`field.${id}.optionDesc.${String(o.value)}`, o.description) } : {}),
+      }));
+    }
+    if (field.config && Array.isArray(field.config.presets)) {
+      next.config = {
+        ...(next.config || field.config),
+        presets: field.config.presets.map((p: any, i: number) => ({ ...p, label: tr(`field.${id}.preset.${i}.label`, p.label), ...(typeof p.description === 'string' ? { description: tr(`field.${id}.preset.${i}.description`, p.description) } : {}) })),
+      };
     }
     if (field.validations) {
       next.validations = field.validations.map(rule => {
@@ -435,7 +505,7 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
 
   const s = doc.settings || {};
   const settings = { ...s };
-  ['submitButtonText', 'successMessage', 'errorMessage', 'formErrorMessage', 'firstStepTitle'].forEach(k => {
+  SETTINGS_TEXT.forEach(([k]) => {
     if (typeof s[k] === 'string') settings[k] = tr(`settings.${k}`, s[k]);
   });
 

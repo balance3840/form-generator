@@ -111,3 +111,83 @@ re-file-input-field {
     }
   }
 }
+
+re-file-input-field {
+  .file-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .file-thumb {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    border-radius: calc(var(--rfg-radius, 10px) * 0.8);
+    border: 1px solid var(--rfg-border, #e5e7eb);
+    background: var(--rfg-tint, #f3f4f6);
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+  .file-thumb-name {
+    display: block;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.3;
+    word-break: break-all;
+    color: var(--rfg-muted, #6b7280);
+  }
+  .file-thumb-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(17, 24, 39, 0.72);
+    color: #fff;
+    font-size: 15px;
+    line-height: 22px;
+    cursor: pointer;
+  }
+  .file-compact {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .file-compact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary, #4f46e5);
+    background: transparent;
+    border: 1.5px dashed var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 10px);
+    cursor: pointer;
+    transition: all 0.15s;
+    &:hover {
+      border-color: var(--rfg-primary, #4f46e5);
+      background: var(--rfg-primary-soft, #eef2ff);
+    }
+  }
+}
+
+re-file-input-field .file-compact input.hidden,
+re-file-input-field .file-compact input[type='file'] {
+  display: none;
+}
+re-file-input-field .file-compact .file-thumbs {
+  margin: 0 0 10px;
+}

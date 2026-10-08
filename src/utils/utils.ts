@@ -84,7 +84,8 @@ export function createYupSchema(fields: FormField[], captchaField: string | bool
   }
 
   fields.forEach(field => {
-    if (isLayoutType(field.type) || !field.model) return;
+    // a repeater's items are validated one by one by the form (see re-form-generator), not as one value
+    if (isLayoutType(field.type) || field.type === 'repeater' || !field.model) return;
     const { model, validations = [] } = field;
     const validationType = effectiveValidationType(field);
     const label = stripTags(field.label || field.checkboxLabel || '') || model;

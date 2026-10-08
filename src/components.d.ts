@@ -26,10 +26,18 @@ export namespace Components {
         "zIndex": string;
     }
     interface ReFileInputField {
+        /**
+          * A small "add" button instead of the big drop area (use with `preview` for photos).
+         */
+        "compact": boolean;
         "inputAttributes": any;
         "inputProps": any;
         "modelKey": string;
         "placeholder": string;
+        /**
+          * Show a thumbnail for every chosen image.
+         */
+        "preview": boolean;
         "subTitle": string;
         "textTitle": string;
     }
@@ -45,6 +53,10 @@ export namespace Components {
         "formId": string;
         "getLanguage": () => Promise<string>;
         "getValues": () => Promise<{ [key: string]: any; }>;
+        /**
+          * Goes to a step by its id (a page break's id, or `start` for the first step). Resolves to false if it could not.
+         */
+        "goToStep": (stepId: string, validate?: boolean) => Promise<boolean>;
         /**
           * Forces a language (e.g. `es`, `pt-BR`), overriding browser detection and hiding the language switcher. Without it the language is picked from `schema.i18n` (browser language if available, else the default).
          */
@@ -113,6 +125,25 @@ export namespace Components {
          */
         "texts": { [key: string]: string };
     }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface ReSignaturePad {
+        "disabled": boolean;
+        /**
+          * Height of the box in pixels.
+         */
+        "height": number;
+        /**
+          * The answer key the form stores the signature under.
+         */
+        "modelKey": string;
+        "texts": { hint?: string; clear?: string };
+        /**
+          * The current signature (PNG data URL), or empty.
+         */
+        "value": string;
+    }
 }
 export interface ReCountrySelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -133,6 +164,10 @@ export interface ReMultiSelectCustomEvent<T> extends CustomEvent<T> {
 export interface ReSearchSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLReSearchSelectElement;
+}
+export interface ReSignaturePadCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLReSignaturePadElement;
 }
 declare global {
     interface HTMLReAlertElement extends Components.ReAlert, HTMLStencilElement {
@@ -181,6 +216,10 @@ declare global {
         "validationError": any;
         "valueChanged": any;
         "languageChanged": { language: string };
+        "formAction": { name: string; field: string; values: any };
+        "stepChanged": { index: number; id: string; title: string };
+        "draftSaved": { values: any };
+        "exit": { values: any };
     }
     interface HTMLReFormGeneratorElement extends Components.ReFormGenerator, HTMLStencilElement {
         addEventListener<K extends keyof HTMLReFormGeneratorElementEventMap>(type: K, listener: (this: HTMLReFormGeneratorElement, ev: ReFormGeneratorCustomEvent<HTMLReFormGeneratorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -242,6 +281,26 @@ declare global {
         prototype: HTMLReSearchSelectElement;
         new (): HTMLReSearchSelectElement;
     };
+    interface HTMLReSignaturePadElementEventMap {
+        "signatureChanged": any;
+    }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface HTMLReSignaturePadElement extends Components.ReSignaturePad, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLReSignaturePadElementEventMap>(type: K, listener: (this: HTMLReSignaturePadElement, ev: ReSignaturePadCustomEvent<HTMLReSignaturePadElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLReSignaturePadElementEventMap>(type: K, listener: (this: HTMLReSignaturePadElement, ev: ReSignaturePadCustomEvent<HTMLReSignaturePadElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLReSignaturePadElement: {
+        prototype: HTMLReSignaturePadElement;
+        new (): HTMLReSignaturePadElement;
+    };
     interface HTMLElementTagNameMap {
         "re-alert": HTMLReAlertElement;
         "re-country-select": HTMLReCountrySelectElement;
@@ -249,6 +308,7 @@ declare global {
         "re-form-generator": HTMLReFormGeneratorElement;
         "re-multi-select": HTMLReMultiSelectElement;
         "re-search-select": HTMLReSearchSelectElement;
+        "re-signature-pad": HTMLReSignaturePadElement;
     }
 }
 declare namespace LocalJSX {
@@ -271,11 +331,19 @@ declare namespace LocalJSX {
         "zIndex"?: string;
     }
     interface ReFileInputField {
+        /**
+          * A small "add" button instead of the big drop area (use with `preview` for photos).
+         */
+        "compact"?: boolean;
         "inputAttributes"?: any;
         "inputProps"?: any;
         "modelKey"?: string;
         "onSelectedFileChanged"?: (event: ReFileInputFieldCustomEvent<any>) => void;
         "placeholder"?: string;
+        /**
+          * Show a thumbnail for every chosen image.
+         */
+        "preview"?: boolean;
         "subTitle"?: string;
         "textTitle"?: string;
     }
@@ -301,11 +369,27 @@ declare namespace LocalJSX {
           * Initial values, keyed by field `model`.
          */
         "model"?: any;
+        /**
+          * Fires when the draft is saved (`settings.saveDraft`).
+         */
+        "onDraftSaved"?: (event: ReFormGeneratorCustomEvent<{ values: any }>) => void;
+        /**
+          * Fires when the visitor leaves with "Save and exit" (`settings.exitUrl` is opened afterwards, if set).
+         */
+        "onExit"?: (event: ReFormGeneratorCustomEvent<{ values: any }>) => void;
+        /**
+          * Fires when a button runs an `emit` action: `{ name, field, values }`. Use it to hook your own code to a button.
+         */
+        "onFormAction"?: (event: ReFormGeneratorCustomEvent<{ name: string; field: string; values: any }>) => void;
         "onHandleSubmit"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         /**
           * Fires when the displayed language changes (detection on load, the switcher, `setLanguage()` or the `language` prop).
          */
         "onLanguageChanged"?: (event: ReFormGeneratorCustomEvent<{ language: string }>) => void;
+        /**
+          * Fires when the visitor moves to another step: `{ index, id, title }`.
+         */
+        "onStepChanged"?: (event: ReFormGeneratorCustomEvent<{ index: number; id: string; title: string }>) => void;
         "onSubmitted"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValidationError"?: (event: ReFormGeneratorCustomEvent<any>) => void;
         "onValueChanged"?: (event: ReFormGeneratorCustomEvent<any>) => void;
@@ -359,6 +443,26 @@ declare namespace LocalJSX {
          */
         "texts"?: { [key: string]: string };
     }
+    /**
+     * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+     */
+    interface ReSignaturePad {
+        "disabled"?: boolean;
+        /**
+          * Height of the box in pixels.
+         */
+        "height"?: number;
+        /**
+          * The answer key the form stores the signature under.
+         */
+        "modelKey"?: string;
+        "onSignatureChanged"?: (event: ReSignaturePadCustomEvent<any>) => void;
+        "texts"?: { hint?: string; clear?: string };
+        /**
+          * The current signature (PNG data URL), or empty.
+         */
+        "value"?: string;
+    }
     interface IntrinsicElements {
         "re-alert": ReAlert;
         "re-country-select": ReCountrySelect;
@@ -366,6 +470,7 @@ declare namespace LocalJSX {
         "re-form-generator": ReFormGenerator;
         "re-multi-select": ReMultiSelect;
         "re-search-select": ReSearchSelect;
+        "re-signature-pad": ReSignaturePad;
     }
 }
 export { LocalJSX as JSX };
@@ -390,6 +495,10 @@ declare module "@stencil/core" {
              * `{q}` in the URL is replaced with the typed text. Without `resultsPath` the response itself must be an array.
              */
             "re-search-select": LocalJSX.ReSearchSelect & JSXBase.HTMLAttributes<HTMLReSearchSelectElement>;
+            /**
+             * A box to sign in with a finger, pen or mouse. The answer is the signature as a PNG data URL (empty when cleared).
+             */
+            "re-signature-pad": LocalJSX.ReSignaturePad & JSXBase.HTMLAttributes<HTMLReSignaturePadElement>;
         }
     }
 }
