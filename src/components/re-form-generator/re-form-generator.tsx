@@ -69,6 +69,12 @@ export class ReFormGenerator {
    * Without it the language is picked from `schema.i18n` (browser language if available, else the default).
    */
   @Prop() language: string = null;
+  /**
+   * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are
+   * saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files`
+   * with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+   */
+  @Prop() submitter?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
 
   /** The localized document that is rendered. */
   @State() doc: FormDocument = { version: 2, fields: [] };
@@ -505,9 +511,9 @@ export class ReFormGenerator {
     const { payload, files } = this.buildPayload();
     this.handleSubmit.emit(payload);
     let result: any = { values: payload, response: null, error: null };
-    if (action.endpoint) {
+    if (this.submitter || action.endpoint) {
       this.status = 'submitting';
-      const outcome = await this.sendToApi(action, payload, files);
+      const outcome = this.submitter ? await this.runSubmitter(payload, files) : await this.sendToApi(action, payload, files);
       result = { ...result, ...outcome };
       if (outcome.error) {
         this.status = 'error';
@@ -895,6 +901,15 @@ export class ReFormGenerator {
         });
       return out;
     });
+  }
+
+  private async runSubmitter(payload: any, files: { key: string; value: FileList; multiple: boolean }[]) {
+    try {
+      const response = await this.submitter!({ values: payload, files });
+      return { response: response === undefined ? null : response, error: null };
+    } catch (e) {
+      return { response: null, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 
   private async sendToApi(action: any, payload: any, files: { key: string; value: FileList; multiple: boolean }[]) {

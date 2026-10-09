@@ -88,6 +88,10 @@ export namespace Components {
         "setLanguage": (language: string) => Promise<void>;
         "submit": () => Promise<any>;
         /**
+          * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files` with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+         */
+        "submitter"?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
+        /**
           * Theme object (or preset id / JSON string). Overrides `schema.theme`.
          */
         "theme": any;
@@ -413,6 +417,10 @@ declare namespace LocalJSX {
           * The form definition: a v2 document, or a v1 array of fields (migrated automatically). Object or JSON string.
          */
         "schema"?: any;
+        /**
+          * Takes over sending the answers (instead of `action.endpoint`): it gets the answers and the picked files and returns when they are saved. Throw (or reject) to show the error message and let the visitor try again. Files are not part of `values`: they come in `files` with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
+         */
+        "submitter"?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
         /**
           * Theme object (or preset id / JSON string). Overrides `schema.theme`.
          */

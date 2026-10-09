@@ -444,6 +444,17 @@ re-form-generator {
       border-bottom-right-radius: 0;
     }
   }
+  // The addon takes the frame of the chosen input style, so the two halves read as one field.
+  &.rfg-input-filled .rfg-addon-wrap .rfg-addon {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--rfg-text) 9%, var(--rfg-bg));
+  }
+  &.rfg-input-underlined .rfg-addon-wrap .rfg-addon {
+    background: transparent;
+    border-width: 0 0 1.5px;
+    border-radius: 0;
+    padding: 0 2px 0 8px;
+  }
 
   .rfg-select-wrap {
     position: relative;
