@@ -20,6 +20,12 @@ export class ReCountrySelect {
   @Prop() showDialCode: boolean = false;
   /** Language used for the country names (via Intl.DisplayNames); the stored value (the code) never changes. */
   @Prop() language: string;
+  /** Small picker (flag and dial code) in front of a phone number: the list opens wider than the box. */
+  @Prop() compact: boolean = false;
+  /** Only offer these countries (codes like "dk", "se"). Empty: all of them. */
+  @Prop() only: string[];
+  /** Read out by screen readers (the compact picker has no visible label). */
+  @Prop() ariaLabelText: string;
   @State() filteredCountries: any[] = []
   @State() dropdownVisible: boolean = false;
   @State() selectedCountry: any = null;
@@ -50,7 +56,8 @@ export class ReCountrySelect {
   }
 
   componentWillLoad() {
-    this.availableCountries = this.localizedCountries();
+    const only = (this.only || []).map(c => String(c).toLowerCase());
+    this.availableCountries = this.localizedCountries().filter(country => !only.length || only.includes(country.code));
     if (this.defaultValue) {
       const wanted = String(this.defaultValue).toLowerCase();
       // the stored value can be the code, the name or the dial code depending on the field's `modelValueKey`
@@ -170,11 +177,14 @@ export class ReCountrySelect {
     const above = rect.top - margin;
     const up = below < 200 && above > below;
     const room = Math.max(120, Math.min(260, up ? above : below));
+    // the compact picker is narrow: its list gets room for the country names, without leaving the window
+    const width = this.compact ? Math.min(Math.max(rect.width, 300), window.innerWidth - 2 * margin) : rect.width;
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
     this.openUp = up;
     this.panelStyle = {
       position: 'fixed',
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
+      left: `${left}px`,
+      width: `${width}px`,
       maxHeight: `${room}px`,
       ...(up ? { bottom: `${window.innerHeight - rect.top + 4}px`, top: 'auto' } : { top: `${rect.bottom + 4}px`, bottom: 'auto' }),
     };
@@ -226,7 +236,7 @@ export class ReCountrySelect {
   render() {
     let selectedFlag = this.selectedCountry ? `https://flagcdn.com/28x21/${this.selectedCountry.code}.png` : 'https://hocococdn.blob.core.windows.net/images/placeholders/globe-icon.png'
     return (
-      <div>
+      <div class={this.compact ? 'is-compact' : ''}>
         <div class={`country-select-input-wrapper ${this.dropdownVisible ? 'is-open' : ''}`} style={{ zIndex: this.zIndex }}>
           <div class="dropdown-container">
             <div class={`selected-country-wrapper ${!this.showSelectedWrapper ? 'hidden' : ''}`}>
@@ -241,6 +251,7 @@ export class ReCountrySelect {
               role="combobox"
               aria-expanded={this.dropdownVisible ? 'true' : 'false'}
               aria-autocomplete="list"
+              aria-label={this.ariaLabelText}
               onFocus={e => this.handleFocus(e)}
               onBlur={() => this.handleBlur()}
               ref={(el) => { this.countrySelectRef = el }}

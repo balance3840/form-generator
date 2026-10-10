@@ -150,7 +150,8 @@ export function packLogic(rules: FieldLogic[]): FieldLogic | FieldLogic[] | unde
  * parameter that follows them, e.g. min(3, 'Too short') or oneOf([...], 'Pick one of the list').
  */
 /** `field` is the `model` of another field in the form. */
-export type RuleParam = 'number' | 'date' | 'text' | 'regex' | 'list' | 'field';
+/** `countries` is a list of country codes ("dk", "se"). */
+export type RuleParam = 'number' | 'date' | 'text' | 'regex' | 'list' | 'field' | 'countries';
 export type RuleSpec = {
   name: string;
   label: string;
@@ -202,7 +203,73 @@ export const RULE_SPECS: RuleSpec[] = [
 
   { name: 'min', label: 'Minimum choices', params: ['number'], types: ['array'], key: 'minChoices', message: 'Choose at least {0} option(s)' },
   { name: 'max', label: 'Maximum choices', params: ['number'], types: ['array'], key: 'maxChoices', message: 'Choose at most {0} option(s)' },
+
+  // phone and e-mail checks that are not Yup methods (see createYupSchema)
+  { name: 'phone', label: 'Valid phone number', hint: 'Country code and number', params: [], types: ['string'], key: 'phone', message: 'Please enter a valid phone number' },
+  { name: 'phoneCountries', label: 'Only from these countries', params: ['countries'], types: ['string'], key: 'phoneCountries', message: 'Phone numbers from this country are not accepted' },
+  { name: 'emailDomains', label: 'Only these e-mail domains', hint: 'e.g. company.com, partner.dk', params: ['list'], types: ['string'], key: 'emailDomains', message: 'Please use an e-mail address from an allowed domain' },
 ];
+
+/**
+ * What kind of input a field is, for choosing the rules that make sense for it: a phone number never needs
+ * "Valid URL", a dropdown never needs "Minimum length".
+ */
+export function fieldKind(field: { type: string; inputType?: string; validationType?: string; config?: { [key: string]: any } }): string {
+  // a search that picks several results is a list of choices
+  if ((field.type === 'search' || field.type === 'address') && field.config && field.config.multiple) return 'choices';
+  if (field.type === 'input') {
+    const t = field.inputType || 'text';
+    return ({ text: 'text', email: 'email', url: 'url', tel: 'tel', password: 'password', number: 'number', date: 'date', time: 'time', 'datetime-local': 'datetime', color: 'color', checkbox: 'checkbox', file: 'file', search: 'text', hidden: 'hidden' } as { [k: string]: string })[t] || 'text';
+  }
+  return (
+    ({
+      textarea: 'longText',
+      phone: 'phone',
+      select: 'choice',
+      radioGroup: 'choice',
+      checkboxGroup: 'choices',
+      multiSelect: 'choices',
+      countrySelect: 'country',
+      search: 'search',
+      address: 'search',
+      file: 'file',
+      signature: 'signature',
+      toggle: 'checkbox',
+      rating: 'rating',
+      scale: 'rating',
+      slider: 'rating',
+      likert: 'likert',
+      ranking: 'ranking',
+    } as { [k: string]: string })[field.type] || 'other'
+  );
+}
+
+/** The rules (by `RuleSpec.key`) the builder offers for each kind of input. `required` is offered everywhere a value is asked. */
+export const RULES_BY_KIND: { [kind: string]: string[] } = {
+  text: ['required', 'minLength', 'maxLength', 'length', 'matches', 'lowercase', 'uppercase', 'sameAs', 'notSameAs', 'oneOf', 'notOneOf', 'uuid'],
+  longText: ['required', 'minLength', 'maxLength', 'matches'],
+  email: ['required', 'email', 'emailDomains', 'maxLength', 'matches', 'sameAs', 'notSameAs', 'notOneOf'],
+  url: ['required', 'url', 'maxLength', 'matches'],
+  phone: ['required', 'phone', 'phoneCountries', 'matches', 'sameAs', 'notSameAs'],
+  tel: ['required', 'minLength', 'maxLength', 'matches'],
+  password: ['required', 'minLength', 'maxLength', 'matches', 'sameAs', 'notSameAs'],
+  number: ['required', 'min', 'max', 'moreThan', 'lessThan', 'integer', 'positive', 'negative', 'minField', 'maxField', 'oneOf', 'notOneOf'],
+  date: ['required', 'minDate', 'maxDate', 'notBeforeField', 'notAfterField'],
+  choices: ['required', 'minChoices', 'maxChoices'],
+  rating: ['required', 'min', 'max'],
+  file: ['required', 'maxFileSize', 'fileTypes', 'minFiles', 'maxFiles'],
+  hidden: [],
+  other: [],
+};
+const ONLY_REQUIRED = ['required'];
+
+/** The rules that make sense for `field` (everything that is not in RULES_BY_KIND only gets `required`). */
+export function rulesFor(field: FormField): RuleSpec[] {
+  if (isLayoutType(field.type)) return [];
+  const keys = RULES_BY_KIND[fieldKind(field)] || ONLY_REQUIRED;
+  const type = effectiveValidationType(field);
+  return keys.map(key => RULE_SPECS.find(spec => spec.key === key && (spec.types.includes(type) || key === 'required'))).filter(Boolean) as RuleSpec[];
+}
 
 /** The validation type that decides which rules apply: file inputs always use the `file` rules. */
 export const effectiveValidationType = (field: { type: string; validationType?: string }): string => (field.type === 'file' ? 'file' : field.validationType || 'string');

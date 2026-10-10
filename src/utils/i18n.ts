@@ -290,18 +290,32 @@ const EXTRA: { [language: string]: Dict } = {
   da: extra(['Element {n}', 'Tilføj', 'Intet tilføjet endnu', 'Gem og afslut', 'Gemt kl. {time}', 'Underskriv her', 'Ryd', 'Trin', 'Færdig', 'Vis den første', '{label}: tilføj mindst {0}', '{label}: tilføj højst {0}', 'Annuller', 'Bekræft', 'Gem', 'Luk', 'Rediger', 'Dupliker', 'Flyt op', 'Flyt ned', 'Indstillinger', 'Træk for at sortere', 'Underskriv', 'Type', 'Søg', '{n} valgt']),
 };
 
+// Texts for the phone, Likert and ranking fields, written with explicit keys per language.
+const MORE: { [language: string]: Dict } = {
+  en: { 'ui.rankHint': 'Click the options in order of preference', 'ui.rankReset': 'Start over', 'ui.countryCode': 'Country code', 'validation.phone': 'Please enter a valid phone number', 'validation.phoneCountries': 'Phone numbers from this country are not accepted', 'validation.emailDomains': 'Please use an e-mail address from an allowed domain', 'validation.likertAll': 'Please answer every statement', 'validation.rankAll': 'Please rank all the options', 'validation.rankTop': 'Please pick your top {0}' },
+  es: { 'ui.rankHint': 'Haz clic en las opciones por orden de preferencia', 'ui.rankReset': 'Empezar de nuevo', 'ui.countryCode': 'Prefijo del país', 'validation.phone': 'Introduce un número de teléfono válido', 'validation.phoneCountries': 'No se aceptan teléfonos de este país', 'validation.emailDomains': 'Usa un correo electrónico de un dominio permitido', 'validation.likertAll': 'Responde a todas las afirmaciones', 'validation.rankAll': 'Ordena todas las opciones', 'validation.rankTop': 'Elige tus {0} favoritas' },
+  fr: { 'ui.rankHint': 'Cliquez sur les options par ordre de préférence', 'ui.rankReset': 'Recommencer', 'ui.countryCode': 'Indicatif du pays', 'validation.phone': 'Saisissez un numéro de téléphone valide', 'validation.phoneCountries': 'Les numéros de ce pays ne sont pas acceptés', 'validation.emailDomains': 'Utilisez une adresse e-mail d’un domaine autorisé', 'validation.likertAll': 'Répondez à chaque affirmation', 'validation.rankAll': 'Classez toutes les options', 'validation.rankTop': 'Choisissez vos {0} préférées' },
+  de: { 'ui.rankHint': 'Klicken Sie die Optionen in der Reihenfolge Ihrer Präferenz an', 'ui.rankReset': 'Neu beginnen', 'ui.countryCode': 'Ländervorwahl', 'validation.phone': 'Bitte geben Sie eine gültige Telefonnummer ein', 'validation.phoneCountries': 'Telefonnummern aus diesem Land werden nicht akzeptiert', 'validation.emailDomains': 'Bitte verwenden Sie eine E-Mail-Adresse einer erlaubten Domain', 'validation.likertAll': 'Bitte beantworten Sie jede Aussage', 'validation.rankAll': 'Bitte ordnen Sie alle Optionen', 'validation.rankTop': 'Bitte wählen Sie Ihre Top {0}' },
+  it: { 'ui.rankHint': 'Fai clic sulle opzioni in ordine di preferenza', 'ui.rankReset': 'Ricomincia', 'ui.countryCode': 'Prefisso internazionale', 'validation.phone': 'Inserisci un numero di telefono valido', 'validation.phoneCountries': 'I numeri di questo paese non sono accettati', 'validation.emailDomains': 'Usa un indirizzo e-mail di un dominio consentito', 'validation.likertAll': 'Rispondi a tutte le affermazioni', 'validation.rankAll': 'Ordina tutte le opzioni', 'validation.rankTop': 'Scegli le tue prime {0}' },
+  pt: { 'ui.rankHint': 'Clique nas opções por ordem de preferência', 'ui.rankReset': 'Recomeçar', 'ui.countryCode': 'Indicativo do país', 'validation.phone': 'Introduza um número de telefone válido', 'validation.phoneCountries': 'Não são aceites números deste país', 'validation.emailDomains': 'Use um e-mail de um domínio permitido', 'validation.likertAll': 'Responda a todas as afirmações', 'validation.rankAll': 'Ordene todas as opções', 'validation.rankTop': 'Escolha as suas {0} preferidas' },
+  nl: { 'ui.rankHint': 'Klik de opties aan in volgorde van voorkeur', 'ui.rankReset': 'Opnieuw beginnen', 'ui.countryCode': 'Landcode', 'validation.phone': 'Vul een geldig telefoonnummer in', 'validation.phoneCountries': 'Nummers uit dit land worden niet geaccepteerd', 'validation.emailDomains': 'Gebruik een e-mailadres van een toegestaan domein', 'validation.likertAll': 'Beantwoord elke stelling', 'validation.rankAll': 'Zet alle opties in volgorde', 'validation.rankTop': 'Kies uw top {0}' },
+  pl: { 'ui.rankHint': 'Klikaj opcje w kolejności od najbardziej preferowanej', 'ui.rankReset': 'Zacznij od nowa', 'ui.countryCode': 'Numer kierunkowy kraju', 'validation.phone': 'Podaj prawidłowy numer telefonu', 'validation.phoneCountries': 'Numery z tego kraju nie są akceptowane', 'validation.emailDomains': 'Użyj adresu e-mail z dozwolonej domeny', 'validation.likertAll': 'Odpowiedz na każde stwierdzenie', 'validation.rankAll': 'Uszereguj wszystkie opcje', 'validation.rankTop': 'Wybierz swoje top {0}' },
+  ca: { 'ui.rankHint': 'Fes clic a les opcions per ordre de preferència', 'ui.rankReset': 'Torna a començar', 'ui.countryCode': 'Prefix del país', 'validation.phone': 'Introdueix un número de telèfon vàlid', 'validation.phoneCountries': 'No s’accepten telèfons d’aquest país', 'validation.emailDomains': 'Fes servir un correu d’un domini permès', 'validation.likertAll': 'Respon a totes les afirmacions', 'validation.rankAll': 'Ordena totes les opcions', 'validation.rankTop': 'Tria les teves {0} preferides' },
+  da: { 'ui.rankHint': 'Klik på mulighederne i den rækkefølge, du foretrækker dem', 'ui.rankReset': 'Start forfra', 'ui.countryCode': 'Landekode', 'validation.phone': 'Indtast et gyldigt telefonnummer', 'validation.phoneCountries': 'Telefonnumre fra dette land accepteres ikke', 'validation.emailDomains': 'Brug en e-mailadresse fra et tilladt domæne', 'validation.likertAll': 'Svar på alle udsagn', 'validation.rankAll': 'Placér alle mulighederne', 'validation.rankTop': 'Vælg dine top {0}' },
+};
+
 /** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
 export const BUILT_IN_UI: { [language: string]: Dict } = {
-  en: { ...EN, ...EXTRA.en },
-  es: { ...ES, ...EXTRA.es },
-  fr: { ...FR, ...EXTRA.fr },
-  de: { ...DE, ...EXTRA.de },
-  it: { ...IT, ...EXTRA.it },
-  pt: { ...PT, ...EXTRA.pt },
-  nl: { ...NL, ...EXTRA.nl },
-  pl: { ...PL, ...EXTRA.pl },
-  ca: { ...CA, ...EXTRA.ca },
-  da: { ...DA, ...EXTRA.da },
+  en: { ...EN, ...EXTRA.en, ...MORE.en },
+  es: { ...ES, ...EXTRA.es, ...MORE.es },
+  fr: { ...FR, ...EXTRA.fr, ...MORE.fr },
+  de: { ...DE, ...EXTRA.de, ...MORE.de },
+  it: { ...IT, ...EXTRA.it, ...MORE.it },
+  pt: { ...PT, ...EXTRA.pt, ...MORE.pt },
+  nl: { ...NL, ...EXTRA.nl, ...MORE.nl },
+  pl: { ...PL, ...EXTRA.pl, ...MORE.pl },
+  ca: { ...CA, ...EXTRA.ca, ...MORE.ca },
+  da: { ...DA, ...EXTRA.da, ...MORE.da },
 };
 
 export const UI_KEYS = Object.keys(BUILT_IN_UI.en);
@@ -471,6 +485,8 @@ export function collectTranslatables(doc: FormDocument): Translatable[] {
       add(`field.${id}.option.${String(option.value)}`, option.label, group, `Option “${option.label}”`);
       add(`field.${id}.optionDesc.${String(option.value)}`, option.description, group, `Description of “${option.label}”`, true);
     });
+    // the statements of a Likert table
+    ((field.config && field.config.rows) || []).forEach((row: any) => add(`field.${id}.row.${String(row.value)}`, row.label, group, `Statement “${row.label}”`));
     ((field.config && field.config.presets) || []).forEach((preset: any, i: number) => {
       add(`field.${id}.preset.${i}.label`, preset.label, group, `Choice “${preset.label}”`);
       add(`field.${id}.preset.${i}.description`, preset.description, group, `Description of “${preset.label}”`, true);
@@ -520,6 +536,9 @@ export function localizeDocument(doc: FormDocument, language: string): FormDocum
         ...(o.group ? { group: tr(`field.${id}.group.${o.group}`, o.group) } : {}),
         ...(typeof o.description === 'string' ? { description: tr(`field.${id}.optionDesc.${String(o.value)}`, o.description) } : {}),
       }));
+    }
+    if (field.config && Array.isArray(field.config.rows)) {
+      next.config = { ...(next.config || field.config), rows: field.config.rows.map((row: any) => ({ ...row, label: tr(`field.${id}.row.${String(row.value)}`, row.label) })) };
     }
     if (field.config && Array.isArray(field.config.presets)) {
       next.config = {

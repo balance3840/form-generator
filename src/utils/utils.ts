@@ -1,6 +1,7 @@
 import * as yup from 'yup';
 import { FormField, RuleSpec, effectiveValidationType, isLayoutType, ruleSpecFor } from './schema';
 import { createTranslator } from './i18n';
+import { emailInDomains, isValidPhone, phoneFromCountries } from './phone';
 
 export type Translate = (key: string, vars?: { [key: string]: any }) => string;
 const defaultTranslate: Translate = createTranslator('en');
@@ -68,6 +69,28 @@ function buildFileValidator(field: FormField, label: string, labelOf: (m: string
 }
 
 /**
+ * Likert and ranking answers are "complete" or not. A Likert table (`config.rows`) is answered when every statement
+ * has an answer; a single Likert question when one point is picked. A ranking when every option (or the top
+ * `config.rankLimit`) has a place.
+ */
+function buildAnsweredValidator(field: FormField, label: string, t: Translate) {
+  const rule = (field.validations || []).find(r => r.name === 'required');
+  if (!rule) return yup.mixed();
+  const custom = rule.params && typeof rule.params[0] === 'string' && rule.params[0];
+  if (field.type === 'ranking') {
+    const options = (field.options || []).length;
+    const needed = Math.min(options, Number(field.config && field.config.rankLimit) || options);
+    const message = custom || (needed < options ? t('validation.rankTop', { label, 0: needed }) : t('validation.rankAll', { label }));
+    return yup.mixed().test('required', message, (value: any) => Array.isArray(value) && value.length >= needed && value.length > 0);
+  }
+  const rows: any[] = (field.config && field.config.rows) || [];
+  if (!rows.length) return yup.mixed().test('required', custom || t('validation.required', { label }), (value: any) => value !== undefined && value !== null && value !== '');
+  return yup.mixed().test('required', custom || t('validation.likertAll', { label }), (value: any) =>
+    rows.every(row => value && value[String(row.value)] !== undefined && value[String(row.value)] !== null && value[String(row.value)] !== ''),
+  );
+}
+
+/**
  * Builds the Yup shape for `fields`. `allFields` (defaults to `fields`) is only used to resolve
  * labels and to check that rules which point at another field point at one that exists. `t` localizes the default messages.
  */
@@ -92,6 +115,10 @@ export function createYupSchema(fields: FormField[], captchaField: string | bool
 
     if (validationType === 'file') {
       fieldsRules[model] = buildFileValidator(field, label, labelOf, t);
+      return;
+    }
+    if (field.type === 'likert' || field.type === 'ranking') {
+      fieldsRules[model] = buildAnsweredValidator(field, label, t);
       return;
     }
 
@@ -126,6 +153,20 @@ export function createYupSchema(fields: FormField[], captchaField: string | bool
         else if (rule === 'notSameAs') validator = validator.notOneOf([ref], args[1]);
         else if (rule === 'minField') validator = validator.min(ref, args[1]);
         else if (rule === 'maxField') validator = validator.max(ref, args[1]);
+        return;
+      }
+
+      // checks that are not Yup methods
+      if (rule === 'phone') {
+        validator = validator.test('phone', args[0], (value: any) => isValidPhone(value));
+        return;
+      }
+      if (rule === 'phoneCountries') {
+        validator = validator.test('phoneCountries', args[1], (value: any) => phoneFromCountries(value, args[0]));
+        return;
+      }
+      if (rule === 'emailDomains') {
+        validator = validator.test('emailDomains', args[1], (value: any) => emailInDomains(value, args[0]));
         return;
       }
 

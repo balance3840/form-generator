@@ -13,6 +13,14 @@ export namespace Components {
         "type": 'success' | 'warning' | 'error' | 'info';
     }
     interface ReCountrySelect {
+        /**
+          * Read out by screen readers (the compact picker has no visible label).
+         */
+        "ariaLabelText": string;
+        /**
+          * Small picker (flag and dial code) in front of a phone number: the list opens wider than the box.
+         */
+        "compact": boolean;
         "defaultValue": string;
         "disabled": any;
         "inputDisplayKey": string;
@@ -26,6 +34,10 @@ export namespace Components {
           * Shown when the search matches nothing.
          */
         "noResultsText": string;
+        /**
+          * Only offer these countries (codes like "dk", "se"). Empty: all of them.
+         */
+        "only": string[];
         "showDialCode": boolean;
         "zIndex": string;
     }
@@ -329,6 +341,14 @@ declare namespace LocalJSX {
         "type"?: 'success' | 'warning' | 'error' | 'info';
     }
     interface ReCountrySelect {
+        /**
+          * Read out by screen readers (the compact picker has no visible label).
+         */
+        "ariaLabelText"?: string;
+        /**
+          * Small picker (flag and dial code) in front of a phone number: the list opens wider than the box.
+         */
+        "compact"?: boolean;
         "defaultValue"?: string;
         "disabled"?: any;
         "inputDisplayKey"?: string;
@@ -343,6 +363,10 @@ declare namespace LocalJSX {
          */
         "noResultsText"?: string;
         "onSelectedCountryChanged"?: (event: ReCountrySelectCustomEvent<any>) => void;
+        /**
+          * Only offer these countries (codes like "dk", "se"). Empty: all of them.
+         */
+        "only"?: string[];
         "showDialCode"?: boolean;
         "zIndex"?: string;
     }

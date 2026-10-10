@@ -2097,6 +2097,278 @@ re-form-generator {
   }
 }
 
+/* ------------------------------------------------------------ phone number */
+.rfg .rfg-phone {
+  display: flex;
+  gap: 8px;
+  re-country-select.rfg-phone-country {
+    flex: none;
+    width: 112px;
+  }
+  .rfg-phone-number {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ------------------------------------------------------------ Likert */
+.rfg .rfg-likert-point {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: center;
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .rfg-likert-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--rfg-border-strong);
+    background: var(--rfg-bg);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  &:hover .rfg-likert-dot {
+    border-color: var(--rfg-primary);
+  }
+  input:focus-visible + .rfg-likert-dot {
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  &.is-checked .rfg-likert-dot {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    box-shadow: inset 0 0 0 4px var(--rfg-bg);
+  }
+  .rfg-likert-num {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+  }
+  .rfg-likert-text {
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--rfg-muted);
+  }
+  &.is-checked .rfg-likert-text {
+    color: var(--rfg-text);
+    font-weight: 600;
+  }
+}
+/* one question: the points side by side, a line behind the dots */
+.rfg .rfg-likert-single {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--rfg-likert-count, 5), minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 8px 12px;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  &::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: calc(100% / var(--rfg-likert-count, 5) / 2);
+    right: calc(100% / var(--rfg-likert-count, 5) / 2);
+    height: 2px;
+    background: var(--rfg-border);
+  }
+  .rfg-likert-dot {
+    position: relative;
+  }
+}
+/* several statements: a table, the points as columns */
+.rfg .rfg-likert-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+}
+.rfg .rfg-likert {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  th,
+  td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--rfg-border);
+  }
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  thead th {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    text-align: center;
+    vertical-align: bottom;
+    width: calc(60% / var(--rfg-likert-count, 5));
+    background: var(--rfg-tint);
+    .rfg-likert-num {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+  }
+  thead .rfg-likert-corner {
+    width: auto;
+  }
+  tbody th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--rfg-text);
+    padding-left: 14px;
+  }
+  tbody tr.is-answered th {
+    color: var(--rfg-text);
+  }
+  tbody tr:hover {
+    background: var(--rfg-tint);
+  }
+  td {
+    text-align: center;
+  }
+  // in the table the column headers say what each point means
+  td .rfg-likert-text,
+  td .rfg-likert-num {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ ranking */
+.rfg .rfg-ranking-hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--rfg-muted);
+}
+.rfg .rfg-ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rfg .rfg-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--rfg-input-height);
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font-size: 15px;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  &.is-ranked {
+    padding: 0 6px 0 8px;
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary-soft);
+    cursor: grab;
+  }
+  &.is-dragging {
+    opacity: 0.4;
+  }
+  .rfg-rank-label {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.rfg .rfg-rank-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: inherit;
+  padding: 0 14px 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: inherit;
+  &:hover:not(:disabled) {
+    background: var(--rfg-tint);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+}
+.rfg .rfg-rank-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--rfg-primary);
+  color: var(--rfg-primary-contrast);
+  font-size: 13px;
+  font-weight: 700;
+  &.is-empty {
+    background: none;
+    border: 2px dashed var(--rfg-border-strong);
+  }
+}
+.rfg .rfg-rank-grip {
+  flex: none;
+  width: 8px;
+  height: 14px;
+  background-image: radial-gradient(circle, var(--rfg-muted) 1.2px, transparent 1.3px);
+  background-size: 4px 4px;
+  opacity: 0.7;
+}
+.rfg .rfg-rank-actions {
+  display: flex;
+  gap: 2px;
+  .rfg-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+    line-height: 1;
+  }
+}
+
+/* ------------------------------------------------------------ NPS */
+.rfg .rfg-scale-nps {
+  gap: 4px;
+  .rfg-scale-btn {
+    position: relative;
+    overflow: hidden;
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: var(--rfg-nps, transparent);
+      opacity: 0.85;
+    }
+  }
+  .rfg-nps-low {
+    --rfg-nps: #ef4444;
+  }
+  .rfg-nps-mid {
+    --rfg-nps: #f59e0b;
+  }
+  .rfg-nps-high {
+    --rfg-nps: #22c55e;
+  }
+}
+
 /* Narrow containers (phones, or a narrow preview) stack the columns. */
 @container rfg (max-width: 520px) {
   .rfg .rfg-row {
@@ -2112,6 +2384,80 @@ re-form-generator {
   }
   .rfg .rfg-scale {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  // NPS keeps its 11 numbers on one line, smaller
+  .rfg .rfg-scale.rfg-scale-nps {
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 3px;
+    .rfg-scale-btn {
+      font-size: 13px;
+      padding: 0;
+    }
+  }
+  // a single Likert question: the points one under the other
+  .rfg .rfg-likert-single {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px;
+    &::before {
+      display: none;
+    }
+    .rfg-likert-point {
+      flex-direction: row;
+      gap: 12px;
+      padding: 8px;
+      text-align: left;
+      border-radius: calc(var(--rfg-radius) * 0.8);
+      &.is-checked {
+        background: var(--rfg-primary-soft);
+      }
+    }
+  }
+  // a Likert table: one card per statement, the points as a list
+  .rfg .rfg-likert-wrap {
+    border: 0;
+    overflow: visible;
+  }
+  .rfg .rfg-likert {
+    thead {
+      display: none;
+    }
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+    tbody tr {
+      margin-bottom: 10px;
+      border: 1px solid var(--rfg-border);
+      border-radius: var(--rfg-radius);
+      padding: 6px;
+    }
+    tbody tr:hover {
+      background: none;
+    }
+    tbody th,
+    td {
+      border: 0;
+      padding: 4px 8px;
+    }
+    tbody th {
+      padding: 6px 8px 8px;
+    }
+    td .rfg-likert-text,
+    td .rfg-likert-num {
+      display: inline;
+    }
+    td .rfg-likert-point {
+      flex-direction: row;
+      gap: 12px;
+      padding: 6px 4px;
+      text-align: left;
+    }
+    td {
+      text-align: left;
+    }
   }
   .rfg .rfg-options {
     grid-template-columns: minmax(0, 1fr);

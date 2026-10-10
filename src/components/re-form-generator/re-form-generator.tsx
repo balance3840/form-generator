@@ -6,6 +6,7 @@ import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, 
 import { loadDocument } from '../../utils/migrate';
 import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
 import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
+import { defaultPhoneCountry, formatPhone, parsePhone, phoneCountry } from '../../utils/phone';
 import { CaptchaController, captchaConfig, captchaProvider, hasWidget, mountCaptcha } from '../../utils/captcha';
 import { I18nConfig, availableLanguages, createTranslator, languageInfo, localizeDocument, matchLanguage, resolveLanguage } from '../../utils/i18n';
 
@@ -42,6 +43,9 @@ type ModalState = {
 };
 
 const STAR = 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8L12 2.5z';
+
+/** The phone country pickers report their choice under this model prefix (see handleCountrySelectChange). */
+const PHONE_PREFIX = '__phone:';
 
 @Component({
   tag: 're-form-generator',
@@ -87,6 +91,12 @@ export class ReFormGenerator {
   @State() status: 'idle' | 'submitting' | 'success' | 'error' = 'idle';
   @State() schemaError: string = null;
   @State() hoverRating: { [model: string]: number } = {};
+  /** The country picked in front of each phone number (several countries share +1, so it cannot always be read back from the number). */
+  @State() phoneCountries: { [model: string]: string } = {};
+  /** What was typed in each phone number box, spaces included (the answer only keeps the digits). */
+  @State() phoneTexts: { [model: string]: string } = {};
+  /** The ranking item being dragged. */
+  @State() rankDrag: { model: string; index: number } | null = null;
   /** State of the "Other…" option of radio / checkbox groups, by field model. */
   @State() others: { [model: string]: { on: boolean; text: string } } = {};
   /** What is picked in each `search` field (value + label), by field model. */
@@ -1012,6 +1022,14 @@ export class ReFormGenerator {
   handleCountrySelectChange(event: CustomEvent) {
     const modelKey = Object.keys(event.detail)[0];
     const country = event.detail[modelKey];
+    if (modelKey.startsWith(PHONE_PREFIX)) {
+      const model = modelKey.slice(PHONE_PREFIX.length);
+      if (!country) return;
+      this.phoneCountries = { ...this.phoneCountries, [model]: country.code };
+      const { number } = parsePhone(this.answerOf(model), country.code);
+      this.setValueByModel(model, formatPhone(phoneCountry(country.code), number));
+      return;
+    }
     const field = this.fieldByModel(modelKey);
     const key = (field && field.modelValueKey) || 'code';
     this.setValueByModel(modelKey, country ? country[key] : null);
@@ -1157,6 +1175,15 @@ export class ReFormGenerator {
             showDialCode={field.showDialCode}
           ></re-country-select>
         );
+
+      case 'phone':
+        return this.renderPhone(field, common, value, zIndex);
+
+      case 'likert':
+        return this.renderLikert(field, common, value);
+
+      case 'ranking':
+        return this.renderRanking(field, common, value);
 
       case 'search':
       case 'address': {
@@ -1500,6 +1527,235 @@ export class ReFormGenerator {
     );
   }
 
+  /**
+   * `type: "phone"`: a country picker (flag and dial code) and the number. The answer is "+45 12345678".
+   * `config.defaultCountry` ("dk") is where it starts (else the form language's country); the `phoneCountries` rule (or
+   * `config.countries`) limits the list.
+   */
+  private renderPhone(field: FormField, common: any, value: any, zIndex: number) {
+    const model = field.model;
+    const config = field.config || {};
+    const picked = this.phoneCountries[model];
+    const parsed = parsePhone(value, picked);
+    const browser = typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : [];
+    // the picker only offers the countries of the "Only from these countries" rule (or `config.countries`)
+    const rule = (field.validations || []).find(r => r.name === 'phoneCountries');
+    const allowed: string[] = ((config.countries || (rule && Array.isArray(rule.params && rule.params[0]) ? rule.params![0] : [])) as string[]).map(c => String(c).toLowerCase());
+    // the visitor's own region first when it fits the form language (en-US -> USA, not the UK)
+    const base = String(this.activeLanguage || '').split('-')[0];
+    const regional = browser.filter(l => l && l.toLowerCase().split('-')[0] === base && l.includes('-'));
+    let code = (parsed.country && parsed.country.code) || picked || defaultPhoneCountry(config.defaultCountry, [...regional, this.activeLanguage, ...browser]);
+    if (allowed.length && (!code || !allowed.includes(code))) code = allowed[0];
+    const country = phoneCountry(code);
+    const typed = this.phoneTexts[model];
+    // the box shows what was typed (spaces, a leading 0) as long as it still means the stored answer
+    const shown = typed !== undefined && formatPhone(country, typed) === (value || '') ? typed : parsed.number;
+    const onInput = (e: any) => {
+      const raw: string = e.target.value;
+      // a pasted international number ("+46 70 123 45 67") also sets the country
+      if (raw.trim().startsWith('+')) {
+        const pasted = parsePhone(raw);
+        if (pasted.country && (!allowed.length || allowed.includes(pasted.country.code))) {
+          this.phoneCountries = { ...this.phoneCountries, [model]: pasted.country.code };
+          this.phoneTexts = { ...this.phoneTexts, [model]: pasted.number };
+          this.setValueByModel(model, formatPhone(pasted.country, pasted.number));
+          return;
+        }
+      }
+      this.phoneTexts = { ...this.phoneTexts, [model]: raw };
+      this.setValueByModel(model, formatPhone(country, raw));
+    };
+    return (
+      <div class="rfg-phone">
+        <re-country-select
+          class="rfg-phone-country"
+          key={`${field.id}-${this.activeLanguage}-${code || ''}-${allowed.join(',')}`}
+          compact={true}
+          language={this.activeLanguage}
+          inputOptions={{ placeholder: '' }}
+          disabled={common.disabled}
+          modelKey={`${PHONE_PREFIX}${model}`}
+          defaultValue={code}
+          inputDisplayKey="dialCode"
+          showDialCode={true}
+          only={allowed}
+          zIndex={String(zIndex)}
+          noResultsText={this.tr('ui.noResults')}
+          ariaLabelText={this.tr('ui.countryCode')}
+        ></re-country-select>
+        <input
+          class="rfg-control rfg-phone-number"
+          type="tel"
+          inputMode="tel"
+          autocomplete="tel-national"
+          {...common}
+          readOnly={field.readonly}
+          placeholder={field.placeholder}
+          value={shown}
+          onInput={onInput}
+        />
+      </div>
+    );
+  }
+
+  /**
+   * `type: "likert"`: agree / disagree style answers. The points are `options` (e.g. 1-5 "Strongly disagree" … "Strongly agree").
+   * Without `config.rows` it is one question (the answer is a point); with rows it is a table of statements and the answer
+   * is `{ [row value]: point }`. `config.showNumbers` puts 1, 2, 3… above the points. Small screens stack the table.
+   */
+  private renderLikert(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const options = this.optionsOf(field);
+    const rows: { label: string; value: any }[] = (field.config && field.config.rows) || [];
+    const numbers = !!(field.config && field.config.showNumbers);
+    const groupName = `${this.formId || 'rfg'}-${common.name}`;
+    const point = (option: any, i: number, checked: boolean, onPick: () => void, props: any = {}) => (
+      <label class={`rfg-likert-point ${checked ? 'is-checked' : ''}`}>
+        <input type="radio" disabled={common.disabled} checked={checked} onChange={onPick} {...props} />
+        <span class="rfg-likert-dot" aria-hidden="true"></span>
+        {numbers && <span class="rfg-likert-num">{i + 1}</span>}
+        <span class="rfg-likert-text">{option.label}</span>
+      </label>
+    );
+    if (!rows.length) {
+      return (
+        <div class="rfg-likert-single" role="radiogroup" style={{ '--rfg-likert-count': String(options.length || 1) }}>
+          {options.map((option, i) =>
+            point(option, i, value !== undefined && value !== null && value !== '' && String(value) === String(option.value), () => this.setValueByModel(model, option.value), { name: groupName, id: i === 0 ? field.id : undefined }),
+          )}
+        </div>
+      );
+    }
+    const answers = value && typeof value === 'object' ? value : {};
+    return (
+      <div class="rfg-likert-wrap">
+        <table class="rfg-likert" style={{ '--rfg-likert-count': String(options.length || 1) }}>
+          <thead>
+            <tr>
+              <th class="rfg-likert-corner"></th>
+              {options.map((option, i) => (
+                <th scope="col" key={String(option.value)}>
+                  {numbers && <span class="rfg-likert-num">{i + 1}</span>}
+                  <span>{option.label}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, r) => {
+              const key = String(row.value);
+              const current = answers[key];
+              return (
+                <tr key={key} class={current !== undefined && current !== null && current !== '' ? 'is-answered' : ''} role="radiogroup" aria-labelledby={`${field.id}-row-${r}`}>
+                  <th scope="row" id={`${field.id}-row-${r}`}>{row.label}</th>
+                  {options.map((option, i) => (
+                    <td key={String(option.value)}>
+                      {point(option, i, current !== undefined && current !== null && String(current) === String(option.value), () => {
+                        // read the answer now: several rows can be clicked before the next render
+                        const latest = this.answerOf(model);
+                        this.setValueByModel(model, { ...(latest && typeof latest === 'object' ? latest : {}), [key]: option.value });
+                      }, {
+                        name: `${groupName}-${key}`,
+                        id: r === 0 && i === 0 ? field.id : undefined,
+                        'aria-label': option.label,
+                      })}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  /**
+   * `type: "ranking"`: people put the `options` in order. Clicking an option gives it the next place; placed options
+   * can be moved (drag, or the arrows) or taken out again. `config.rankLimit` asks only for a top N. The answer is the
+   * list of option values, best first.
+   */
+  private renderRanking(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const options = this.optionsOf(field);
+    const limit = Math.min(options.length, Number(field.config && field.config.rankLimit) || options.length);
+    const rankedOf = (current: any): any[] => (Array.isArray(current) ? current : []).filter(v => options.some(o => String(o.value) === String(v)));
+    const ranked = rankedOf(value);
+    const rest = options.filter(o => !ranked.some(v => String(v) === String(o.value)));
+    const labelOf = (v: any) => (options.find(o => String(o.value) === String(v)) || { label: String(v) }).label;
+    const set = (next: any[]) => this.setValueByModel(model, next.length ? next : undefined);
+    // each change starts from the stored answer (not from this render), so quick clicks add up
+    const now = () => rankedOf(this.answerOf(model));
+    const move = (from: number, to: number) => {
+      const next = now();
+      if (to < 0 || to >= next.length || from === to) return;
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      set(next);
+    };
+    const full = ranked.length >= limit;
+    return (
+      <div class="rfg-ranking" role="group">
+        <div class="rfg-ranking-hint">
+          <span>{this.tr('ui.rankHint')}</span>
+          {ranked.length > 0 && !common.disabled && (
+            <button type="button" class="rfg-link" onClick={() => set([])}>
+              {this.tr('ui.rankReset')}
+            </button>
+          )}
+        </div>
+        <ol class="rfg-ranking-list">
+          {ranked.map((v, i) => (
+            <li
+              key={String(v)}
+              class={`rfg-rank-item is-ranked ${this.rankDrag && this.rankDrag.model === model && this.rankDrag.index === i ? 'is-dragging' : ''}`}
+              draggable={!common.disabled}
+              onDragStart={(e: DragEvent) => {
+                this.rankDrag = { model, index: i };
+                if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e: DragEvent) => this.rankDrag && this.rankDrag.model === model && e.preventDefault()}
+              onDrop={(e: DragEvent) => {
+                e.preventDefault();
+                if (this.rankDrag && this.rankDrag.model === model) move(this.rankDrag.index, i);
+                this.rankDrag = null;
+              }}
+              onDragEnd={() => (this.rankDrag = null)}
+            >
+              <span class="rfg-rank-grip" aria-hidden="true" title={this.tr('ui.dragToReorder')}></span>
+              <span class="rfg-rank-num">{i + 1}</span>
+              <span class="rfg-rank-label">{labelOf(v)}</span>
+              {!common.disabled && (
+                <span class="rfg-rank-actions">
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveUp')}: ${labelOf(v)}`} disabled={i === 0} onClick={() => move(i, i - 1)}>
+                    ↑
+                  </button>
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveDown')}: ${labelOf(v)}`} disabled={i === ranked.length - 1} onClick={() => move(i, i + 1)}>
+                    ↓
+                  </button>
+                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.remove')}: ${labelOf(v)}`} onClick={() => set(now().filter((_, j) => j !== i))}>
+                    ×
+                  </button>
+                </span>
+              )}
+            </li>
+          ))}
+          {rest.map((option, i) => (
+            <li key={String(option.value)} class="rfg-rank-item">
+              <button type="button" class="rfg-rank-pick" id={i === 0 && !ranked.length ? field.id : undefined} disabled={common.disabled || full} onClick={() => {
+                const current = now();
+                if (current.length < limit && !current.some(v => String(v) === String(option.value))) set([...current, option.value]);
+              }}>
+                <span class="rfg-rank-num is-empty" aria-hidden="true"></span>
+                <span class="rfg-rank-label">{option.label}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
+
   private renderRating(field: FormField, value: any) {
     const max = (field.config && field.config.max) || 5;
     const hover = this.hoverRating[field.model];
@@ -1527,13 +1783,16 @@ export class ReFormGenerator {
 
   private renderScale(field: FormField, value: any) {
     const { min = 1, max = 10, minLabel, maxLabel } = field.config || {};
+    // `config.nps`: a Net Promoter Score question (0-10), the numbers tinted as detractors, passives and promoters
+    const nps = !!(field.config && field.config.nps);
+    const tinted = nps && field.config!.nps !== 'plain';
     const numbers: number[] = [];
     for (let n = min; n <= max; n++) numbers.push(n);
     return (
       <div class="rfg-scale-wrap">
-        <div class="rfg-scale" role="radiogroup" style={{ '--rfg-scale-count': String(numbers.length) }}>
+        <div class={`rfg-scale ${nps ? 'rfg-scale-nps' : ''}`} role="radiogroup" style={{ '--rfg-scale-count': String(numbers.length) }}>
           {numbers.map(n => (
-            <button type="button" class={`rfg-scale-btn ${Number(value) === n && value !== '' ? 'is-active' : ''}`} id={n === min ? field.id : undefined} disabled={field.disabled} onClick={() => this.setValueByModel(field.model, Number(value) === n ? '' : n)}>
+            <button type="button" class={`rfg-scale-btn ${tinted ? `rfg-nps-${n <= 6 ? 'low' : n <= 8 ? 'mid' : 'high'}` : ''} ${Number(value) === n && value !== '' ? 'is-active' : ''}`} id={n === min ? field.id : undefined} disabled={field.disabled} onClick={() => this.setValueByModel(field.model, Number(value) === n ? '' : n)}>
               {n}
             </button>
           ))}

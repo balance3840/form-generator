@@ -143,3 +143,28 @@ re-country-select {
     }
   }
 }
+
+// Phone prefix: flag and dial code only; the list opens wider (see placePanel)
+re-country-select .is-compact {
+  .country-select-input-wrapper .selected-country-wrapper {
+    gap: 6px;
+    padding: 0 0 0 10px;
+    inset-inline: 0 26px;
+    .selected-flag {
+      width: 20px;
+    }
+    .selected-country-value {
+      font-variant-numeric: tabular-nums;
+    }
+  }
+  .country-select-input-wrapper .country-search {
+    padding-inline: 10px 26px;
+    // the typed search text needs no room for the flag
+    &::placeholder {
+      color: transparent;
+    }
+  }
+  .country-chevron {
+    inset-inline-end: 8px;
+  }
+}

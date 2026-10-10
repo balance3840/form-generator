@@ -80,7 +80,10 @@ Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g
 | `countrySelect` | `showDialCode`, `modelValueKey` (`code` by default, or `name` / `dialCode`), `defaultValue` |
 | `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos), `config.fileStyle: "block"` makes that button a full-width dashed bar |
 | `rating` | `config: { max }` |
-| `scale` | `config: { min, max, minLabel, maxLabel }` |
+| `scale` | `config: { min, max, minLabel, maxLabel }`. `config.nps: true` makes it a Net Promoter Score question: 0-10 kept on one line on phones, with a thin red / amber / green line for detractors, passives and promoters (`"plain"` drops the colours) |
+| `phone` | a country picker (flag and dial code, the `re-country-select` list) and the number. The answer is `"+45 12345678"` (country code, a space, the digits; a national leading 0 is dropped except for Italy). `config.defaultCountry` (`"dk"`) is where it starts, otherwise the visitor's region / the form language's country. Pasting `+46 70…` picks the country. The `phoneCountries` rule also limits the picker |
+| `likert` | agree / disagree style answers. The points are `options` (`[{ label: "Strongly disagree", value: 1 }, …]`). Without `config.rows` it is one question and the answer is a point; with `config.rows: [{ label, value }]` it is a table of statements and the answer is `{ [row value]: point }` (on phones the rows become cards). `config.showNumbers` shows 1, 2, 3… above the points. `required` means every statement is answered |
+| `ranking` | people put the `options` in order (click to place, drag or arrows to move). The answer is the list of option values, best first. `config.rankLimit` asks only for a top N. `required` means all options (or the top N) are placed |
 | `slider` | `config: { min, max, step, unit }` |
 | `heading`, `paragraph`, `divider` | content blocks (`label` / `helpText`, `content`, `config.level`) |
 | `columns` | a **row** of columns, see [Layout](#layout-rows-and-columns) |
@@ -126,7 +129,7 @@ Fields are stacked top to bottom. To put fields side by side, wrap them in a `co
 
 On a `boolean` field, `required` means "must be ticked". A rule whose value is empty is ignored.
 
-Available rules by `validationType` (the builder offers exactly these):
+Available rules by `validationType`:
 
 | Type | Rules |
 | --- | --- |
@@ -136,6 +139,10 @@ Available rules by `validationType` (the builder offers exactly these):
 | `array` | `required` `min` `max` `length` (number of choices) |
 | `boolean` | `required` (must be ticked) |
 | `file` (used automatically for `type: "file"`) | `required` `maxFileSize` (MB per file) `fileTypes` (`[".pdf", "image/*"]`) `minFiles` `maxFiles` |
+
+Phone and e-mail checks: `phone` (a plausible international number: a known country code, at most 15 digits), `phoneCountries` (`[["dk", "se"], "message"]`: only numbers from these countries) and `emailDomains` (`[["company.com"], "message"]`: only addresses on these domains, subdomains included).
+
+Not every rule makes sense for every input: the builder offers them per kind of input, through `rulesFor(field)` / `RULES_BY_KIND` (a phone number gets `phone`, `phoneCountries`, `matches`, `sameAs`…; a URL `url`, `maxLength`, `matches`; a dropdown, a Likert or a ranking only `required`).
 
 Rules that compare with another field take that field's `model` as their value, e.g. `{ "name": "sameAs", "params": ["email", "The emails do not match"] }` or `{ "name": "minField", "params": ["startDate", "End must be after the start"] }`. If the referenced field no longer exists the rule is ignored. A file field's `attributes.accept` is enforced on submit too, not just used as a hint for the file picker.
 

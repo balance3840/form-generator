@@ -7,3 +7,4 @@ export { default as COUNTRIES } from './components/re-country-select/countries';
 export * from './utils/search';
 export * from './utils/captcha';
 export * from './utils/prefill';
+export * from './utils/phone';
