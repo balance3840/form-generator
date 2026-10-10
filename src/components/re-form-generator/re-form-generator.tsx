@@ -5,7 +5,7 @@ import { createYupSchema, getValidationErrors } from '../../utils/utils';
 import { clickedInsideSelector } from '../../utils/dom';
 import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, isLayoutType, itemInstances, rowLayout, sanitizeHtml, setByPath, withDraft } from '../../utils/schema';
 import { loadDocument } from '../../utils/migrate';
-import { ScriptSandbox } from '../../utils/script-sandbox';
+import { ScriptHost, ScriptSandbox } from '../../utils/script-sandbox';
 import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
 import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
 import { defaultPhoneCountry, formatPhone, parsePhone, phoneCountry } from '../../utils/phone';
@@ -202,7 +202,7 @@ export class ReFormGenerator {
     this.stopScript();
     this.scriptCode = code;
     if (!code || typeof document === 'undefined') return;
-    this.sandbox = new ScriptSandbox(code, {
+    const host: ScriptHost = {
       values: () => this.values,
       fields: () =>
         flattenFields(this.doc.fields, true, true)
@@ -226,7 +226,8 @@ export class ReFormGenerator {
         const safe = safeLinkUrl(url);
         if (safe && /^https?:\/\//i.test(safe)) window.location.assign(safe);
       },
-    }, this.el);
+    };
+    this.sandbox = new ScriptSandbox(code, host, this.el);
   }
 
   private stopScript() {
@@ -319,6 +320,11 @@ export class ReFormGenerator {
   @Watch('theme')
   onThemeChange() {
     this.ensureFont();
+  }
+
+  @Watch('allowScript')
+  onScriptMode() {
+    this.startScript();
   }
 
   @Watch('language')
