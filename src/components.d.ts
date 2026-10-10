@@ -67,6 +67,10 @@ export namespace Components {
          */
         "action": any;
         /**
+          * Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it.
+         */
+        "allowScript": boolean;
+        /**
           * Used by the builder: shows every field, ignores logic and disables interaction.
          */
         "designMode": boolean;
@@ -396,6 +400,10 @@ declare namespace LocalJSX {
           * Where to send the answers: { endpoint, httpMethod, bearerToken, headers, formData, recaptchaSiteKey, webhookEndpoint, mapping }. Overrides `schema.action`.
          */
         "action"?: any;
+        /**
+          * Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it.
+         */
+        "allowScript"?: boolean;
         /**
           * Used by the builder: shows every field, ignores logic and disables interaction.
          */

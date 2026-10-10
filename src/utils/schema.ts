@@ -70,6 +70,8 @@ export type FormDocument = {
   i18n?: { [key: string]: any };
   /** A footer shown under the form, like the footer of a website. */
   footer?: FormFooter;
+  /** The form's own JavaScript, run in a sandbox with a `form` object (see utils/script-sandbox.ts). */
+  script?: string;
 };
 
 export type FooterLink = { label: string; url: string; newTab?: boolean };
@@ -107,7 +109,7 @@ export const SOCIAL_NETWORKS: { value: string; label: string }[] = [
 ];
 
 /** Field types that only display content (or act) and never hold a value. */
-export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'tabs', 'modal', 'callout', 'button'];
+export const LAYOUT_TYPES = ['heading', 'paragraph', 'divider', 'pageBreak', 'columns', 'section', 'tabs', 'modal', 'callout', 'button', 'image', 'video', 'link', 'icon', 'embed'];
 
 export const isLayoutType = (type: string) => LAYOUT_TYPES.includes(type);
 
@@ -217,6 +219,7 @@ export const RULE_SPECS: RuleSpec[] = [
 export function fieldKind(field: { type: string; inputType?: string; validationType?: string; config?: { [key: string]: any } }): string {
   // a search that picks several results is a list of choices
   if ((field.type === 'search' || field.type === 'address') && field.config && field.config.multiple) return 'choices';
+  if (field.type === 'pictureChoice') return field.config && field.config.multiple ? 'choices' : 'choice';
   if (field.type === 'input') {
     const t = field.inputType || 'text';
     return ({ text: 'text', email: 'email', url: 'url', tel: 'tel', password: 'password', number: 'number', date: 'date', time: 'time', 'datetime-local': 'datetime', color: 'color', checkbox: 'checkbox', file: 'file', search: 'text', hidden: 'hidden' } as { [k: string]: string })[t] || 'text';
@@ -240,6 +243,10 @@ export function fieldKind(field: { type: string; inputType?: string; validationT
       slider: 'rating',
       likert: 'likert',
       ranking: 'ranking',
+      hidden: 'hidden',
+      dates: 'choices',
+      dateRange: 'dateRange',
+      yesNo: 'choice',
     } as { [k: string]: string })[field.type] || 'other'
   );
 }
@@ -439,6 +446,15 @@ export function defaultValues(fields: FormField[]): { [key: string]: any } {
     if (!field.model || isLayoutType(field.type)) return;
     if (field.type === 'repeater') {
       out[field.model] = repeaterDefault(field);
+    } else if (field.type === 'hidden') {
+      // `type: "hidden"`: a value people never see. `config.source`: "url" (the page address `?param=`),
+      // "fixed" (`config.value`), or "data" (`config.prefill`, filled by the host like any auto-fill)
+      const config = field.config || {};
+      if (config.source === 'fixed' && config.value !== undefined) out[field.model] = config.value;
+      else if (config.source === 'url' && typeof location !== 'undefined') {
+        const v = new URLSearchParams(location.search).get(config.param || field.model);
+        if (v !== null) out[field.model] = v;
+      }
     } else if (field.defaultValue !== undefined) {
       out[field.model] = deepClone(field.defaultValue);
     } else if (field.type === 'slider') {

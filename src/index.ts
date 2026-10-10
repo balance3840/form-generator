@@ -8,3 +8,4 @@ export * from './utils/search';
 export * from './utils/captcha';
 export * from './utils/prefill';
 export * from './utils/phone';
+export * from './utils/media';

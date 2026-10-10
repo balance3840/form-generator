@@ -77,6 +77,10 @@ function buildAnsweredValidator(field: FormField, label: string, t: Translate) {
   const rule = (field.validations || []).find(r => r.name === 'required');
   if (!rule) return yup.mixed();
   const custom = rule.params && typeof rule.params[0] === 'string' && rule.params[0];
+  if (field.type === 'dateRange') return yup.mixed().test('required', custom || t('validation.required', { label }), (value: any) => !!(value && value.start && value.end));
+  if (field.type === 'dates') {
+    return yup.mixed().test('required', custom || t('validation.pickTimes', { label }), (value: any) => Array.isArray(value) && value.length > 0 && value.every((d: any) => d && Array.isArray(d.slots) && d.slots.length > 0));
+  }
   if (field.type === 'ranking') {
     const options = (field.options || []).length;
     const needed = Math.min(options, Number(field.config && field.config.rankLimit) || options);
@@ -117,7 +121,7 @@ export function createYupSchema(fields: FormField[], captchaField: string | bool
       fieldsRules[model] = buildFileValidator(field, label, labelOf, t);
       return;
     }
-    if (field.type === 'likert' || field.type === 'ranking') {
+    if (field.type === 'likert' || field.type === 'ranking' || field.type === 'dateRange' || (field.type === 'dates' && field.config && Array.isArray(field.config.slots) && field.config.slots.length)) {
       fieldsRules[model] = buildAnsweredValidator(field, label, t);
       return;
     }
@@ -216,3 +220,4 @@ export function getValidationErrors(err: any) {
 
   return validationErrors;
 }
+

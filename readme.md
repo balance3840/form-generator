@@ -81,19 +81,21 @@ Inputs accept `config.prefix` / `config.suffix` (fixed text next to the box, e.g
 | `file` | `attributes: { accept, multiple }`. `config.preview` shows thumbnails of chosen images, `config.compact` replaces the big drop area with a small "add" button (good for photos), `config.fileStyle: "block"` makes that button a full-width dashed bar |
 | `rating` | `config: { max }` |
 | `scale` | `config: { min, max, minLabel, maxLabel }`. `config.nps: true` makes it a Net Promoter Score question: 0-10 kept on one line on phones, with a thin red / amber / green line for detractors, passives and promoters (`"plain"` drops the colours) |
-| `phone` | a country picker (flag and dial code, the `re-country-select` list) and the number. The answer is `"+45 12345678"` (country code, a space, the digits; a national leading 0 is dropped except for Italy). `config.defaultCountry` (`"dk"`) is where it starts, otherwise the visitor's region / the form language's country. Pasting `+46 70…` picks the country. The `phoneCountries` rule also limits the picker |
+| `phone` | a country picker (flag and dial code, the `re-country-select` list) and the number. The answer is `"+45 20123456"` (country code, a space, the digits; a national leading 0 is dropped except for Italy). `config.defaultCountry` (`"dk"`) is where it starts, otherwise the visitor's region / the form language's country. Pasting `+46 70…` picks the country. The `phoneCountries` rule also limits the picker. `config.phoneStyle`: `inline` (default: one box, the flag and dial code inside it) or `separate` (the picker next to the box) |
 | `likert` | agree / disagree style answers. The points are `options` (`[{ label: "Strongly disagree", value: 1 }, …]`). Without `config.rows` it is one question and the answer is a point; with `config.rows: [{ label, value }]` it is a table of statements and the answer is `{ [row value]: point }` (on phones the rows become cards). `config.showNumbers` shows 1, 2, 3… above the points. `required` means every statement is answered |
 | `ranking` | people put the `options` in order (click to place, drag or arrows to move). The answer is the list of option values, best first. `config.rankLimit` asks only for a top N. `required` means all options (or the top N) are placed |
 | `slider` | `config: { min, max, step, unit }` |
 | `heading`, `paragraph`, `divider` | content blocks (`label` / `helpText`, `content`, `config.level`) |
 | `columns` | a **row** of columns, see [Layout](#layout-rows-and-columns) |
-| `pageBreak` | splits the form into steps. Its `label` is the title of the step that starts after it, `helpText` its description (the first step's are `settings.firstStepTitle` / `firstStepDescription`). It can have `logic` to skip the whole step |
+| `pageBreak` | splits the form into steps (with `config.ending` it starts the thank-you page instead). Its `label` is the title of the step that starts after it, `helpText` its description (the first step's are `settings.firstStepTitle` / `firstStepDescription`). It can have `logic` to skip the whole step |
 | `section` | a titled card around other fields (`fields`). `config`: `style` (`card` or `plain`), `collapsible`, `startCollapsed`. See [App-like flows](#app-like-flows) |
 | `repeater` | a group people can add several of (tenants, rooms, meters…). The answer is a list of objects. See [App-like flows](#app-like-flows) |
 | `tabs` | switch between groups of fields: `tabs: [{ id, label, fields }]`, `config.style` (`line` or `pills`). The tab with an error opens by itself |
 | `modal` | a dialog (pop-up form) that a button opens with the `openModal` action: `label` (title), `fields`, `config.confirmLabel` / `cancelLabel` / `confirmActions`. See [Dialogs](#dialogs) |
 | `button` | a button that runs `config.actions`, see [Buttons and actions](#buttons-and-actions) |
 | `callout` | a message box: `label` (title), `content`, `config.tone` (`info success warning danger`). Combine with `logic` to show it only when it applies |
+| `image`, `video`, `link`, `icon`, `embed` | content blocks. `image`: `config.src` (https or an uploaded data URL), `alt`, `caption`, `width` (`small` / `medium` / `full`), `align`, `link`, `rounded`. `video`: `config.url` (YouTube (privacy-enhanced player), Vimeo, Loom, or an .mp4/.webm file), `caption`. `link`: `label`, `config.url` (http(s), mailto:, tel:), `style` (`button` / `text`), `newTab`. `icon`: `config.emoji` or `config.icon` (see `BLOCK_ICONS`), `size`, `align`, `label` / `helpText` under it. `embed`: `config.url` (https: a map, a booking calendar, a PDF), `height` |
+| thank-you page | a `pageBreak` with `config.ending: true`: the blocks after it are shown after a successful send instead of the form (never as a step, no questions) |
 | `signature` | a box to sign in (finger, pen, mouse). The answer is a PNG data URL. `config.height`, `config.hint`. `config.mode: "dialog"` shows a grey box with a button (`signLabel`) that opens the signing pad in a dialog and then shows the signature |
 
 ### Layout: rows and columns
@@ -140,7 +142,7 @@ Available rules by `validationType`:
 | `boolean` | `required` (must be ticked) |
 | `file` (used automatically for `type: "file"`) | `required` `maxFileSize` (MB per file) `fileTypes` (`[".pdf", "image/*"]`) `minFiles` `maxFiles` |
 
-Phone and e-mail checks: `phone` (a plausible international number: a known country code, at most 15 digits), `phoneCountries` (`[["dk", "se"], "message"]`: only numbers from these countries) and `emailDomains` (`[["company.com"], "message"]`: only addresses on these domains, subdomains included).
+Phone and e-mail checks: `phone` (a number that exists in its country's numbering plan, checked with libphonenumber-js: length and leading digits), `phoneCountries` (`[["dk", "se"], "message"]`: only numbers from these countries) and `emailDomains` (`[["company.com"], "message"]`: only addresses on these domains, subdomains included).
 
 Not every rule makes sense for every input: the builder offers them per kind of input, through `rulesFor(field)` / `RULES_BY_KIND` (a phone number gets `phone`, `phoneCountries`, `matches`, `sameAs`…; a URL `url`, `maxLength`, `matches`; a dropdown, a Likert or a ranking only `required`).
 
@@ -159,7 +161,7 @@ Rules that compare with another field take that field's `model` as their value, 
 
 Everything below is plain JSON, so a form can behave like a small application.
 
-**Steps.** A `pageBreak` starts a new step. `settings.stepsLayout: "sidebar"` shows a list of the steps next to the form (a strip on small screens), with a tick on the steps that are filled in; the default is a progress bar. `settings.stepNavigation`: `visited` (default: steps already visited), `free` (any step) or `locked` (only back). `settings.nextButtonText` can use `{next}` (title of the next step): `"{next} →"`. `settings.saveDraft: true` keeps the answers in this browser (`draftKey` names the slot; files are not kept) and shows a "Save and exit" button (`exitText`, `exitUrl`); the draft is removed after a successful submit.
+**Steps.** A `pageBreak` starts a new step. `settings.stepsLayout: "sidebar"` shows a list of the steps next to the form (a strip on small screens), with a tick on the steps that are filled in; the default is a progress bar. Above the form, `settings.progressStyle` picks `bar` (default), `percent`, `steps` (numbered dots), `titles` (numbered dots with the step titles) or `none`; `showStepCount: false` hides “Step 2 of 4”, `progressPosition: "bottom"` puts it above the buttons, `stepHeader: false` hides the step's title and description on its page, `stepTransition` is `fade` or `slide` (off when the visitor asks for less motion), `backButtonText` renames Back, and `theme.buttonAlign: "split"` puts Back on the left and Next on the right. A page break's `config` sets its own step: `image` (+ `alt`) at the top, `nextLabel` for its Next button, `hideBack: true`. The first step uses `settings.firstStepImage` / `firstStepImageAlt`. Every one of these texts is translatable. `settings.stepNavigation`: `visited` (default: steps already visited), `free` (any step) or `locked` (only back). `settings.nextButtonText` can use `{next}` (title of the next step): `"{next} →"`. `settings.saveDraft: true` keeps the answers in this browser (`draftKey` names the slot; files are not kept) and shows a "Save and exit" button (`exitText`, `exitUrl`); the draft is removed after a successful submit.
 
 **Sections.** `{ "type": "section", "label": "Dates", "fields": [ … ] }` groups fields in a card. Rows can sit inside sections. `config.badge` puts a round number ("1") next to the title, `config.tooltip` adds a "?" icon with a help text, and a section with a `disable` rule is greyed out and unusable (a numbered checklist that unlocks step by step). A section without fields is just a card with a title.
 
@@ -302,9 +304,27 @@ Everything in a web page is readable by visitors, so treat anything you put in a
 - **For a key you cannot restrict**, put a small proxy in between: the form calls your address, the proxy adds the key and forwards the request. The builder generates a ready-to-paste Cloudflare Worker for the address providers ("Keep the key off the page") and switches the field to it.
 - Submit the form to **your own server** (`action.endpoint`) and verify captcha tokens there.
 
+### The form's own code
+
+`script` (a string at the top of the document) is JavaScript that runs with the form, like the “Script” box of the old forms, but **in a sandbox**: a hidden frame with no access to the page, its cookies, its storage or anybody's login. It talks to the form through a `form` object:
+
+```js
+form.on('change', ({ key, value }) => {      // also 'ready', 'step', 'beforeSubmit', 'submitted'
+  if (key === 'city') form.filterOptions('projects', o => o.label.includes(value));
+});
+form.set('year', '2000');                    // or form.set({ a: 1, b: 2 })
+form.get('city');                            // form.values: every answer
+form.setOptions('projects', [{ label: 'A', value: 'a' }]);   // form.resetOptions('projects') undoes it
+form.hide('vat'); form.show('vat');          // hidden fields are not checked and not sent
+form.goToStep('stepId'); form.redirect('https://…');
+form.on('beforeSubmit', ({ values }) => values.age < 18 ? 'You must be 18 or older.' : true);  // false or a message stops the send
+```
+
+`form.updateValue` / `form.getValue` work too (the names older scripts used). The prop `allow-script="false"` never runs it; the builder's canvas never does.
+
 ### Settings & action
 
-`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`, and for steps `stepsLayout stepNavigation firstStepTitle firstStepDescription nextButtonText saveDraft draftKey exitText exitUrl` (see [App-like flows](#app-like-flows)).
+`settings`: `autofill` (`false` stops the browser from suggesting saved addresses and the like; a single field can do the same with `attributes.autocomplete: "off"`) `submitButtonText successMessage errorMessage formErrorMessage showTitle showProgress hideSubmitButton allowResubmit redirectUrl`, `afterSubmit` (`message`, `page`: the thank-you page, or `redirect`) and `redirectTarget` (`top`, default: an embedded form moves the whole page, with a Continue button when the browser refuses; `self`: only the frame), and for steps `stepsLayout progressStyle showStepCount progressPosition stepHeader stepTransition stepNavigation firstStepTitle firstStepDescription firstStepImage firstStepImageAlt nextButtonText backButtonText saveDraft draftKey exitText exitUrl` (see [App-like flows](#app-like-flows)).
 
 `action` (optional): `endpoint httpMethod bearerToken headers formData webhookEndpoint recaptchaSiteKey mapping`. Without an endpoint the form just emits `submitted`.
 

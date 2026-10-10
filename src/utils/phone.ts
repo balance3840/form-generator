@@ -1,8 +1,9 @@
 /**
- * Phone numbers of the `phone` field. The answer is stored as `+<dial code> <number>`, e.g. "+45 12345678":
- * readable in an e-mail and easy to turn into E.164 (remove the space). No phone library is bundled, so "valid"
- * means a plausible international number (ITU E.164: at most 15 digits), not one checked against each country's plan.
+ * Phone numbers of the `phone` field. The answer is stored as `+<dial code> <number>`, e.g. "+45 20123456":
+ * readable in an e-mail and easy to turn into E.164 (remove the space). "Valid" is checked against each country's
+ * numbering plan (length and leading digits) with libphonenumber-js, the JavaScript port of Google's libphonenumber.
  */
+import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js/min';
 import countries from '../components/re-country-select/countries';
 
 export type PhoneCountry = { name: string; dialCode: string; code: string };
@@ -40,19 +41,35 @@ export function formatPhone(country: PhoneCountry | undefined, number: string): 
   return country ? `${country.dialCode} ${national}` : national;
 }
 
-/** A plausible international number: a known country code and 15 digits at most, at least 4 after the country code. */
+/** The number in E.164 form ("+4520123456"), or '' when it has no country code. */
+const e164 = (value: any) => {
+  const text = String(value === undefined || value === null ? '' : value).trim();
+  return text.startsWith('+') ? `+${digits(text)}` : '';
+};
+
+/** A number that exists in its country's numbering plan (e.g. a Danish number has 8 digits and cannot start with 1). */
 export function isValidPhone(value: any): boolean {
   if (value === undefined || value === null || value === '') return true; // empty answers are the job of `required`
-  const { country, number } = parsePhone(value);
-  if (!country) return false;
-  const total = digits(country.dialCode).length + number.length;
-  return number.length >= 4 && total <= 15;
+  const full = e164(value);
+  if (!full) return false;
+  try {
+    return isValidPhoneNumber(full);
+  } catch (e) {
+    return false;
+  }
 }
 
 /** Whether the number belongs to one of `codes` (country codes like "dk", "se"). */
 export function phoneFromCountries(value: any, codes: string[]): boolean {
   if (value === undefined || value === null || value === '' || !codes || !codes.length) return true;
   const wanted = codes.map(c => String(c).trim().toLowerCase()).filter(Boolean);
+  // the numbering plan tells countries apart even when they share a dial code (+1: USA or Canada)
+  try {
+    const known = parsePhoneNumberFromString(e164(value));
+    if (known && known.country) return wanted.includes(known.country.toLowerCase());
+  } catch (e) {
+    /* not a number the plan knows: fall back to the dial code */
+  }
   const { country } = parsePhone(value, wanted[0]);
   if (!country) return false;
   // countries sharing a dial code (+1) cannot be told apart, so any of them is accepted when one of them is

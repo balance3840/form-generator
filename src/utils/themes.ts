@@ -18,7 +18,7 @@ export type FormTheme = {
   buttonStyle?: 'solid' | 'outline';
   buttonWidth?: 'full' | 'auto';
   /** Where the submit button sits when it does not fill the width. */
-  buttonAlign?: 'left' | 'center' | 'right';
+  buttonAlign?: 'left' | 'center' | 'right' | 'split';
   labelStyle?: 'normal' | 'uppercase';
   /** Branding images: http(s) URLs, relative paths or `data:image/...` URLs. */
   logo?: string;

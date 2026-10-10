@@ -28,14 +28,24 @@ export const CAPTCHA_PROVIDERS: CaptchaProviderInfo[] = [
   { id: 'recaptcha3', label: 'Google reCAPTCHA v3 (invisible)', description: 'No challenge: scores the visitor in the background (shows Google’s small badge).', needsKey: true, token: true, field: 'g-recaptcha-response', keyUrl: 'https://www.google.com/recaptcha/admin/create', verifyUrl: 'https://www.google.com/recaptcha/api/siteverify' },
 ];
 
-export type CaptchaConfig = { provider: string; siteKey?: string; theme?: 'auto' | 'light' | 'dark' };
+export type CaptchaConfig = {
+  provider: string;
+  siteKey?: string;
+  theme?: 'auto' | 'light' | 'dark';
+  /**
+   * Turnstile only: `always` (default) shows the box, `interaction-only` shows it only when the visitor has to tick it
+   * (most people see nothing), `execute` shows it once the check starts.
+   */
+  appearance?: 'always' | 'execute' | 'interaction-only';
+};
 
 export const captchaProvider = (id?: string) => CAPTCHA_PROVIDERS.find(p => p.id === id);
 
 /** The captcha settings of a form: `settings.captcha`, or the old `action.recaptchaSiteKey`. */
 export function captchaConfig(settings: { [key: string]: any } | undefined, action: { [key: string]: any } | undefined): CaptchaConfig | null {
   const own = settings && settings.captcha;
-  if (own && own.provider && own.provider !== 'none') return own;
+  // a widget without a site key cannot run (the key is often added by the server that serves the form): no captcha then
+  if (own && own.provider && own.provider !== 'none') return hasWidget(own.provider) && !own.siteKey ? null : own;
   if (action && action.recaptchaSiteKey) return { provider: 'recaptcha', siteKey: action.recaptchaSiteKey };
   return null;
 }
@@ -86,7 +96,7 @@ export async function mountCaptcha(config: CaptchaConfig, container: HTMLElement
   if (config.provider === 'turnstile') {
     await loadScript('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit');
     await ready(() => w.turnstile);
-    const id = w.turnstile.render(container, { sitekey: siteKey, theme: options.theme, language: lang, callback: (t: string) => onToken(t), 'expired-callback': () => onToken(''), 'error-callback': () => onToken('') });
+    const id = w.turnstile.render(container, { sitekey: siteKey, theme: options.theme, language: lang, appearance: config.appearance || 'always', size: 'flexible', callback: (t: string) => onToken(t), 'expired-callback': () => onToken(''), 'error-callback': () => onToken('') });
     return { token: async () => w.turnstile.getResponse(id) || '', reset: () => (w.turnstile.reset(id), onToken('')), destroy: () => w.turnstile.remove(id) };
   }
 

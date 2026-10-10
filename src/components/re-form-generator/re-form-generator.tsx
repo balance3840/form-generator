@@ -2,13 +2,23 @@ import { Component, Element, Event, EventEmitter, Host, Listen, Method, Prop, St
 import * as yup from 'yup';
 import set from 'lodash/set';
 import { createYupSchema, getValidationErrors } from '../../utils/utils';
+import { clickedInsideSelector } from '../../utils/dom';
 import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, isLayoutType, itemInstances, rowLayout, sanitizeHtml, setByPath, withDraft } from '../../utils/schema';
 import { loadDocument } from '../../utils/migrate';
+import { ScriptSandbox } from '../../utils/script-sandbox';
 import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
 import { ADDRESS_PROVIDERS, addressSource } from '../../utils/search';
 import { defaultPhoneCountry, formatPhone, parsePhone, phoneCountry } from '../../utils/phone';
+import { dateOf, dayLabel, firstDayOfWeek, isoOf, monthGrid, monthTitle, resolveDay, today, weekdayNames } from '../../utils/calendar';
+import { BLOCK_ICONS, safeColor, safeEmbedUrl, safeIconNode, safeLinkUrl, videoSource } from '../../utils/media';
 import { CaptchaController, captchaConfig, captchaProvider, hasWidget, mountCaptcha } from '../../utils/captcha';
 import { I18nConfig, availableLanguages, createTranslator, languageInfo, localizeDocument, matchLanguage, resolveLanguage } from '../../utils/i18n';
+
+/** What the form knows about a step besides its fields (from the page break that starts it). */
+type StepPage = { id?: string; title?: string; description?: string; image?: string; alt?: string; nextLabel?: string; hideBack?: boolean };
+
+/** Answer paths the form's code may write: names, dots and [n] indexes (never __proto__ and the like). */
+const SAFE_PATH = /^(?!.*(?:__proto__|prototype|constructor))[\w-]+(?:\.[\w-]+|\[\d+\])*$/;
 
 const DEFAULT_SETTINGS = {
   autofill: true,
@@ -79,6 +89,8 @@ export class ReFormGenerator {
    * with the model path of the field they were picked in (e.g. `rooms[0].units[2].photos`).
    */
   @Prop() submitter?: (submission: { values: any; files: { key: string; value: FileList; multiple: boolean }[] }) => Promise<any> | any;
+  /** Runs the form's own code (`schema.script`) in a sandbox. `false` never runs it. */
+  @Prop() allowScript: boolean = true;
 
   /** The localized document that is rendered. */
   @State() doc: FormDocument = { version: 2, fields: [] };
@@ -91,12 +103,26 @@ export class ReFormGenerator {
   @State() status: 'idle' | 'submitting' | 'success' | 'error' = 'idle';
   @State() schemaError: string = null;
   @State() hoverRating: { [model: string]: number } = {};
+  /** What the form's code changed: the options a field offers, and fields it hid or showed (by model). */
+  @State() scriptOptions: { [model: string]: any[] } = {};
+  @State() scriptVisible: { [model: string]: boolean } = {};
+  /** Why the form's code stopped the send (shown above the buttons). */
+  @State() scriptError: string = '';
+  /**
+   * The thank-you page: the blocks after a page break with `config.ending` (shown after a successful send, never as a
+   * step). They are taken out of the form's own fields when the document loads.
+   */
+  @State() endingFields: FormField[] = [];
+  /** A redirect the browser did not allow (an embedded form may not move the page it sits in): shown as a button. */
+  @State() pendingRedirect: string = '';
   /** The country picked in front of each phone number (several countries share +1, so it cannot always be read back from the number). */
   @State() phoneCountries: { [model: string]: string } = {};
   /** What was typed in each phone number box, spaces included (the answer only keeps the digits). */
   @State() phoneTexts: { [model: string]: string } = {};
   /** The ranking item being dragged. */
   @State() rankDrag: { model: string; index: number } | null = null;
+  /** The month each calendar field shows ("YYYY-MM"). */
+  @State() calMonths: { [model: string]: string } = {};
   /** State of the "Other…" option of radio / checkbox groups, by field model. */
   @State() others: { [model: string]: { on: boolean; text: string } } = {};
   /** What is picked in each `search` field (value + label), by field model. */
@@ -157,6 +183,62 @@ export class ReFormGenerator {
   componentDidLoad() {
     this.languageReady = true;
     this.languageChanged.emit({ language: this.activeLanguage });
+    this.startScript();
+  }
+
+  disconnectedCallback() {
+    this.stopScript();
+  }
+
+  /* ------------------------------------------------------------ form's code */
+
+  private sandbox: ScriptSandbox = null;
+  private scriptCode = '';
+
+  /** (Re)starts the form's own code when it changed. Never in the builder's canvas. */
+  private startScript() {
+    const code = !this.designMode && this.allowScript !== false && typeof this.sourceDoc.script === 'string' ? this.sourceDoc.script.trim() : '';
+    if (code === this.scriptCode && (this.sandbox || !code)) return;
+    this.stopScript();
+    this.scriptCode = code;
+    if (!code || typeof document === 'undefined') return;
+    this.sandbox = new ScriptSandbox(code, {
+      values: () => this.values,
+      fields: () =>
+        flattenFields(this.doc.fields, true, true)
+          .filter(f => f.model && !isLayoutType(f.type))
+          .map(f => ({ model: f.model, type: f.type, label: String(f.label || f.checkboxLabel || '').replace(/<[^>]*>/g, ''), ...(f.options ? { options: f.options.map((o: any) => ({ label: o.label, value: o.value })) } : {}) })),
+      setValue: (key, value) => SAFE_PATH.test(key) && this.setValueByModel(key, value),
+      setOptions: (model, options) => {
+        const next = { ...this.scriptOptions };
+        if (options) next[model] = options.filter(o => o && typeof o === 'object' && 'value' in o).map(o => ({ label: String(o.label ?? o.value), value: o.value }));
+        else delete next[model];
+        this.scriptOptions = next;
+      },
+      setVisible: (model, visible) => {
+        const next = { ...this.scriptVisible };
+        if (visible === null) delete next[model];
+        else next[model] = visible;
+        this.scriptVisible = next;
+      },
+      goToStep: id => this.goToStepId(id),
+      redirect: url => {
+        const safe = safeLinkUrl(url);
+        if (safe && /^https?:\/\//i.test(safe)) window.location.assign(safe);
+      },
+    }, this.el);
+  }
+
+  private stopScript() {
+    if (this.sandbox) this.sandbox.destroy();
+    this.sandbox = null;
+    this.scriptCode = '';
+  }
+
+  /** A field as the form's code left it (other options). */
+  private withScript(field: FormField): FormField {
+    const options = field.model && this.scriptOptions[field.model];
+    return options ? { ...field, options } : field;
   }
 
   private navStep = '';
@@ -226,6 +308,7 @@ export class ReFormGenerator {
     this.status = 'idle';
     this.validationErrors = {};
     this.load(this.designMode);
+    this.startScript();
   }
 
   @Watch('model')
@@ -339,7 +422,10 @@ export class ReFormGenerator {
     const changed = language !== this.activeLanguage;
     this.activeLanguage = language;
     this.tr = createTranslator(language, this.sourceDoc.i18n as I18nConfig);
-    this.doc = localizeDocument(this.sourceDoc, language);
+    const localized = localizeDocument(this.sourceDoc, language);
+    const at = (localized.fields || []).findIndex(f => f.type === 'pageBreak' && f.config && f.config.ending);
+    this.endingFields = at >= 0 ? localized.fields.slice(at + 1) : [];
+    this.doc = at >= 0 ? { ...localized, fields: localized.fields.slice(0, at) } : localized;
     if (changed && this.languageReady) {
       this.languageChanged.emit({ language });
       // error messages on screen should follow the language too
@@ -374,12 +460,12 @@ export class ReFormGenerator {
 
   /* ------------------------------------------------------------- derived data */
 
-  private statesCache: { values: any; doc: FormDocument; design: boolean; modal: ModalState | null; value: FieldStates } = null;
+  private statesCache: { values: any; doc: FormDocument; ending: FormField[]; design: boolean; modal: ModalState | null; script: { [model: string]: boolean }; value: FieldStates } = null;
 
   /** Logic result (shown / disabled / required, by field id) for the current answers. Cached until they change. */
   private states(values = this.values): FieldStates {
     const cache = this.statesCache;
-    if (cache && cache.values === values && cache.doc === this.doc && cache.design === this.designMode && cache.modal === this.modal) return cache.value;
+    if (cache && cache.values === values && cache.doc === this.doc && cache.ending === this.endingFields && cache.design === this.designMode && cache.modal === this.modal && cache.script === this.scriptVisible) return cache.value;
     let value: FieldStates;
     if (this.designMode) {
       // the builder shows every block and ignores logic
@@ -390,8 +476,21 @@ export class ReFormGenerator {
       value = computeStates(this.doc.fields, values);
       // the fields of an open dialog have their own scope: the dialog's answers (plus the form's)
       if (this.modal) evaluateStates(draftFields(this.modal.fields), values, { ...values, ...draftObject(values) }, value);
+      // fields the form's code hid or showed
+      const forced = Object.keys(this.scriptVisible);
+      if (forced.length) {
+        value = { ...value, visible: { ...value.visible } };
+        flattenFields(this.doc.fields, true, true).forEach(f => {
+          if (f.model && forced.includes(f.model)) value.visible[f.id] = this.scriptVisible[f.model];
+        });
+      }
     }
-    this.statesCache = { values, doc: this.doc, design: this.designMode, modal: this.modal, value };
+    // the blocks of the thank-you page have no logic: always shown
+    if (this.endingFields.length) {
+      value = { ...value, visible: { ...value.visible } };
+      flattenFields(this.endingFields, false, true).forEach(f => (value.visible[f.id] = true));
+    }
+    this.statesCache = { values, doc: this.doc, ending: this.endingFields, design: this.designMode, modal: this.modal, script: this.scriptVisible, value };
     return value;
   }
 
@@ -420,16 +519,18 @@ export class ReFormGenerator {
    * Splits the fields into steps at every `pageBreak`. Hidden fields stay in their page (so they keep their
    * state), but pages without any visible field are skipped, and so are steps whose page break is hidden by logic.
    */
-  private pagesFor(values: { [key: string]: any }): Array<FormField[] & { title?: string; id?: string; description?: string }> {
-    type Page = FormField[] & { title?: string; id?: string; description?: string };
+  private pagesFor(values: { [key: string]: any }): Array<FormField[] & StepPage> {
+    type Page = FormField[] & StepPage;
     const vis = this.visibility(values);
     const settings = this.doc.settings || {};
-    const newPage = (id: string, title?: string, description?: string): Page => Object.assign([] as FormField[], { id, title, description, hiddenStep: false });
-    const pages: Page[] = [newPage('start', settings.firstStepTitle, settings.firstStepDescription)];
+    const newPage = (id: string, title?: string, description?: string, config: any = {}): Page =>
+      Object.assign([] as FormField[], { id, title, description, image: config.image, alt: config.alt, nextLabel: config.nextLabel, hideBack: !!config.hideBack, hiddenStep: false });
+    const pages: Page[] = [newPage('start', settings.firstStepTitle, settings.firstStepDescription, { image: settings.firstStepImage, alt: settings.firstStepImageAlt })];
     this.doc.fields.forEach(field => {
       if (field.type === 'pageBreak') {
-        // a page break's label is the title of the step that starts after it
-        const page = pages[pages.length - 1].length ? newPage(field.id, field.label, field.helpText) : Object.assign(pages[pages.length - 1], { id: field.id, title: field.label || pages[pages.length - 1].title, description: field.helpText || pages[pages.length - 1].description });
+        // a page break's label is the title of the step that starts after it (its settings are that step's settings)
+        const last = pages[pages.length - 1];
+        const page = last.length ? newPage(field.id, field.label, field.helpText, field.config || {}) : Object.assign(last, newPage(field.id, field.label || last.title, field.helpText || last.description, field.config || {}));
         if (page !== pages[pages.length - 1]) pages.push(page);
         (page as any).hiddenStep = !vis[field.id];
       } else {
@@ -508,6 +609,11 @@ export class ReFormGenerator {
         return { values: {}, response: null, error: null, blocked: true };
       }
     } else if (captchaField) {
+      // Turnstile solves itself in the background: give it a moment if the visitor was quicker
+      if (captcha.provider === 'turnstile' && !this.captchaToken && this.captchaCtrl) {
+        const started = Date.now();
+        while (!this.captchaToken && Date.now() - started < 6000) await new Promise(resolve => setTimeout(resolve, 150));
+      }
       const token = captcha.provider === 'recaptcha3' && this.captchaCtrl ? await this.captchaCtrl.token() : this.captchaToken;
       this.values = { ...this.values, [captchaField]: token || '' };
     }
@@ -519,6 +625,15 @@ export class ReFormGenerator {
       return { errors };
     }
     const { payload, files } = this.buildPayload();
+    // the form's code has the last word (e.g. a check against another system)
+    if (this.sandbox) {
+      const verdict = await this.sandbox.ask('beforeSubmit', { values: payload });
+      if (verdict.block) {
+        this.scriptError = verdict.message || this.getSettings().formErrorMessage;
+        return { blocked: true, message: this.scriptError };
+      }
+    }
+    this.scriptError = '';
     this.handleSubmit.emit(payload);
     let result: any = { values: payload, response: null, error: null };
     if (this.submitter || action.endpoint) {
@@ -536,11 +651,45 @@ export class ReFormGenerator {
     this.clearDraft();
     this.destroyCaptcha();
     this.submitted.emit(result);
-    const { redirectUrl } = this.getSettings();
-    if (redirectUrl && typeof window !== 'undefined') {
-      setTimeout(() => (window.location.href = redirectUrl), 1200);
-    }
+    if (this.sandbox) this.sandbox.emit('submitted', { values: result.values });
+    this.redirectAfterSubmit();
     return result;
+  }
+
+  /** What happens after a successful send: `settings.afterSubmit` ("message", "page" or "redirect"); old forms: a redirect URL means "redirect". */
+  private afterSubmit(): 'message' | 'page' | 'redirect' {
+    const settings = this.getSettings();
+    const chosen = settings.afterSubmit;
+    if (chosen === 'redirect' || (!chosen && settings.redirectUrl)) return safeLinkUrl(settings.redirectUrl) ? 'redirect' : 'message';
+    if (chosen === 'page' || (!chosen && this.endingFields.length)) return this.endingFields.length ? 'page' : 'message';
+    return 'message';
+  }
+
+  /**
+   * Goes to `settings.redirectUrl`. Embedded in another site (an iframe), `settings.redirectTarget: "top"` (default)
+   * moves the whole page and `"self"` only the frame. Browsers may refuse to move the outer page from a frame: then the
+   * thank-you screen shows a button that does it (a click is always allowed).
+   */
+  private redirectAfterSubmit() {
+    if (this.designMode || typeof window === 'undefined' || this.afterSubmit() !== 'redirect') return;
+    const settings = this.getSettings();
+    const url = safeLinkUrl(settings.redirectUrl) as string;
+    let framed = false;
+    try {
+      framed = window.top !== window.self;
+    } catch (e) {
+      framed = true;
+    }
+    if (framed && settings.redirectTarget !== 'self') {
+      this.pendingRedirect = url; // the button stays as a fallback; when the page moves, nobody sees it
+      try {
+        window.top!.location.href = url;
+      } catch (e) {
+        /* blocked: the button does it */
+      }
+      return;
+    }
+    window.location.href = url;
   }
 
   /* ---------------------------------------------------------- validation */
@@ -694,10 +843,14 @@ export class ReFormGenerator {
   }
 
   /** Shows step `index` (the visitor's position), remembers it was visited, and tells the host. */
+  /** 1 when the visitor went forward, -1 back (the slide transition comes from that side). */
+  private stepDirection = 1;
+
   private setStep(index: number, scroll = true) {
     const pages = this.pagesFor(this.values);
     const next = Math.max(0, Math.min(index, pages.length - 1));
     const changed = next !== this.currentStep;
+    if (changed) this.stepDirection = next > this.currentStep ? 1 : -1;
     this.currentStep = next;
     if (changed) {
       // an item opened as a page, an open menu or dialog belong to the step that was left
@@ -709,6 +862,7 @@ export class ReFormGenerator {
     if (changed) {
       const page = pages[next] as any;
       this.stepChanged.emit({ index: next, id: page.id, title: page.title || '' });
+      if (this.sandbox) this.sandbox.emit('step', { index: next, id: page.id, title: page.title || '' });
       this.saveDraftSoon();
     }
     this.scheduleCompletion();
@@ -1007,8 +1161,7 @@ export class ReFormGenerator {
 
   @Listen('click', { target: 'document' })
   onDocumentClick(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    const inside = (selector: string) => !!(target && target.closest && target.closest(selector));
+    const inside = (selector: string) => clickedInsideSelector(event, selector);
     if (this.addMenu && !inside('.rfg-add')) this.addMenu = '';
     if (this.itemMenu && !inside('.rfg-menu-wrap')) this.itemMenu = '';
   }
@@ -1044,6 +1197,7 @@ export class ReFormGenerator {
       return;
     }
     this.valueChanged.emit({ [model]: value });
+    if (this.sandbox) this.sandbox.emit('change', { key: model, value });
     const field = this.fieldByModel(model);
     if (field) this.revalidateField(field);
     this.afterChange();
@@ -1184,6 +1338,16 @@ export class ReFormGenerator {
 
       case 'ranking':
         return this.renderRanking(field, common, value);
+
+      case 'dates':
+      case 'dateRange':
+        return this.renderCalendar(field, common, value);
+
+      case 'yesNo':
+        return this.renderYesNo(field, common, value);
+
+      case 'pictureChoice':
+        return this.renderPictureChoice(field, common, value);
 
       case 'search':
       case 'address': {
@@ -1382,7 +1546,11 @@ export class ReFormGenerator {
           );
         }
         // `config.plain`: show the answer as plain text (e.g. the name of a unit in a checklist)
-        if (field.config && field.config.plain && field._prefix !== DRAFT) return <div class="rfg-plain">{value === undefined || value === null ? '' : String(value)}</div>;
+        if (field.config && field.config.plain && field._prefix !== DRAFT) {
+          // no answer yet (always the case in the builder): the placeholder, greyed, so the field does not look missing
+          const empty = value === undefined || value === null || value === '';
+          return <div class={`rfg-plain ${empty ? 'is-empty' : ''}`}>{empty ? field.placeholder || '—' : String(value)}</div>;
+        }
         const input = (
           <input
             class={`rfg-control rfg-input-${type} ${field.readonly ? 'rfg-readonly' : ''}`}
@@ -1406,12 +1574,31 @@ export class ReFormGenerator {
           const other = getByPath(this.values, owner ? `${owner}.${by.field}` : by.field);
           suffix = (by.values && other !== undefined && by.values[String(other)]) || suffix;
         }
-        if (!prefix && !suffix) return input;
+        // `config.prefixIcon` / `config.suffixIcon`: an icon (its shapes, as in the icon block) before the text
+        const prefixIcon = safeIconNode(field.config && field.config.prefixIcon);
+        const suffixIcon = safeIconNode(field.config && field.config.suffixIcon);
+        const addonIcon = (node: any[]) =>
+          node.length ? (
+            <svg class="rfg-addon-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              {node.map(([Tag, attrs]: [any, any], i: number) => <Tag key={i} {...attrs} />)}
+            </svg>
+          ) : null;
+        if (!prefix && !suffix && !prefixIcon.length && !suffixIcon.length) return input;
         return (
           <div class="rfg-addon-wrap">
-            {prefix && <span class="rfg-addon rfg-addon-prefix">{prefix}</span>}
+            {(prefix || prefixIcon.length > 0) && (
+              <span class="rfg-addon rfg-addon-prefix">
+                {addonIcon(prefixIcon)}
+                {prefix}
+              </span>
+            )}
             {input}
-            {suffix && <span class="rfg-addon rfg-addon-suffix">{suffix}</span>}
+            {(suffix || suffixIcon.length > 0) && (
+              <span class="rfg-addon rfg-addon-suffix">
+                {addonIcon(suffixIcon)}
+                {suffix}
+              </span>
+            )}
           </div>
         );
       }
@@ -1530,7 +1717,7 @@ export class ReFormGenerator {
   /**
    * `type: "phone"`: a country picker (flag and dial code) and the number. The answer is "+45 12345678".
    * `config.defaultCountry` ("dk") is where it starts (else the form language's country); the `phoneCountries` rule (or
-   * `config.countries`) limits the list.
+   * `config.countries`) limits the list. `config.phoneStyle`: `"inline"` (default, the flag inside the box) or `"separate"`.
    */
   private renderPhone(field: FormField, common: any, value: any, zIndex: number) {
     const model = field.model;
@@ -1565,8 +1752,10 @@ export class ReFormGenerator {
       this.phoneTexts = { ...this.phoneTexts, [model]: raw };
       this.setValueByModel(model, formatPhone(country, raw));
     };
+    // one box with the flag and dial code inside it on the left (like Stripe or intl-tel-input); `phoneStyle: "separate"` puts the picker next to it
+    const inline = config.phoneStyle !== 'separate';
     return (
-      <div class="rfg-phone">
+      <div class={inline ? 'rfg-phone rfg-phone-inline rfg-control' : 'rfg-phone'}>
         <re-country-select
           class="rfg-phone-country"
           key={`${field.id}-${this.activeLanguage}-${code || ''}-${allowed.join(',')}`}
@@ -1584,7 +1773,7 @@ export class ReFormGenerator {
           ariaLabelText={this.tr('ui.countryCode')}
         ></re-country-select>
         <input
-          class="rfg-control rfg-phone-number"
+          class={inline ? 'rfg-phone-number' : 'rfg-control rfg-phone-number'}
           type="tel"
           inputMode="tel"
           autocomplete="tel-national"
@@ -1756,6 +1945,239 @@ export class ReFormGenerator {
     );
   }
 
+  /**
+   * Calendar fields. `type: "dates"`: people tap several days (e.g. when they are available); the answer is a list of
+   * "YYYY-MM-DD", or with `config.slots` ([{ label, value }], e.g. morning / afternoon) a list of `{ date, slots }`.
+   * `type: "dateRange"`: a first and a last day; the answer is `{ start, end }`. `config.minDate` / `maxDate`: "today",
+   * "+60" (days from today) or a date. `config.disabledWeekdays`: [0…6] (0 is Sunday). `config.maxDays`: how many days at most.
+   */
+  private renderCalendar(field: FormField, common: any, value: any) {
+    const model = field.model;
+    const config = field.config || {};
+    const lang = this.activeLanguage || 'en';
+    const range = field.type === 'dateRange';
+    const slots: { label: string; value: any }[] = (!range && Array.isArray(config.slots) && config.slots) || [];
+    const min = resolveDay(config.minDate);
+    const max = resolveDay(config.maxDate);
+    const offDays: number[] = Array.isArray(config.disabledWeekdays) ? config.disabledWeekdays : [];
+    const maxDays = Number(config.maxDays) || 0;
+
+    // the chosen days (read again at every click: several clicks can come before the next render)
+    const daysOf = (current: any): { date: string; slots: any[] }[] =>
+      (Array.isArray(current) ? current : []).map((v: any) => (typeof v === 'string' ? { date: v, slots: [] } : { date: v && v.date, slots: (v && v.slots) || [] })).filter((v: any) => v.date);
+    const picked = range ? [] : daysOf(value);
+    const now0 = () => daysOf(this.answerOf(model));
+    const start: string = range && value && value.start ? value.start : '';
+    const end: string = range && value && value.end ? value.end : '';
+    const isPicked = (iso: string) => (range ? iso === start || iso === end : picked.some(p => p.date === iso));
+    const inRange = (iso: string) => range && start && end && iso > start && iso < end;
+    const disabled = (iso: string) => !!common.disabled || (min && iso < min) || (max && iso > max) || offDays.includes(dateOf(iso).getDay());
+
+    const write = (days: { date: string; slots: any[] }[]) => {
+      const sorted = [...days].sort((a, b) => (a.date < b.date ? -1 : 1));
+      this.setValueByModel(model, sorted.length ? (slots.length ? sorted : sorted.map(d => d.date)) : undefined);
+    };
+    const pick = (iso: string) => {
+      if (disabled(iso)) return;
+      if (range) {
+        const cur = this.answerOf(model) || {};
+        if (!cur.start || cur.end) this.setValueByModel(model, { start: iso, end: '' });
+        else this.setValueByModel(model, iso < cur.start ? { start: iso, end: cur.start } : { start: cur.start, end: iso });
+        return;
+      }
+      const cur = now0();
+      if (cur.some(p => p.date === iso)) write(cur.filter(p => p.date !== iso));
+      else if (!maxDays || cur.length < maxDays) write([...cur, { date: iso, slots: [] }]);
+    };
+
+    const focusMonth = this.calMonths[model] || (start || (picked[0] && picked[0].date) || (min && min > today() ? min : today())).slice(0, 7);
+    const [year, month] = focusMonth.split('-').map(Number);
+    const go = (delta: number) => {
+      const d = new Date(year, month - 1 + delta, 1);
+      this.calMonths = { ...this.calMonths, [model]: isoOf(d).slice(0, 7) };
+    };
+    const firstDay = firstDayOfWeek(lang);
+    const weeks = monthGrid(year, month - 1, firstDay);
+    const canPrev = !min || isoOf(new Date(year, month - 1, 0)) >= min;
+    const canNext = !max || isoOf(new Date(year, month, 1)) <= max;
+    const now = today();
+    const arrow = (d: string) => (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
+
+    return (
+      <div class={`rfg-calendar-wrap ${range ? 'is-range' : ''}`}>
+        <div class="rfg-calendar" role="group" aria-labelledby={`${field.id}-label`}>
+          <div class="rfg-cal-head">
+            <button type="button" class="rfg-icon-btn" aria-label={this.tr('ui.prevMonth')} disabled={!canPrev} onClick={() => go(-1)}>
+              {arrow('M15 6l-6 6 6 6')}
+            </button>
+            <div class="rfg-cal-title" aria-live="polite">
+              {monthTitle(lang, year, month - 1)}
+            </div>
+            <button type="button" class="rfg-icon-btn" aria-label={this.tr('ui.nextMonth')} disabled={!canNext} onClick={() => go(1)}>
+              {arrow('M9 6l6 6-6 6')}
+            </button>
+          </div>
+          <div class="rfg-cal-grid" role="grid">
+            {weekdayNames(lang, firstDay).map(name => (
+              <div class="rfg-cal-wd" role="columnheader">
+                {name}
+              </div>
+            ))}
+            {weeks.map(week =>
+              week.map((iso, i) =>
+                iso ? (
+                  <button
+                    type="button"
+                    key={iso}
+                    id={iso === weeks[0].find(Boolean) ? field.id : undefined}
+                    class={`rfg-cal-day ${isPicked(iso) ? 'is-picked' : ''} ${inRange(iso) ? 'in-range' : ''} ${range && iso === start ? 'range-start' : ''} ${range && iso === end ? 'range-end' : ''} ${iso === now ? 'is-today' : ''}`}
+                    aria-pressed={isPicked(iso) ? 'true' : 'false'}
+                    aria-label={dayLabel(lang, iso, true)}
+                    disabled={!!disabled(iso)}
+                    onClick={() => pick(iso)}
+                  >
+                    {Number(iso.slice(8))}
+                  </button>
+                ) : (
+                  <span key={`e-${i}`} class="rfg-cal-empty"></span>
+                ),
+              ),
+            )}
+          </div>
+        </div>
+        {range ? (
+          <div class="rfg-cal-summary">
+            {start ? (
+              <span>
+                {dayLabel(lang, start)} – {end ? dayLabel(lang, end) : this.tr('ui.pickLastDay')}
+                {end && <small> · {this.tr('ui.daysCount', { n: Math.round((dateOf(end).getTime() - dateOf(start).getTime()) / 864e5) + 1 })}</small>}
+              </span>
+            ) : (
+              <span class="rfg-muted">{this.tr('ui.pickFirstDay')}</span>
+            )}
+          </div>
+        ) : (
+          picked.length > 0 && (
+            <div class="rfg-cal-picked">
+              {picked.map(p => (
+                <div key={p.date} class="rfg-cal-pick">
+                  <span class="rfg-cal-pick-day">{dayLabel(lang, p.date)}</span>
+                  {slots.length > 0 && (
+                    <span class="rfg-cal-slots">
+                      {slots.map(s => {
+                        const on = p.slots.some((x: any) => String(x) === String(s.value));
+                        return (
+                          <button
+                            type="button"
+                            class={`rfg-chip ${on ? 'is-on' : ''}`}
+                            aria-pressed={on ? 'true' : 'false'}
+                            disabled={common.disabled}
+                            onClick={() =>
+                              write(
+                                now0().map(x => {
+                                  if (x.date !== p.date) return x;
+                                  const has = x.slots.some((y: any) => String(y) === String(s.value));
+                                  return { ...x, slots: has ? x.slots.filter((y: any) => String(y) !== String(s.value)) : [...x.slots, s.value] };
+                                }),
+                              )
+                            }
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </span>
+                  )}
+                  {!common.disabled && (
+                    <button type="button" class="rfg-icon-btn rfg-cal-remove" aria-label={`${this.tr('ui.remove')}: ${dayLabel(lang, p.date)}`} onClick={() => write(now0().filter(x => x.date !== p.date))}>
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    );
+  }
+
+  /** `type: "yesNo"`: two big buttons. The answer is "yes" or "no"; `config.yesLabel` / `noLabel` rename them. */
+  private renderYesNo(field: FormField, common: any, value: any) {
+    const config = field.config || {};
+    const choice = (v: 'yes' | 'no', label: string, path: string) => (
+      <button
+        type="button"
+        id={v === 'yes' ? field.id : undefined}
+        class={`rfg-yesno-btn ${value === v ? 'is-checked' : ''}`}
+        aria-pressed={value === v ? 'true' : 'false'}
+        disabled={common.disabled}
+        onClick={() => {
+          this.setValueByModel(field.model, value === v ? undefined : v);
+          if (config.autoAdvance && value !== v) setTimeout(() => this.nextStep(), 160);
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d={path} />
+        </svg>
+        {label}
+      </button>
+    );
+    return (
+      <div class="rfg-yesno" role="group" aria-labelledby={`${field.id}-label`}>
+        {choice('yes', config.yesLabel || this.tr('ui.yes'), 'M5 13l4 4L19 7')}
+        {choice('no', config.noLabel || this.tr('ui.no'), 'M6 6l12 12M18 6L6 18')}
+      </div>
+    );
+  }
+
+  /**
+   * `type: "pictureChoice"`: options shown as pictures (`options[].image`). `config.multiple`: several can be picked
+   * (the answer is a list). `config.columns`: 2, 3 (default) or 4 per row; narrow screens show 2.
+   */
+  private renderPictureChoice(field: FormField, common: any, value: any) {
+    const config = field.config || {};
+    const multiple = !!config.multiple;
+    const picked: any[] = multiple ? (Array.isArray(value) ? value : []) : value !== undefined && value !== null && value !== '' ? [value] : [];
+    const options = this.optionsOf(field);
+    return (
+      <div class="rfg-pictures" role={multiple ? 'group' : 'radiogroup'} aria-labelledby={`${field.id}-label`} style={{ '--rfg-pic-cols': String([2, 3, 4].includes(Number(config.columns)) ? config.columns : 3) }}>
+        {options.map((option: any, i: number) => {
+          const on = picked.some(v => String(v) === String(option.value));
+          const src = safeImageUrl(option.image);
+          return (
+            <button
+              type="button"
+              key={String(option.value)}
+              id={i === 0 ? field.id : undefined}
+              class={`rfg-picture ${on ? 'is-checked' : ''}`}
+              role={multiple ? 'checkbox' : 'radio'}
+              aria-checked={on ? 'true' : 'false'}
+              disabled={common.disabled}
+              onClick={() => {
+                if (multiple) this.setValueByModel(field.model, on ? picked.filter(v => String(v) !== String(option.value)) : [...picked, option.value]);
+                else {
+                  this.setValueByModel(field.model, on ? undefined : option.value);
+                  if (config.autoAdvance && !on) setTimeout(() => this.nextStep(), 160);
+                }
+              }}
+            >
+              <span class="rfg-picture-img">{src ? <img src={src} alt="" loading="lazy" /> : <span class="rfg-picture-blank" aria-hidden="true"></span>}</span>
+              <span class="rfg-picture-label">
+                <span class="rfg-picture-mark" aria-hidden="true"></span>
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   private renderRating(field: FormField, value: any) {
     const max = (field.config && field.config.max) || 5;
     const hover = this.hoverRating[field.model];
@@ -1838,6 +2260,7 @@ export class ReFormGenerator {
     }
     if (field.type === 'callout') return this.renderCallout(field);
     if (field.type === 'button') return this.renderButton(field);
+    if (field.type === 'image' || field.type === 'video' || field.type === 'link' || field.type === 'icon' || field.type === 'embed') return this.renderContent(field, hidden);
 
     const errors = field.model ? this.validationErrors[field.model] : null;
     if (bare) {
@@ -1888,6 +2311,133 @@ export class ReFormGenerator {
   }
 
   /* ------------------------------------------------- callout, button, section */
+
+  /**
+   * Blocks that show something. `image`: `config.src`, `alt`, `caption`, `width` (`small` / `medium` / `full`), `align`,
+   * `link`. `video`: `config.url` (YouTube, Vimeo, Loom or a video file), `caption`. `link`: `label`, `config.url`,
+   * `style` (`button` / `text`), `newTab`. `icon`: `config.emoji` or `config.icon` (a BLOCK_ICONS name), `size`, `align`,
+   * with `label` / `helpText` under it. `embed`: `config.url` (https: a map, a booking calendar, a PDF), `height`.
+   */
+  private renderContent(field: FormField, hidden: boolean) {
+    const config = field.config || {};
+    const align = ['left', 'center', 'right'].includes(config.align) ? config.align : field.type === 'icon' ? 'center' : 'left';
+    const wrap = (body: any, extra = '') => (
+      <div key={field.id} data-field-id={field.id} class={`rfg-field rfg-block rfg-content rfg-${field.type} rfg-align-${align} ${extra} ${hidden ? 'rfg-hidden' : ''}`}>
+        {body}
+      </div>
+    );
+    const caption = config.caption ? <div class="rfg-caption">{config.caption}</div> : null;
+
+    if (field.type === 'image') {
+      const src = safeImageUrl(config.src);
+      if (!src) return this.designMode ? wrap(<div class="rfg-media-empty">{config.src ? '⚠' : ''}</div>) : null;
+      const img = <img src={src} alt={config.alt || ''} loading="lazy" />;
+      const link = safeLinkUrl(config.link);
+      return wrap(
+        <figure class={`rfg-image-figure rfg-w-${['small', 'medium'].includes(config.width) ? config.width : 'full'} ${config.rounded === false ? '' : 'rfg-rounded'}`}>
+          {link ? (
+            <a href={link} target="_blank" rel="noopener">
+              {img}
+            </a>
+          ) : (
+            img
+          )}
+          {caption && <figcaption>{config.caption}</figcaption>}
+        </figure>,
+      );
+    }
+
+    if (field.type === 'video') {
+      // `config.file`: an uploaded video, played as a file whatever its address looks like
+      const source = config.file && /^https:\/\//i.test(String(config.url || '')) ? { kind: 'file' as const, src: String(config.url) } : videoSource(config.url);
+      if (!source) return this.designMode ? wrap(<div class="rfg-media-empty rfg-ratio"></div>) : null;
+      // in the builder a light placeholder instead of the player (nothing loads from the video site while editing)
+      if (this.designMode)
+        return wrap(
+          <figure class="rfg-video-figure">
+            <div class="rfg-media-empty rfg-ratio">
+              <div class="rfg-play">
+                <span>▶</span>
+                <span>{config.url}</span>
+              </div>
+            </div>
+            {caption && <figcaption>{config.caption}</figcaption>}
+          </figure>,
+        );
+      return wrap(
+        <figure class="rfg-video-figure">
+          <div class="rfg-ratio">
+            {source.kind === 'iframe' ? (
+              <iframe src={source.src} title={config.caption || field.label || 'Video'} loading="lazy" allow="fullscreen; picture-in-picture; encrypted-media" allowFullScreen></iframe>
+            ) : (
+              <video src={source.src} controls preload="metadata"></video>
+            )}
+          </div>
+          {caption && <figcaption>{config.caption}</figcaption>}
+        </figure>,
+      );
+    }
+
+    if (field.type === 'link') {
+      const href = safeLinkUrl(config.url);
+      const text = field.label || config.url || '';
+      const newTab = config.newTab !== false && /^https?:/i.test(href || '');
+      const props = href ? { href, ...(newTab ? { target: '_blank', rel: 'noopener' } : { target: '_top' }) } : {};
+      return wrap(
+        config.style === 'text' ? (
+          <a class="rfg-text-link" {...props}>
+            {text}
+          </a>
+        ) : (
+          <a class={`rfg-btn ${config.variant === 'secondary' ? 'rfg-btn-secondary' : 'rfg-btn-primary'} rfg-link-btn`} {...props}>
+            {text}
+          </a>
+        ),
+      );
+    }
+
+    if (field.type === 'icon') {
+      const size = ['small', 'medium', 'large'].includes(config.size) ? config.size : 'medium';
+      // `config.iconNode`: the shapes of a library icon (stored in the form); `config.icon` alone: a built-in BLOCK_ICONS name
+      const node = safeIconNode(config.iconNode);
+      const path = !node.length && config.icon && BLOCK_ICONS[config.icon];
+      const color = safeColor(config.color);
+      return wrap(
+        <div class="rfg-icon-block">
+          {config.emoji ? (
+            <span class={`rfg-emoji rfg-size-${size}`} role="img" aria-label={field.label || ''}>
+              {String(config.emoji).slice(0, 16)}
+            </span>
+          ) : node.length || path ? (
+            <span class={`rfg-icon-badge rfg-size-${size}`} aria-hidden="true" style={color ? { '--rfg-icon-color': color } : {}}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                {node.length ? node.map(([Tag, attrs]: [any, any], i: number) => <Tag key={i} {...attrs} />) : <path d={path as string} />}
+              </svg>
+            </span>
+          ) : null}
+          {field.label && <div class="rfg-icon-title" innerHTML={sanitizeHtml(field.label)}></div>}
+          {field.helpText && <div class="rfg-icon-text">{field.helpText}</div>}
+        </div>,
+      );
+    }
+
+    // embed
+    const src = safeEmbedUrl(config.url);
+    if (!src) return this.designMode ? wrap(<div class="rfg-media-empty" style={{ height: '160px' }}></div>) : null;
+    const height = Math.max(120, Math.min(1200, Number(config.height) || 420));
+    return wrap(
+      <figure class="rfg-embed-figure">
+        {this.designMode ? (
+          <div class="rfg-media-empty" style={{ height: `${height}px` }}>
+            {src}
+          </div>
+        ) : (
+          <iframe src={src} title={config.caption || field.label || 'Embedded content'} loading="lazy" style={{ height: `${height}px` }} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" referrerPolicy="strict-origin-when-cross-origin"></iframe>
+        )}
+        {caption && <figcaption>{config.caption}</figcaption>}
+      </figure>,
+    );
+  }
 
   private renderCallout(field: FormField) {
     const tone = (field.config && field.config.tone) || 'info';
@@ -2934,7 +3484,8 @@ export class ReFormGenerator {
     const vis = this.visibility();
     // while an item is open as a page, the rest of the step steps aside: only the blocks that lead to it are shown
     const detail = !this.insideItem && !this.designMode && Object.keys(this.openItems).length > 0;
-    return fields.map(field => {
+    return fields.map(raw => {
+      const field = this.withScript(this.recallField(raw));
       if (detail && !this.containsOpen(field)) return null;
       const hidden = !vis[field.id];
       if (field.type === 'pageBreak') return null;
@@ -2945,9 +3496,66 @@ export class ReFormGenerator {
       if (field.type === 'section') return this.renderSection(field, hidden);
       if (field.type === 'tabs') return this.renderTabs(field, hidden);
       if (field.type === 'modal') return null; // a dialog is only shown when something opens it
+      if (field.type === 'hidden') return null; // its value is in the answers, nothing to show
       if (field.type === 'repeater') return this.renderRepeater(field, hidden);
       return this.renderField(field, this.zOf(field), hidden, bare);
     });
+  }
+
+  /* ----------------------------------------------------- recall: {{field:key}} and {{data}} in texts */
+
+  /**
+   * Shows earlier answers in texts: `{{field:email}}` becomes what was answered (the option's label for choices, dates
+   * in the form's language). `{{tenant.name}}`-style tokens are filled by the host before (see applyPrefill); one that is
+   * left has no data and is dropped, except in the builder, which shows the token as it was written.
+   */
+  private recall(text: any, html = false): any {
+    if (typeof text !== 'string' || text.indexOf('{{') < 0) return text;
+    const escape = (v: string) => (html ? v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : v);
+    return text.replace(/\{\{\s*([\w.:[\]-]+)\s*\}\}/g, (all, key: string) => {
+      if (this.designMode) return all;
+      if (!key.startsWith('field:')) return '';
+      return escape(this.answerText(key.slice(6)));
+    });
+  }
+
+  /** An answer as people read it. */
+  private answerText(model: string): string {
+    const value = this.answerOf(model);
+    if (value === undefined || value === null || value === '') return '';
+    const field = this.fieldByModel(model);
+    const labelOf = (v: any) => {
+      const option = field && field.options && field.options.find((o: any) => String(o.value) === String(v));
+      if (option) return option.label;
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        try {
+          return new Date(`${v}T00:00:00`).toLocaleDateString(this.activeLanguage, { day: 'numeric', month: 'long', year: 'numeric' });
+        } catch (e) {
+          return v;
+        }
+      }
+      if (typeof v === 'boolean') return this.tr(v ? 'ui.yes' : 'ui.no');
+      return typeof v === 'object' ? '' : String(v);
+    };
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.start) return [labelOf(value.start), value.end ? labelOf(value.end) : ''].filter(Boolean).join(' – ');
+    if (Array.isArray(value)) return value.map(v => (v && typeof v === 'object' && v.date ? labelOf(v.date) : labelOf(v))).filter(Boolean).join(', ');
+    return labelOf(value);
+  }
+
+  /** The block with its texts recalled (the same object when it has nothing to fill in). */
+  private recallField(field: FormField): FormField {
+    const config = field.config || {};
+    const texts = [field.label, field.helpText, field.content, field.placeholder, field.checkboxLabel, config.caption];
+    if (!texts.some(t => typeof t === 'string' && t.indexOf('{{') >= 0)) return field;
+    return {
+      ...field,
+      label: this.recall(field.label, true),
+      helpText: this.recall(field.helpText),
+      content: this.recall(field.content, true),
+      placeholder: this.recall(field.placeholder),
+      checkboxLabel: this.recall(field.checkboxLabel, true),
+      ...(config.caption ? { config: { ...config, caption: this.recall(config.caption) } } : {}),
+    };
   }
 
   private renderFields(fields: FormField[]) {
@@ -3131,6 +3739,29 @@ export class ReFormGenerator {
   }
 
   private renderSuccess(settings: any) {
+    const again = settings.allowResubmit && (
+      <button type="button" class="rfg-link" onClick={() => this.reset()}>
+        {this.tr('ui.submitAnother')}
+      </button>
+    );
+    if (this.pendingRedirect) {
+      return (
+        <div class="rfg-success">
+          <a class="rfg-btn rfg-btn-primary" href={this.pendingRedirect} target="_top" rel="noopener">
+            {this.tr('ui.continue')}
+          </a>
+        </div>
+      );
+    }
+    // the thank-you page built in the form
+    if (this.afterSubmit() === 'page') {
+      return (
+        <div class="rfg-success-page">
+          <div class="rfg-grid">{this.renderBlocks(this.endingFields)}</div>
+          {again}
+        </div>
+      );
+    }
     return (
       <div class="rfg-success">
         <div class="rfg-success-icon">
@@ -3138,7 +3769,7 @@ export class ReFormGenerator {
             <path d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p class="rfg-success-message" innerHTML={sanitizeHtml(settings.successMessage)}></p>
+        <p class="rfg-success-message" innerHTML={sanitizeHtml(this.recall(settings.successMessage, true))}></p>
         {settings.allowResubmit && (
           <button type="button" class="rfg-link" onClick={() => this.reset()}>
             {this.tr('ui.submitAnother')}
@@ -3204,6 +3835,89 @@ export class ReFormGenerator {
     );
   }
 
+  /**
+   * How far along the visitor is (`settings.progressStyle`): a bar (default), the bar with a percentage, numbered
+   * steps, numbered steps with their titles, or nothing. `showProgress: false` (older forms) means nothing.
+   */
+  private progressStyle(settings: any): 'bar' | 'percent' | 'steps' | 'titles' | 'none' {
+    if (settings.showProgress === false) return 'none';
+    const style = settings.progressStyle;
+    return style === 'percent' || style === 'steps' || style === 'titles' || style === 'none' ? style : 'bar';
+  }
+
+  private renderProgress(pages: any[], step: number, settings: any) {
+    const style = this.progressStyle(settings);
+    if (style === 'none') return null;
+    const total = pages.length;
+    const count = settings.showStepCount !== false;
+    const head = settings.stepHeader !== false;
+    const label = this.tr('ui.step', { current: step + 1, total });
+    if (style === 'bar' || style === 'percent') {
+      const percent = Math.round(((step + 1) / total) * 100);
+      return (
+        <div key="progress" class={`rfg-progress rfg-progress-${style}`} role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={total} aria-valuenow={step + 1}>
+          {(count || style === 'percent' || (!head && pages[step].title)) && (
+            <div class="rfg-progress-text">
+              {count && <span>{label}</span>}
+              {/* without the page heading, the step's title goes next to the count */}
+              {!head && pages[step].title ? <span class="rfg-step-title">{count ? ' · ' : ''}{pages[step].title}</span> : null}
+              {style === 'percent' && <span class="rfg-progress-percent">{percent}%</span>}
+            </div>
+          )}
+          <div class="rfg-progress-track">
+            <div class="rfg-progress-bar" style={{ width: `${percent}%` }}></div>
+          </div>
+        </div>
+      );
+    }
+    // numbered steps (with titles): visited steps can be clicked like the sidebar list (settings.stepNavigation)
+    const tick = () => (
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    );
+    return (
+      <nav key="progress" class={`rfg-stepper ${style === 'titles' ? 'rfg-stepper-titles' : ''}`} aria-label={this.tr('ui.stepsNav')}>
+        <ol>
+          {pages.map((page, index) => {
+            const done = index < step;
+            const open = this.canOpenStep(index, pages);
+            const name = page.title || this.tr('ui.step', { current: index + 1, total });
+            return (
+              <li key={page.id} class={`${index === step ? 'is-current' : ''} ${done ? 'is-done' : ''}`}>
+                <button type="button" class="rfg-stepper-item" disabled={!open} aria-current={index === step ? 'step' : undefined} aria-label={name} title={name} onClick={() => open && index !== step && this.setStep(index)}>
+                  <span class="rfg-stepper-dot">{done ? tick() : index + 1}</span>
+                  {style === 'titles' && <span class="rfg-stepper-name">{name}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {/* small screens: the titles do not fit, the current one is written under the dots */}
+        {(count || (style === 'titles' && !head)) && (
+          <div class="rfg-stepper-caption">
+            {count ? label : ''}
+            {style === 'titles' && !head && pages[step].title ? `${count ? ' · ' : ''}${pages[step].title}` : ''}
+          </div>
+        )}
+      </nav>
+    );
+  }
+
+  /** The top of a step: its picture, then its title and description (`settings.stepHeader: false` hides the texts). */
+  private renderPageHead(page: any, settings: any, always = false) {
+    const image = safeImageUrl(page.image);
+    const texts = (always || settings.stepHeader !== false) && (page.title || page.description);
+    if (!image && !texts) return null;
+    return (
+      <div class="rfg-page-head">
+        {image && <img class="rfg-page-image" src={image} alt={page.alt || ''} />}
+        {texts && page.title && <h2 class="rfg-page-title">{this.recall(page.title)}</h2>}
+        {texts && page.description && <p class="rfg-page-desc">{this.recall(page.description)}</p>}
+      </div>
+    );
+  }
+
   render() {
     const settings = this.getSettings();
     const action = this.getAction();
@@ -3260,8 +3974,10 @@ export class ReFormGenerator {
 
     // a button of the page that submits the form replaces the built-in submit button
     const ownSubmit = !this.designMode && flattenFields(pages[step] || [], true).some(f => f.type === 'button' && (f.config && f.config.actions || []).some((a: any) => a && a.type === 'submit'));
+    const transition = settings.stepTransition === 'fade' || settings.stepTransition === 'slide' ? settings.stepTransition : '';
     const pagesView = pages.map((page, index) => (
-      <section key={page.id || index} class={`rfg-page ${index === step ? '' : 'rfg-hidden'}`}>
+      <section key={page.id || index} class={`rfg-page ${index === step ? '' : 'rfg-hidden'} ${isSteps && transition && index === step ? `rfg-enter-${transition}${this.stepDirection < 0 ? ' is-back' : ''}` : ''}`}>
+        {isSteps && !sidebar && this.renderPageHead(page, settings)}
         {this.renderFields(page)}
       </section>
     ));
@@ -3276,6 +3992,11 @@ export class ReFormGenerator {
         </div>
       ) : null,
       this.status === 'error' ? <re-alert key="api-error" message={settings.errorMessage} type="error"></re-alert> : null,
+      !this.designMode && this.scriptError ? (
+        <div key="script-error" class="rfg-form-error" role="alert">
+          <span>{this.scriptError}</span>
+        </div>
+      ) : null,
       showSubmit ? (
         <div key="actions" class="rfg-actions">
           {captcha && captcha.provider === 'honeypot' && (
@@ -3292,14 +4013,14 @@ export class ReFormGenerator {
               {this.captchaField() && this.validationErrors[this.captchaField()] && <div class="rfg-error">{this.validationErrors[this.captchaField()][0]}</div>}
             </div>
           )}
-          {isSteps && step > 0 && (
-            <button type="button" class="rfg-btn rfg-btn-secondary" onClick={() => this.prevStep()}>
-              {this.tr('ui.back')}
+          {isSteps && step > 0 && !pages[step].hideBack && (
+            <button type="button" class="rfg-btn rfg-btn-secondary rfg-btn-back" onClick={() => this.prevStep()}>
+              {settings.backButtonText || this.tr('ui.back')}
             </button>
           )}
           {isSteps && !isLast ? (
             <button type="button" class="rfg-btn rfg-btn-primary" onClick={() => this.nextStep()}>
-              {this.interpolate(settings.nextButtonText || this.tr('ui.continue')) || this.tr('ui.continue')}
+              {this.interpolate(pages[step].nextLabel || settings.nextButtonText || this.tr('ui.continue')) || this.tr('ui.continue')}
             </button>
           ) : ownSubmit ? null : (
             <button type="button" class="rfg-btn rfg-btn-primary" disabled={this.status === 'submitting'} onClick={() => this.submit()}>
@@ -3312,8 +4033,8 @@ export class ReFormGenerator {
 
     const header = !this.designMode && this.doc.title && settings.showTitle && (
       <header class="rfg-header">
-        <h1 innerHTML={sanitizeHtml(this.doc.title)}></h1>
-        {this.doc.description && <p>{this.doc.description}</p>}
+        <h1 innerHTML={sanitizeHtml(this.recall(this.doc.title, true))}></h1>
+        {this.doc.description && <p>{this.recall(this.doc.description)}</p>}
       </header>
     );
 
@@ -3329,28 +4050,16 @@ export class ReFormGenerator {
             <div class="rfg-flow">
               {this.renderStepNav(pages, step, settings)}
               <div class="rfg-flow-main">
-                <div class="rfg-page-head">
-                  <h2 class="rfg-page-title">{pages[step].title || this.tr('ui.step', { current: step + 1, total: pages.length })}</h2>
-                  {pages[step].description && <p class="rfg-page-desc">{pages[step].description}</p>}
-                </div>
+                {this.renderPageHead({ ...pages[step], title: pages[step].title || this.tr('ui.step', { current: step + 1, total: pages.length }) }, settings, true)}
                 {pagesView}
                 {footer}
               </div>
             </div>
           ) : (
             [
-              isSteps && settings.showProgress ? (
-                <div key="progress" class="rfg-progress" role="progressbar" aria-valuemin={1} aria-valuemax={pages.length} aria-valuenow={step + 1}>
-                  <div class="rfg-progress-text">
-                    {this.tr('ui.step', { current: step + 1, total: pages.length })}
-                    {pages[step].title ? <span class="rfg-step-title"> · {pages[step].title}</span> : null}
-                  </div>
-                  <div class="rfg-progress-track">
-                    <div class="rfg-progress-bar" style={{ width: `${((step + 1) / pages.length) * 100}%` }}></div>
-                  </div>
-                </div>
-              ) : null,
+              isSteps && settings.progressPosition !== 'bottom' ? this.renderProgress(pages, step, settings) : null,
               pagesView,
+              isSteps && settings.progressPosition === 'bottom' ? <div key="progress-bottom" class="rfg-progress-bottom">{this.renderProgress(pages, step, settings)}</div> : null,
               footer,
             ]
           )}

@@ -1,4 +1,5 @@
 import { Component, Event, EventEmitter, Listen, Prop, State, Watch, h } from '@stencil/core';
+import { clickedInside } from '../../utils/dom';
 import { SearchItem, runSearch } from '../../utils/search';
 
 
@@ -154,7 +155,7 @@ export class ReSearchSelect {
 
   @Listen('click', { target: 'document' })
   onDocumentClick(event: MouseEvent) {
-    if (this.host && !this.host.contains(event.target as Node)) {
+    if (this.host && !clickedInside(event, this.host)) {
       this.open = false;
       this.syncQueryWithSelection();
     }

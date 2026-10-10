@@ -1,4 +1,5 @@
-import { Component, Prop, Listen, State, Event, EventEmitter, h } from '@stencil/core';
+import { Component, Element, Prop, Listen, State, Event, EventEmitter, h } from '@stencil/core';
+import { clickedInside } from '../../utils/dom';
 import countries from './countries';
 
 @Component({
@@ -7,6 +8,7 @@ import countries from './countries';
   shadow: false,
 })
 export class ReCountrySelect {
+  @Element() el: HTMLElement;
 
   public availableCountries: any[] = [];
   @Prop() inputOptions: any;
@@ -200,7 +202,8 @@ export class ReCountrySelect {
   @Listen('click', { target: 'document' })
   handleOutsideClick(event: MouseEvent) {
     if (!this.countrySelectRef) return;
-    if (!this.countrySelectRef.contains(event.target as Node)) {
+    // the whole picker counts (flag, arrow, list), also when it sits inside a shadow root
+    if (!clickedInside(event, this.el)) {
       if (this.countrySelectRef.value) {
         this.countrySelectRef.value = '';
         this.showSelectedWrapper = false;

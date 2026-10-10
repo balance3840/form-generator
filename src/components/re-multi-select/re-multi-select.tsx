@@ -1,4 +1,5 @@
 import { Component, Listen, Prop, State, h, Event, EventEmitter, } from '@stencil/core';
+import { clickedInside } from '../../utils/dom';
 
 
 @Component({
@@ -48,7 +49,7 @@ export class MultiSelect {
   @Listen('click', { target: 'document' })
   handleOutsideClick(event: MouseEvent) {
     if (!this.multiSelectRef) return;
-    if (!this.multiSelectRef.contains(event.target as Node)) {
+    if (!clickedInside(event, this.multiSelectRef)) {
       this.isOpen = false;
     }
   }

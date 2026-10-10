@@ -427,6 +427,12 @@ re-form-generator {
       white-space: nowrap;
       font-size: 14px;
     }
+    .rfg-addon {
+      gap: 6px;
+    }
+    .rfg-addon-icon {
+      flex: none;
+    }
     .rfg-addon-prefix {
       border-right: 0;
       border-radius: var(--rfg-radius) 0 0 var(--rfg-radius);
@@ -771,6 +777,170 @@ re-form-generator {
     border-radius: 999px;
     transition: width 0.3s ease;
   }
+  .rfg-progress-text {
+    display: flex;
+    gap: 4px;
+    align-items: baseline;
+  }
+  .rfg-progress-percent {
+    margin-left: auto;
+    color: var(--rfg-primary);
+  }
+  .rfg-progress-bottom {
+    margin-top: calc(var(--rfg-gap) * 1.2);
+    .rfg-progress,
+    .rfg-stepper {
+      margin-bottom: 0;
+    }
+  }
+
+  // Numbered steps: dots joined by a line; done steps are filled, the current one is ringed.
+  .rfg-stepper {
+    margin-bottom: calc(var(--rfg-gap) * 1.4);
+    ol {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    li {
+      flex: 1 1 0;
+      min-width: 0;
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    // the line to the previous dot
+    li + li::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      right: calc(50% + 20px);
+      left: calc(-50% + 20px);
+      height: 2px;
+      border-radius: 2px;
+      background: var(--rfg-border-strong);
+    }
+    li.is-done + li::before,
+    li.is-done + li.is-current::before {
+      background: var(--rfg-primary);
+    }
+  }
+  .rfg-stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--rfg-muted);
+    cursor: pointer;
+    &:disabled {
+      cursor: default;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--rfg-primary);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+  }
+  .rfg-stepper-dot {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--rfg-bg);
+    border: 2px solid var(--rfg-border-strong);
+    color: var(--rfg-muted);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .rfg-stepper li.is-done .rfg-stepper-dot {
+    background: var(--rfg-primary);
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+  .rfg-stepper li.is-current .rfg-stepper-dot {
+    border-color: var(--rfg-primary);
+    color: var(--rfg-primary);
+    box-shadow: 0 0 0 4px var(--rfg-tint);
+  }
+  .rfg-stepper-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .rfg-stepper li.is-current .rfg-stepper-name {
+    color: var(--rfg-text);
+  }
+  .rfg-stepper-caption {
+    display: none;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rfg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rfg-stepper:not(.rfg-stepper-titles) .rfg-stepper-caption {
+    display: block;
+  }
+
+  // The top of a step: picture, title, description.
+  .rfg-page-head {
+    margin-bottom: calc(var(--rfg-gap) * 1.2);
+  }
+  .rfg-page-image {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+    border-radius: var(--rfg-radius, 12px);
+    margin-bottom: 16px;
+  }
+  .rfg-page-title {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--rfg-text);
+  }
+  .rfg-page-desc {
+    margin: 4px 0 0;
+    color: var(--rfg-muted);
+  }
+
+  // Moving between steps (settings.stepTransition)
+  .rfg-enter-fade {
+    animation: rfg-step-fade 0.28s ease both;
+  }
+  .rfg-enter-slide {
+    animation: rfg-step-slide 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .rfg-enter-slide.is-back {
+    animation-name: rfg-step-slide-back;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rfg-enter-fade,
+    .rfg-enter-slide {
+      animation: none;
+    }
+  }
 
   /* ----------------------------------------------------------- buttons */
   .rfg-actions {
@@ -891,6 +1061,10 @@ re-form-generator {
   }
   &.rfg-btna-right .rfg-actions {
     justify-content: flex-end;
+  }
+  // Back on the left, Next / Submit on the right (also when there is no Back button)
+  &.rfg-btna-split .rfg-actions .rfg-btn-primary {
+    margin-left: auto;
   }
 
   .rfg-btn-secondary {
@@ -1933,6 +2107,10 @@ re-form-generator {
     min-height: var(--rfg-input-height);
     display: flex;
     align-items: center;
+    &.is-empty {
+      font-weight: 400;
+      color: var(--rfg-muted);
+    }
   }
   // a select that looks like a button (the condition of a unit)
   .rfg-select-pill {
@@ -2100,15 +2278,485 @@ re-form-generator {
 /* ------------------------------------------------------------ phone number */
 .rfg .rfg-phone {
   display: flex;
+  align-items: stretch;
   gap: 8px;
+  // the picker is exactly as tall as the number box next to it (text boxes get their height from their padding)
   re-country-select.rfg-phone-country {
     flex: none;
+    display: flex;
     width: 112px;
+    --rfg-input-height: 100%;
+    > div {
+      flex: 1;
+      min-width: 0;
+    }
   }
   .rfg-phone-number {
     flex: 1;
     min-width: 0;
   }
+}
+
+/* the "inline" look: one box (it is the .rfg-control, so it takes every input style and the error border), the flag and
+   dial code inside it on the left, a thin divider, then the number */
+.rfg .rfg-phone.rfg-phone-inline {
+  gap: 0;
+  padding: 0;
+  overflow: visible;
+  cursor: text;
+  &:focus-within {
+    border-color: var(--rfg-primary);
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  re-country-select.rfg-phone-country {
+    width: 104px;
+    border-inline-end: 1px solid var(--rfg-border);
+  }
+  re-country-select .country-select-input-wrapper .country-search,
+  re-country-select .country-select-input-wrapper .country-search:focus {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .rfg-phone-number {
+    flex: 1;
+    min-width: 0;
+    padding: var(--rfg-input-pad);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    color: var(--rfg-text);
+    outline: none;
+    &::placeholder {
+      color: color-mix(in srgb, var(--rfg-text) 42%, transparent);
+    }
+  }
+}
+.rfg.rfg-input-filled .rfg-phone.rfg-phone-inline:focus-within {
+  background: var(--rfg-bg);
+}
+.rfg.rfg-input-underlined .rfg-phone.rfg-phone-inline {
+  padding: 0;
+  &:focus-within {
+    box-shadow: none;
+  }
+  // one line under the whole field, no divider standing up from it
+  re-country-select.rfg-phone-country {
+    border-inline-end: 0;
+  }
+}
+
+/* ------------------------------------------------------------ content blocks: image, video, link, icon, embed */
+.rfg .rfg-content {
+  figure {
+    margin: 0;
+  }
+  figcaption,
+  .rfg-caption {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--rfg-muted);
+  }
+  &.rfg-align-center {
+    text-align: center;
+    figure {
+      margin-inline: auto;
+    }
+  }
+  &.rfg-align-right {
+    text-align: right;
+    figure {
+      margin-inline-start: auto;
+    }
+  }
+}
+.rfg .rfg-image-figure {
+  max-width: 100%;
+  &.rfg-w-small {
+    width: 33%;
+    min-width: 120px;
+  }
+  &.rfg-w-medium {
+    width: 60%;
+    min-width: 200px;
+  }
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  &.rfg-rounded img {
+    border-radius: var(--rfg-radius);
+  }
+}
+.rfg .rfg-ratio {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: var(--rfg-radius);
+  overflow: hidden;
+  background: #000;
+  iframe,
+  video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+.rfg .rfg-embed-figure iframe {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+}
+.rfg .rfg-media-empty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 12px;
+  border: 1.5px dashed var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-tint);
+  color: var(--rfg-muted);
+  font-size: 12.5px;
+  word-break: break-all;
+  &.rfg-ratio {
+    background: var(--rfg-tint);
+  }
+}
+.rfg .rfg-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.rfg .rfg-text-link {
+  color: var(--rfg-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rfg .rfg-icon-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rfg .rfg-align-center .rfg-icon-block {
+  align-items: center;
+}
+.rfg .rfg-align-right .rfg-icon-block {
+  align-items: flex-end;
+}
+.rfg .rfg-emoji {
+  line-height: 1;
+  &.rfg-size-small {
+    font-size: 28px;
+  }
+  &.rfg-size-medium {
+    font-size: 44px;
+  }
+  &.rfg-size-large {
+    font-size: 68px;
+  }
+}
+.rfg .rfg-icon-badge {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  // the theme's accent, or the colour picked for this icon
+  color: var(--rfg-icon-color, var(--rfg-primary));
+  background: color-mix(in srgb, var(--rfg-icon-color, var(--rfg-primary)) 13%, transparent);
+  svg {
+    width: 50%;
+    height: 50%;
+  }
+  &.rfg-size-small {
+    width: 40px;
+    height: 40px;
+  }
+  &.rfg-size-medium {
+    width: 60px;
+    height: 60px;
+  }
+  &.rfg-size-large {
+    width: 88px;
+    height: 88px;
+  }
+}
+.rfg .rfg-icon-title {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: var(--rfg-text);
+}
+.rfg .rfg-icon-text {
+  color: var(--rfg-muted);
+  max-width: 52ch;
+}
+.rfg .rfg-align-center .rfg-icon-block {
+  text-align: center;
+}
+.rfg .rfg-align-right .rfg-icon-block {
+  text-align: right;
+}
+.rfg .rfg-media-empty .rfg-play {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  font-size: 13px;
+  span:first-child {
+    font-size: 34px;
+    line-height: 1;
+  }
+}
+/* the thank-you page built in the form */
+.rfg .rfg-success-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rfg-gap);
+  .rfg-link {
+    align-self: center;
+  }
+}
+
+/* ------------------------------------------------------------ calendar: several days, or a range */
+.rfg .rfg-calendar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rfg .rfg-calendar {
+  max-width: 360px;
+  padding: 12px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+}
+.rfg .rfg-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  .rfg-icon-btn:disabled {
+    opacity: 0.3;
+  }
+}
+.rfg .rfg-cal-title {
+  font-weight: 600;
+}
+.rfg .rfg-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.rfg .rfg-cal-wd {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rfg-muted);
+  text-transform: capitalize;
+}
+.rfg .rfg-cal-day {
+  aspect-ratio: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--rfg-text);
+  cursor: pointer;
+  &:hover:not(:disabled):not(.is-picked) {
+    background: var(--rfg-tint);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rfg-focus);
+  }
+  &.is-today {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--rfg-border-strong);
+  }
+  &.in-range {
+    border-radius: 0;
+    background: var(--rfg-primary-soft);
+  }
+  &.is-picked {
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+    font-weight: 600;
+  }
+  &:disabled {
+    color: color-mix(in srgb, var(--rfg-text) 28%, transparent);
+    text-decoration: line-through;
+    cursor: default;
+  }
+}
+.rfg .is-range .rfg-cal-day {
+  &.range-start {
+    border-radius: 50% 0 0 50%;
+  }
+  &.range-end {
+    border-radius: 0 50% 50% 0;
+  }
+  &.range-start.range-end {
+    border-radius: 50%;
+  }
+}
+.rfg .rfg-cal-summary {
+  font-size: 14px;
+  small {
+    color: var(--rfg-muted);
+  }
+  .rfg-muted {
+    color: var(--rfg-muted);
+  }
+}
+.rfg .rfg-cal-picked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rfg .rfg-cal-pick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--rfg-border);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-tint);
+}
+.rfg .rfg-cal-pick-day {
+  min-width: 110px;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+.rfg .rfg-cal-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+.rfg .rfg-cal-remove {
+  margin-inline-start: auto;
+}
+.rfg .rfg-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: 999px;
+  background: var(--rfg-bg);
+  font: inherit;
+  font-size: 13px;
+  color: var(--rfg-text);
+  cursor: pointer;
+  &.is-on {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary);
+    color: var(--rfg-primary-contrast);
+  }
+}
+
+/* ------------------------------------------------------------ yes / no */
+.rfg .rfg-yesno {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+  gap: 10px;
+}
+.rfg .rfg-yesno-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: calc(var(--rfg-input-height) + 8px);
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font: inherit;
+  font-weight: 600;
+  color: var(--rfg-text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  svg {
+    color: var(--rfg-muted);
+  }
+  &:hover:not(:disabled) {
+    border-color: var(--rfg-primary);
+  }
+  &.is-checked {
+    border-color: var(--rfg-primary);
+    background: var(--rfg-primary-soft);
+    svg {
+      color: var(--rfg-primary);
+    }
+  }
+}
+
+/* ------------------------------------------------------------ picture choice */
+.rfg .rfg-pictures {
+  display: grid;
+  grid-template-columns: repeat(var(--rfg-pic-cols, 3), minmax(0, 1fr));
+  gap: 10px;
+}
+.rfg .rfg-picture {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--rfg-border-strong);
+  border-radius: var(--rfg-radius);
+  background: var(--rfg-bg);
+  font: inherit;
+  color: var(--rfg-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:hover:not(:disabled) {
+    border-color: var(--rfg-primary);
+  }
+  &.is-checked {
+    border-color: var(--rfg-primary);
+    box-shadow: 0 0 0 2px var(--rfg-primary);
+  }
+}
+.rfg .rfg-picture-img {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--rfg-radius) * 0.7);
+  overflow: hidden;
+  background: var(--rfg-tint);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+.rfg .rfg-picture-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.rfg .rfg-picture-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--rfg-border-strong);
+}
+.rfg .rfg-picture.is-checked .rfg-picture-mark {
+  border-color: var(--rfg-primary);
+  background: var(--rfg-primary);
+  box-shadow: inset 0 0 0 3px var(--rfg-bg);
 }
 
 /* ------------------------------------------------------------ Likert */
@@ -2462,6 +3110,12 @@ re-form-generator {
   .rfg .rfg-options {
     grid-template-columns: minmax(0, 1fr);
   }
+  .rfg .rfg-pictures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rfg .rfg-calendar {
+    max-width: none;
+  }
   .rfg .rfg-items-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2644,5 +3298,54 @@ re-form-generator {
   &.rfg-footer-bar:not([style*='--rfg-footer-bg']) {
     background: color-mix(in srgb, var(--rfg-text) 92%, var(--rfg-bg));
     --rfg-footer-text: var(--rfg-bg);
+  }
+}
+
+@keyframes rfg-step-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rfg-step-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rfg-step-slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Small screens: numbered steps lose their titles (written once under the dots) and shrink.
+@container rfg (max-width: 520px) {
+  .rfg .rfg-stepper-titles .rfg-stepper-name {
+    display: none;
+  }
+  .rfg .rfg-stepper-titles .rfg-stepper-caption {
+    display: block;
+  }
+  .rfg .rfg-stepper-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .rfg .rfg-stepper li + li::before {
+    top: 12px;
+    right: calc(50% + 16px);
+    left: calc(-50% + 16px);
   }
 }
