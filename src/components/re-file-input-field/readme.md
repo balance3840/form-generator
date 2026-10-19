@@ -7,17 +7,18 @@
 
 ## Properties
 
-| Property          | Attribute          | Description                                                                        | Type      | Default     |
-| ----------------- | ------------------ | ---------------------------------------------------------------------------------- | --------- | ----------- |
-| `block`           | `block`            | With `compact`: the button spans the whole width (a dashed "add photo" bar).       | `boolean` | `false`     |
-| `compact`         | `compact`          | A small "add" button instead of the big drop area (use with `preview` for photos). | `boolean` | `false`     |
-| `inputAttributes` | `input-attributes` |                                                                                    | `any`     | `undefined` |
-| `inputProps`      | `input-props`      |                                                                                    | `any`     | `undefined` |
-| `modelKey`        | `model-key`        |                                                                                    | `string`  | `undefined` |
-| `placeholder`     | `placeholder`      |                                                                                    | `string`  | `undefined` |
-| `preview`         | `preview`          | Show a thumbnail for every chosen image.                                           | `boolean` | `false`     |
-| `subTitle`        | `sub-title`        |                                                                                    | `string`  | `undefined` |
-| `textTitle`       | `text-title`       |                                                                                    | `string`  | `undefined` |
+| Property          | Attribute          | Description                                                                        | Type                                                                     | Default     |
+| ----------------- | ------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------- |
+| `block`           | `block`            | With `compact`: the button spans the whole width (a dashed "add photo" bar).       | `boolean`                                                                | `false`     |
+| `compact`         | `compact`          | A small "add" button instead of the big drop area (use with `preview` for photos). | `boolean`                                                                | `false`     |
+| `inputAttributes` | `input-attributes` |                                                                                    | `any`                                                                    | `undefined` |
+| `inputProps`      | `input-props`      |                                                                                    | `any`                                                                    | `undefined` |
+| `modelKey`        | `model-key`        |                                                                                    | `string`                                                                 | `undefined` |
+| `placeholder`     | `placeholder`      |                                                                                    | `string`                                                                 | `undefined` |
+| `preview`         | `preview`          | Show a thumbnail for every chosen image.                                           | `boolean`                                                                | `false`     |
+| `subTitle`        | `sub-title`        |                                                                                    | `string`                                                                 | `undefined` |
+| `textTitle`       | `text-title`       |                                                                                    | `string`                                                                 | `undefined` |
+| `texts`           | --                 | Texts of the drop area and the file list: touch title, add more, replace, remove.  | `{ tap?: string; addMore?: string; replace?: string; remove?: string; }` | `{}`        |
 
 
 ## Events

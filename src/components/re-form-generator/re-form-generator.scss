@@ -318,8 +318,28 @@ re-form-generator {
   input.rfg-control[type='month'],
   input.rfg-control[type='week'] {
     height: var(--rfg-input-height);
+    min-width: 0;
+    max-width: 100%;
     padding-top: 0;
     padding-bottom: 0;
+  }
+  // iOS Safari draws these controls wider than their box (centred, with its own minimum width)
+  @supports (-webkit-touch-callout: none) {
+    input.rfg-control[type='date'],
+    input.rfg-control[type='time'],
+    input.rfg-control[type='datetime-local'],
+    input.rfg-control[type='month'],
+    input.rfg-control[type='week'] {
+      -webkit-appearance: none;
+      appearance: none;
+      line-height: calc(var(--rfg-input-height) - 2px);
+
+      &::-webkit-date-and-time-value {
+        min-height: 1.5em;
+        margin: 0;
+        text-align: start;
+      }
+    }
   }
   .rfg-input-color {
     padding: 4px;
@@ -621,8 +641,22 @@ re-form-generator {
 
   /* -------------------------------------------------- rating, scale, range */
   .rfg-rating {
+    --rfg-star-size: 32px;
     display: flex;
     gap: 4px;
+
+    &.rfg-rating-small {
+      --rfg-star-size: 24px;
+    }
+    &.rfg-rating-large {
+      --rfg-star-size: 44px;
+    }
+    // the stars keep a normal size and spread evenly across the whole width
+    &.rfg-rating-full {
+      --rfg-star-size: 36px;
+      justify-content: space-between;
+      max-width: 420px;
+    }
   }
   .rfg-star {
     padding: 2px;
@@ -634,6 +668,8 @@ re-form-generator {
     line-height: 0;
 
     svg {
+      width: var(--rfg-star-size);
+      height: auto;
       fill: transparent;
     }
     &.is-active {
@@ -778,7 +814,8 @@ re-form-generator {
     .multi-select__header,
     .country-search,
     .rfg-option,
-    .file-field-container,
+    .file-dropzone,
+    .file-card,
     .rfg-scale-btn {
       border-color: var(--rfg-error);
     }
@@ -3135,6 +3172,21 @@ re-form-generator {
     font-size: 15px;
     line-height: 1;
   }
+  // moving an item is not destructive: no red like the remove button
+  .rfg-rank-move:hover {
+    background: var(--rfg-tint);
+    color: var(--rfg-text);
+  }
+}
+// touch screens can't drag the items (the arrows move them) and keep the hover look after a tap
+@media (hover: none), (pointer: coarse) {
+  .rfg .rfg-rank-grip {
+    display: none;
+  }
+  .rfg .rfg-rank-actions .rfg-rank-move:hover {
+    background: transparent;
+    color: var(--rfg-muted);
+  }
 }
 
 /* ------------------------------------------------------------ NPS */
@@ -3178,14 +3230,11 @@ re-form-generator {
     --rfg-pad-y: 22px;
     --rfg-pad-x: 18px;
   }
+  // a scale (and NPS) keeps all its numbers on one line, smaller
   .rfg .rfg-scale {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-  // NPS keeps its 11 numbers on one line, smaller
-  .rfg .rfg-scale.rfg-scale-nps {
-    grid-template-columns: repeat(11, minmax(0, 1fr));
     gap: 3px;
     .rfg-scale-btn {
+      min-width: 0;
       font-size: 13px;
       padding: 0;
     }

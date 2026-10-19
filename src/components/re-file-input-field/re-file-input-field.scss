@@ -1,113 +1,228 @@
 re-file-input-field {
-  .file-field-container {
-    width: 100%;
+  display: block;
+
+  .file-wrap {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-    .file-dropzone {
-      width: 100%;
-      min-height: 11rem;
-      border: 1.5px dashed var(--rfg-border-strong, #d1d5db);
-      border-radius: var(--rfg-radius, 8px);
-      background-color: var(--rfg-tint, #f9fafb);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      transition: background-color 0.3s, border-color 0.3s;
+  .file-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 24px 16px;
+    font: inherit;
+    text-align: center;
+    color: var(--rfg-muted, #6b7280);
+    background: var(--rfg-bg, #fff);
+    border: 1.5px dashed var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 8px);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
 
-      &.hover,
-      &:hover {
-        background-color: var(--rfg-primary-soft, #eef2ff);
-        border-color: var(--rfg-primary, #4f46e5);
+    &:hover:not(:disabled) {
+      border-color: var(--rfg-primary, #4f46e5);
+      background: var(--rfg-tint, #f9fafb);
+    }
+    &:focus-visible {
+      outline: none;
+      border-color: var(--rfg-primary, #4f46e5);
+      box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
 
-        .dropzone-icon {
-          color: var(--rfg-primary, #4f46e5);
-        }
-      }
+  .file-wrap.is-dragging .file-dropzone,
+  .file-wrap.is-dragging .file-add-more {
+    border-color: var(--rfg-primary, #4f46e5);
+    border-style: solid;
+    background: var(--rfg-primary-soft, #eef2ff);
+  }
 
-      &.dark {
-        background-color: #374151;
-        border-color: #4b5563;
+  .file-dropzone-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--rfg-primary, #4f46e5);
+    background: var(--rfg-primary-soft, #eef2ff);
+  }
 
-        &:hover {
-          background-color: #4b5563;
-          border-color: #6b7280;
-        }
+  .file-dropzone-text {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    font-size: 14px;
+    line-height: 20px;
+  }
 
-        .dropzone-icon,
-        .dropzone-text,
-        .dropzone-subtext {
-          color: #9ca3af;
-        }
-      }
+  .file-dropzone-title {
+    font-weight: 600;
+    color: var(--rfg-primary, #4f46e5);
+  }
 
-      .dropzone-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding-top: 1.25rem;
-        padding-bottom: 1.5rem;
-        font-weight: normal;
-      }
+  .file-dropzone-title--touch {
+    display: none;
+  }
 
-      .dropzone-icon {
-        width: 2rem;
-        height: 2rem;
-        margin-bottom: 1rem;
-        color: var(--rfg-muted, #6b7280);
-        transition: color 0.3s;
-      }
+  .file-dropzone-hint {
+    font-size: 12px;
+    line-height: 16px;
+  }
 
-      .dropzone-text {
-        margin-bottom: 0.5rem;
-        color: var(--rfg-muted, #6b7280);
-        transition: color 0.3s;
-        display: flex;
-        gap: 8px;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
-        .file-element {
-          display: flex;
-          gap: 8px;
-          color: var(--rfg-text, #1f2937);
-        }
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    padding-inline-end: 6px;
+    background: var(--rfg-bg, #fff);
+    border: 1px solid var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 8px);
+  }
 
-      }
+  .file-card-thumb {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: calc(var(--rfg-radius, 8px) * 0.6);
+    object-fit: cover;
+    background: var(--rfg-tint, #f3f4f6);
+  }
 
-      .font-bold {
-        font-weight: bold;
-      }
+  .file-card-ext {
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--rfg-primary, #4f46e5);
+    background: var(--rfg-primary-soft, #eef2ff);
+  }
 
-      .dropzone-subtext {
-        font-size: 0.8rem;
-        color: var(--rfg-muted, #6b7280);
-        transition: color 0.3s;
-      }
+  .file-card-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
 
-      .remove-file {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: var(--rfg-error, #e5484d);
-        color: white;
-        text-align: center;
-        line-height: 20px;
-        font-size: 14px;
-        font-weight: bold;
-      }
+  .file-card-name {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--rfg-text, #1f2937);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-      .file-name {
-        font-weight: bold;
-        max-width: 250px;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: nowrap;
-      }
+  .file-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--rfg-muted, #6b7280);
+  }
 
+  .file-card-replace {
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--rfg-primary, #4f46e5);
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .file-card-remove {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: var(--rfg-muted, #6b7280);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+
+    &:hover {
+      color: var(--rfg-error, #e5484d);
+      background: color-mix(in srgb, var(--rfg-error, #e5484d) 10%, transparent);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
+    }
+  }
+
+  .file-add-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 44px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rfg-primary, #4f46e5);
+    background: transparent;
+    border: 1.5px dashed var(--rfg-border-strong, #d1d5db);
+    border-radius: var(--rfg-radius, 8px);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+
+    &:hover {
+      border-color: var(--rfg-primary, #4f46e5);
+      background: var(--rfg-tint, #f9fafb);
+    }
+  }
+
+  .file-wrap input.hidden {
+    display: none;
+  }
+}
+
+// touch screens can't drag files in: they get a "tap" title and no drag text
+@media (hover: none), (pointer: coarse) {
+  re-file-input-field {
+    .file-dropzone-title--pointer,
+    .file-dropzone-drag {
+      display: none;
+    }
+    .file-dropzone-title--touch {
+      display: inline;
+    }
+    .file-card-remove:hover {
+      color: var(--rfg-muted, #6b7280);
+      background: transparent;
     }
   }
 }
@@ -201,8 +316,3 @@ re-file-input-field .file-compact.is-block {
   }
 }
 
-// The native input only opens the file chooser (the label around it is the click target). Without this it showed
-// "Choose file / No file chosen" inside the drop area.
-re-file-input-field .file-field-container input.hidden {
-  display: none;
-}

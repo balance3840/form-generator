@@ -1640,6 +1640,7 @@ export class ReFormGenerator {
             preview={!!(field.config && field.config.preview)}
             compact={!!(field.config && (field.config.compact || field.config.fileStyle === 'block'))}
             block={!!(field.config && field.config.fileStyle === 'block')}
+            texts={{ tap: (field.config && field.config.title) || field.textTitle || this.tr('ui.tapToUpload'), addMore: this.tr('ui.addMoreFiles'), replace: this.tr('ui.replaceFile'), remove: this.tr('ui.remove') }}
           ></re-file-input-field>
         );
 
@@ -2334,10 +2335,10 @@ export class ReFormGenerator {
               <span class="rfg-rank-label">{labelOf(v)}</span>
               {!common.disabled && (
                 <span class="rfg-rank-actions">
-                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveUp')}: ${labelOf(v)}`} disabled={i === 0} onClick={() => move(i, i - 1)}>
+                  <button type="button" class="rfg-icon-btn rfg-rank-move" aria-label={`${this.tr('ui.moveUp')}: ${labelOf(v)}`} disabled={i === 0} onClick={() => move(i, i - 1)}>
                     ↑
                   </button>
-                  <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.moveDown')}: ${labelOf(v)}`} disabled={i === ranked.length - 1} onClick={() => move(i, i + 1)}>
+                  <button type="button" class="rfg-icon-btn rfg-rank-move" aria-label={`${this.tr('ui.moveDown')}: ${labelOf(v)}`} disabled={i === ranked.length - 1} onClick={() => move(i, i + 1)}>
                     ↓
                   </button>
                   <button type="button" class="rfg-icon-btn" aria-label={`${this.tr('ui.remove')}: ${labelOf(v)}`} onClick={() => set(now().filter((_, j) => j !== i))}>
@@ -2751,10 +2752,12 @@ export class ReFormGenerator {
 
   private renderRating(field: FormField, value: any) {
     const max = (field.config && field.config.max) || 5;
+    // `config.size`: small, medium (default), large, or full (the stars spread across the whole width)
+    const size = ['small', 'large', 'full'].includes(field.config && field.config.size) ? field.config!.size : 'medium';
     const hover = this.hoverRating[field.model];
     const shown = hover !== undefined ? hover : Number(value) || 0;
     return (
-      <div class="rfg-rating" role="radiogroup" onMouseLeave={() => (this.hoverRating = { ...this.hoverRating, [field.model]: undefined })}>
+      <div class={`rfg-rating rfg-rating-${size}`} role="radiogroup" onMouseLeave={() => (this.hoverRating = { ...this.hoverRating, [field.model]: undefined })}>
         {Array.from({ length: max }, (_, i) => i + 1).map(n => (
           <button
             type="button"
@@ -2765,7 +2768,7 @@ export class ReFormGenerator {
             onMouseEnter={() => (this.hoverRating = { ...this.hoverRating, [field.model]: n })}
             onClick={() => this.setValueByModel(field.model, Number(value) === n ? '' : n)}
           >
-            <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d={STAR} stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
             </svg>
           </button>

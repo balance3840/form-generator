@@ -60,6 +60,10 @@ export namespace Components {
         "preview": boolean;
         "subTitle": string;
         "textTitle": string;
+        /**
+          * Texts of the drop area and the file list: touch title, add more, replace, remove.
+         */
+        "texts": { tap?: string; addMore?: string; replace?: string; remove?: string };
     }
     interface ReFormGenerator {
         /**
@@ -394,6 +398,10 @@ declare namespace LocalJSX {
         "preview"?: boolean;
         "subTitle"?: string;
         "textTitle"?: string;
+        /**
+          * Texts of the drop area and the file list: touch title, add more, replace, remove.
+         */
+        "texts"?: { tap?: string; addMore?: string; replace?: string; remove?: string };
     }
     interface ReFormGenerator {
         /**
