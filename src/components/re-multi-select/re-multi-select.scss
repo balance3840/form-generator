@@ -50,11 +50,14 @@ re-multi-select {
     }
 
     &__options {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       position: absolute;
       left: 0;
       right: 0;
       margin: 4px 0 0;
-      padding: 4px;
+      padding: 6px;
       list-style: none;
       max-height: 220px;
       overflow-y: auto;

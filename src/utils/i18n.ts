@@ -314,19 +314,34 @@ const MORE: { [language: string]: Dict } = {
   da: { 'ui.prevMonth': 'Forrige måned', 'ui.nextMonth': 'Næste måned', 'ui.pickFirstDay': 'Vælg den første dag', 'ui.pickLastDay': 'Vælg den sidste dag', 'ui.daysCount': '{n} dage', 'validation.pickTimes': 'Vælg et tidspunkt for hver dag', 'ui.yes': 'Ja', 'ui.no': 'Nej', 'ui.rankHint': 'Klik på mulighederne i den rækkefølge, du foretrækker dem', 'ui.rankReset': 'Start forfra', 'ui.countryCode': 'Landekode', 'validation.phone': 'Indtast et gyldigt telefonnummer', 'validation.phoneCountries': 'Telefonnumre fra dette land accepteres ikke', 'validation.emailDomains': 'Brug en e-mailadresse fra et tilladt domæne', 'validation.likertAll': 'Svar på alle udsagn', 'validation.rankAll': 'Placér alle mulighederne', 'validation.rankTop': 'Vælg dine top {0}' , 'ui.weekN': 'Uge {n}', 'ui.prevYear': 'Forrige år', 'ui.nextYear': 'Næste år', 'ui.prevYears': 'Forrige år', 'ui.nextYears': 'Næste år', 'ui.showMoreOptions': 'Vis flere muligheder', 'ui.showFewerOptions': 'Vis færre muligheder', 'ui.savedAgo': 'Gemt {time}', 'ui.justNow': 'lige nu', 'ui.help': 'Hjælp' },
 };
 
+// Texts for the file upload.
+const FILE_UI: { [language: string]: Dict } = {
+  en: { 'ui.tapToUpload': 'Tap to upload', 'ui.addMoreFiles': 'Add more files', 'ui.replaceFile': 'Replace' },
+  es: { 'ui.tapToUpload': 'Toca para subir', 'ui.addMoreFiles': 'Añadir más archivos', 'ui.replaceFile': 'Reemplazar' },
+  fr: { 'ui.tapToUpload': 'Touchez pour importer', 'ui.addMoreFiles': 'Ajouter d’autres fichiers', 'ui.replaceFile': 'Remplacer' },
+  de: { 'ui.tapToUpload': 'Zum Hochladen tippen', 'ui.addMoreFiles': 'Weitere Dateien hinzufügen', 'ui.replaceFile': 'Ersetzen' },
+  it: { 'ui.tapToUpload': 'Tocca per caricare', 'ui.addMoreFiles': 'Aggiungi altri file', 'ui.replaceFile': 'Sostituisci' },
+  pt: { 'ui.tapToUpload': 'Toque para carregar', 'ui.addMoreFiles': 'Adicionar mais ficheiros', 'ui.replaceFile': 'Substituir' },
+  'pt-br': { 'ui.tapToUpload': 'Toque para enviar', 'ui.addMoreFiles': 'Adicionar mais arquivos', 'ui.replaceFile': 'Substituir' },
+  nl: { 'ui.tapToUpload': 'Tik om te uploaden', 'ui.addMoreFiles': 'Meer bestanden toevoegen', 'ui.replaceFile': 'Vervangen' },
+  pl: { 'ui.tapToUpload': 'Dotknij, aby przesłać', 'ui.addMoreFiles': 'Dodaj więcej plików', 'ui.replaceFile': 'Zamień' },
+  ca: { 'ui.tapToUpload': 'Toca per pujar', 'ui.addMoreFiles': 'Afegeix més fitxers', 'ui.replaceFile': 'Substitueix' },
+  da: { 'ui.tapToUpload': 'Tryk for at uploade', 'ui.addMoreFiles': 'Tilføj flere filer', 'ui.replaceFile': 'Erstat' },
+};
+
 /** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
 export const BUILT_IN_UI: { [language: string]: Dict } = {
-  en: { ...EN, ...EXTRA.en, ...MORE.en },
-  es: { ...ES, ...EXTRA.es, ...MORE.es },
-  fr: { ...FR, ...EXTRA.fr, ...MORE.fr },
-  de: { ...DE, ...EXTRA.de, ...MORE.de },
-  it: { ...IT, ...EXTRA.it, ...MORE.it },
-  pt: { ...PT, ...EXTRA.pt, ...MORE.pt },
-  'pt-br': { ...PT_BR, ...EXTRA['pt-br'], ...MORE['pt-br'] },
-  nl: { ...NL, ...EXTRA.nl, ...MORE.nl },
-  pl: { ...PL, ...EXTRA.pl, ...MORE.pl },
-  ca: { ...CA, ...EXTRA.ca, ...MORE.ca },
-  da: { ...DA, ...EXTRA.da, ...MORE.da },
+  en: { ...EN, ...EXTRA.en, ...MORE.en, ...FILE_UI.en },
+  es: { ...ES, ...EXTRA.es, ...MORE.es, ...FILE_UI.es },
+  fr: { ...FR, ...EXTRA.fr, ...MORE.fr, ...FILE_UI.fr },
+  de: { ...DE, ...EXTRA.de, ...MORE.de, ...FILE_UI.de },
+  it: { ...IT, ...EXTRA.it, ...MORE.it, ...FILE_UI.it },
+  pt: { ...PT, ...EXTRA.pt, ...MORE.pt, ...FILE_UI.pt },
+  'pt-br': { ...PT_BR, ...EXTRA['pt-br'], ...MORE['pt-br'], ...FILE_UI['pt-br'] },
+  nl: { ...NL, ...EXTRA.nl, ...MORE.nl, ...FILE_UI.nl },
+  pl: { ...PL, ...EXTRA.pl, ...MORE.pl, ...FILE_UI.pl },
+  ca: { ...CA, ...EXTRA.ca, ...MORE.ca, ...FILE_UI.ca },
+  da: { ...DA, ...EXTRA.da, ...MORE.da, ...FILE_UI.da },
 };
 
 export const UI_KEYS = Object.keys(BUILT_IN_UI.en);
