@@ -1,6 +1,6 @@
 {
   "name": "@restrella/form-generator",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Form generator: renders themeable, validated forms from a JSON schema (v2)",
   "homepage": "https://balance3840.github.io/form-generator/",
   "main": "dist/index.cjs.js",
