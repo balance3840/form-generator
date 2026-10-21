@@ -100,6 +100,7 @@ export class ReFormGenerator {
   /** The document as written (default language). */
   @State() sourceDoc: FormDocument = { version: 2, fields: [] };
   @State() activeLanguage: string = 'en';
+  @State() expandedText: { [id: string]: boolean } = {};
   @State() values: { [key: string]: any } = {};
   @State() validationErrors: { [key: string]: string[] } = {};
   @State() currentStep: number = 0;
@@ -1539,6 +1540,38 @@ export class ReFormGenerator {
     );
   }
 
+  /**
+   * A read-only long text that is longer than `config.truncate` ({ by: 'lines' | 'characters', limit, mode: 'viewMore' | 'tooltip' })
+   * shows only its start: with a "View more" button that opens the rest, or with a "?" that shows the whole text. Null when the
+   * text fits (or no usable limit is set), so the normal box is drawn.
+   */
+  private renderCollapsedText(field: FormField, text: string) {
+    const { by, limit, mode } = field.config.truncate;
+    const max = Math.floor(Number(limit));
+    if (!(max > 0)) return null;
+    const lines = text.split('\n');
+    const cut = by === 'characters' ? text.length > max : lines.length > max;
+    if (!cut) return null;
+    const shown = by === 'characters' ? text.slice(0, max).trimEnd() : lines.slice(0, max).join('\n');
+    const expanded = !!this.expandedText[field.id];
+    if (mode === 'tooltip') {
+      return (
+        <div class="rfg-control rfg-readonly rfg-clamp" id={field.id}>
+          <span class="rfg-clamp-text">{shown}…</span>
+          {this.renderTip(`${field.id}-full`, text)}
+        </div>
+      );
+    }
+    return (
+      <div class="rfg-control rfg-readonly rfg-clamp" id={field.id}>
+        <span class="rfg-clamp-text">{expanded ? text : `${shown}…`}</span>
+        <button type="button" class="rfg-clamp-toggle" aria-expanded={expanded ? 'true' : 'false'} onClick={() => (this.expandedText = { ...this.expandedText, [field.id]: !expanded })}>
+          {this.tr(expanded ? 'ui.viewLess' : 'ui.viewMore')}
+        </button>
+      </div>
+    );
+  }
+
   private renderControl(field: FormField, zIndex: number) {
     const { model } = field;
     const value = this.answerOf(model);
@@ -1547,6 +1580,10 @@ export class ReFormGenerator {
 
     switch (field.type) {
       case 'textarea':
+        if (field.readonly && field.config && field.config.truncate) {
+          const collapsed = this.renderCollapsedText(field, String(value ?? ''));
+          if (collapsed) return collapsed;
+        }
         return <textarea class="rfg-control" {...common} readOnly={field.readonly} placeholder={field.placeholder} rows={4} {...attributes} value={value ?? ''} onInput={(e: any) => this.setValue(field, e.target.value)}></textarea>;
 
       case 'select':

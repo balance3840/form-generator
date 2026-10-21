@@ -3670,6 +3670,37 @@ re-form-generator {
     gap: 6px;
     min-width: 0;
   }
+  // a read-only long text cut short (config.truncate): the start of it, then "View more" or a "?" with the whole text
+  .rfg-clamp {
+    height: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    .rfg-clamp-toggle {
+      display: block;
+      margin-top: 4px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--rfg-primary);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      &:hover {
+        text-decoration: underline;
+      }
+      &:focus-visible {
+        outline: none;
+        border-radius: 3px;
+        box-shadow: 0 0 0 3px var(--rfg-focus);
+      }
+    }
+    .rfg-tip-pop {
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  }
   .rfg-tipwrap {
     display: inline-flex;
     vertical-align: middle;

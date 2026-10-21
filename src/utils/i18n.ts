@@ -316,17 +316,17 @@ const MORE: { [language: string]: Dict } = {
 
 // Texts for the file upload.
 const FILE_UI: { [language: string]: Dict } = {
-  en: { 'ui.tapToUpload': 'Tap to upload', 'ui.addMoreFiles': 'Add more files', 'ui.replaceFile': 'Replace' },
-  es: { 'ui.tapToUpload': 'Toca para subir', 'ui.addMoreFiles': 'Añadir más archivos', 'ui.replaceFile': 'Reemplazar' },
-  fr: { 'ui.tapToUpload': 'Touchez pour importer', 'ui.addMoreFiles': 'Ajouter d’autres fichiers', 'ui.replaceFile': 'Remplacer' },
-  de: { 'ui.tapToUpload': 'Zum Hochladen tippen', 'ui.addMoreFiles': 'Weitere Dateien hinzufügen', 'ui.replaceFile': 'Ersetzen' },
-  it: { 'ui.tapToUpload': 'Tocca per caricare', 'ui.addMoreFiles': 'Aggiungi altri file', 'ui.replaceFile': 'Sostituisci' },
-  pt: { 'ui.tapToUpload': 'Toque para carregar', 'ui.addMoreFiles': 'Adicionar mais ficheiros', 'ui.replaceFile': 'Substituir' },
-  'pt-br': { 'ui.tapToUpload': 'Toque para enviar', 'ui.addMoreFiles': 'Adicionar mais arquivos', 'ui.replaceFile': 'Substituir' },
-  nl: { 'ui.tapToUpload': 'Tik om te uploaden', 'ui.addMoreFiles': 'Meer bestanden toevoegen', 'ui.replaceFile': 'Vervangen' },
-  pl: { 'ui.tapToUpload': 'Dotknij, aby przesłać', 'ui.addMoreFiles': 'Dodaj więcej plików', 'ui.replaceFile': 'Zamień' },
-  ca: { 'ui.tapToUpload': 'Toca per pujar', 'ui.addMoreFiles': 'Afegeix més fitxers', 'ui.replaceFile': 'Substitueix' },
-  da: { 'ui.tapToUpload': 'Tryk for at uploade', 'ui.addMoreFiles': 'Tilføj flere filer', 'ui.replaceFile': 'Erstat' },
+  en: { 'ui.tapToUpload': 'Tap to upload', 'ui.addMoreFiles': 'Add more files', 'ui.replaceFile': 'Replace', 'ui.viewMore': 'View more', 'ui.viewLess': 'View less' },
+  es: { 'ui.tapToUpload': 'Toca para subir', 'ui.addMoreFiles': 'Añadir más archivos', 'ui.replaceFile': 'Reemplazar', 'ui.viewMore': 'Ver más', 'ui.viewLess': 'Ver menos' },
+  fr: { 'ui.tapToUpload': 'Touchez pour importer', 'ui.addMoreFiles': 'Ajouter d’autres fichiers', 'ui.replaceFile': 'Remplacer', 'ui.viewMore': 'Voir plus', 'ui.viewLess': 'Voir moins' },
+  de: { 'ui.tapToUpload': 'Zum Hochladen tippen', 'ui.addMoreFiles': 'Weitere Dateien hinzufügen', 'ui.replaceFile': 'Ersetzen', 'ui.viewMore': 'Mehr anzeigen', 'ui.viewLess': 'Weniger anzeigen' },
+  it: { 'ui.tapToUpload': 'Tocca per caricare', 'ui.addMoreFiles': 'Aggiungi altri file', 'ui.replaceFile': 'Sostituisci', 'ui.viewMore': 'Mostra altro', 'ui.viewLess': 'Mostra meno' },
+  pt: { 'ui.tapToUpload': 'Toque para carregar', 'ui.addMoreFiles': 'Adicionar mais ficheiros', 'ui.replaceFile': 'Substituir', 'ui.viewMore': 'Ver mais', 'ui.viewLess': 'Ver menos' },
+  'pt-br': { 'ui.tapToUpload': 'Toque para enviar', 'ui.addMoreFiles': 'Adicionar mais arquivos', 'ui.replaceFile': 'Substituir', 'ui.viewMore': 'Ver mais', 'ui.viewLess': 'Ver menos' },
+  nl: { 'ui.tapToUpload': 'Tik om te uploaden', 'ui.addMoreFiles': 'Meer bestanden toevoegen', 'ui.replaceFile': 'Vervangen', 'ui.viewMore': 'Meer tonen', 'ui.viewLess': 'Minder tonen' },
+  pl: { 'ui.tapToUpload': 'Dotknij, aby przesłać', 'ui.addMoreFiles': 'Dodaj więcej plików', 'ui.replaceFile': 'Zamień', 'ui.viewMore': 'Pokaż więcej', 'ui.viewLess': 'Pokaż mniej' },
+  ca: { 'ui.tapToUpload': 'Toca per pujar', 'ui.addMoreFiles': 'Afegeix més fitxers', 'ui.replaceFile': 'Substitueix', 'ui.viewMore': 'Mostra’n més', 'ui.viewLess': 'Mostra’n menys' },
+  da: { 'ui.tapToUpload': 'Tryk for at uploade', 'ui.addMoreFiles': 'Tilføj flere filer', 'ui.replaceFile': 'Erstat', 'ui.viewMore': 'Vis mere', 'ui.viewLess': 'Vis mindre' },
 };
 
 /** Languages that ship with built-in texts. Any other language falls back to English for these (and can override them). */
