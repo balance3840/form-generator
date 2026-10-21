@@ -3,7 +3,7 @@ import * as yup from 'yup';
 import set from 'lodash/set';
 import { createYupSchema, getValidationErrors } from '../../utils/utils';
 import { clickedInsideSelector } from '../../utils/dom';
-import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, isLayoutType, itemInstances, requiredProgress, rowLayout, sanitizeHtml, setByPath, withDraft } from '../../utils/schema';
+import { DRAFT, FieldStates, FormDocument, FormField, blankItem, computeStates, deepClone, defaultValues, draftFields, draftObject, evaluateStates, flattenFields, getByPath, htmlText, isLayoutType, itemInstances, requiredProgress, rowLayout, sanitizeHtml, setByPath, textClamp, truncateHtml, withDraft } from '../../utils/schema';
 import { loadDocument } from '../../utils/migrate';
 import { ScriptHost, ScriptSandbox } from '../../utils/script-sandbox';
 import { contrastColor, pageGradientStops, pageMode, FormTheme, googleFontUrl, resolveTheme, safeImageUrl, themeToCssVars } from '../../utils/themes';
@@ -101,6 +101,7 @@ export class ReFormGenerator {
   @State() sourceDoc: FormDocument = { version: 2, fields: [] };
   @State() activeLanguage: string = 'en';
   @State() expandedText: { [id: string]: boolean } = {};
+  @State() clampOverflow: { [id: string]: boolean } = {};
   @State() values: { [key: string]: any } = {};
   @State() validationErrors: { [key: string]: string[] } = {};
   @State() currentStep: number = 0;
@@ -391,6 +392,7 @@ export class ReFormGenerator {
     this.syncCustomCss();
     this.mountCaptchaIfNeeded();
     this.keepCurrentStepInView();
+    this.measureClamps();
   }
 
   /** On narrow screens the step list is a horizontal strip: keep the current step visible inside it (without scrolling the page). */
@@ -1540,38 +1542,6 @@ export class ReFormGenerator {
     );
   }
 
-  /**
-   * A read-only long text that is longer than `config.truncate` ({ by: 'lines' | 'characters', limit, mode: 'viewMore' | 'tooltip' })
-   * shows only its start: with a "View more" button that opens the rest, or with a "?" that shows the whole text. Null when the
-   * text fits (or no usable limit is set), so the normal box is drawn.
-   */
-  private renderCollapsedText(field: FormField, text: string) {
-    const { by, limit, mode } = field.config.truncate;
-    const max = Math.floor(Number(limit));
-    if (!(max > 0)) return null;
-    const lines = text.split('\n');
-    const cut = by === 'characters' ? text.length > max : lines.length > max;
-    if (!cut) return null;
-    const shown = by === 'characters' ? text.slice(0, max).trimEnd() : lines.slice(0, max).join('\n');
-    const expanded = !!this.expandedText[field.id];
-    if (mode === 'tooltip') {
-      return (
-        <div class="rfg-control rfg-readonly rfg-clamp" id={field.id}>
-          <span class="rfg-clamp-text">{shown}…</span>
-          {this.renderTip(`${field.id}-full`, text)}
-        </div>
-      );
-    }
-    return (
-      <div class="rfg-control rfg-readonly rfg-clamp" id={field.id}>
-        <span class="rfg-clamp-text">{expanded ? text : `${shown}…`}</span>
-        <button type="button" class="rfg-clamp-toggle" aria-expanded={expanded ? 'true' : 'false'} onClick={() => (this.expandedText = { ...this.expandedText, [field.id]: !expanded })}>
-          {this.tr(expanded ? 'ui.viewLess' : 'ui.viewMore')}
-        </button>
-      </div>
-    );
-  }
-
   private renderControl(field: FormField, zIndex: number) {
     const { model } = field;
     const value = this.answerOf(model);
@@ -1580,10 +1550,6 @@ export class ReFormGenerator {
 
     switch (field.type) {
       case 'textarea':
-        if (field.readonly && field.config && field.config.truncate) {
-          const collapsed = this.renderCollapsedText(field, String(value ?? ''));
-          if (collapsed) return collapsed;
-        }
         return <textarea class="rfg-control" {...common} readOnly={field.readonly} placeholder={field.placeholder} rows={4} {...attributes} value={value ?? ''} onInput={(e: any) => this.setValue(field, e.target.value)}></textarea>;
 
       case 'select':
@@ -2858,7 +2824,7 @@ export class ReFormGenerator {
     if (field.type === 'paragraph') {
       return (
         <div key={field.id} class={`rfg-field rfg-block rfg-paragraph ${hidden ? 'rfg-hidden' : ''}`}>
-          <p innerHTML={sanitizeHtml(field.content || '')}></p>
+          {this.renderClamped(field, sanitizeHtml(field.content || ''), 'p', '')}
         </div>
       );
     }
@@ -3050,6 +3016,60 @@ export class ReFormGenerator {
     );
   }
 
+  /**
+   * The text of a text block / message box, cut short when `config.truncate` ({ by: 'lines' | 'characters', limit, mode: 'viewMore' | 'tooltip' })
+   * asks for it and the text is longer than that: with a "View more / View less" button, or a "?" that shows the whole text.
+   * Lines are clamped with CSS (and measured after drawing), characters are cut out of the HTML.
+   */
+  private renderClamped(field: FormField, html: string, Tag: string, cls: string) {
+    const T: any = Tag;
+    const clamp = textClamp(field.config);
+    if (!clamp) return <T class={cls || undefined} innerHTML={html}></T>;
+    const open = !!this.expandedText[field.id];
+    let shown = html;
+    let longer: boolean;
+    if (clamp.by === 'characters') {
+      const short = truncateHtml(html, clamp.limit);
+      longer = short !== null;
+      if (short !== null) shown = short;
+    } else {
+      longer = !!this.clampOverflow[field.id];
+    }
+    const text = clamp.by === 'characters' && !open ? shown : html;
+    return (
+      <div class="rfg-clamp" data-clamp-id={field.id}>
+        <T
+          class={`${cls} ${clamp.by === 'lines' ? 'rfg-clamp-lines' : ''} ${clamp.by === 'lines' && !open ? 'is-collapsed' : ''}`}
+          style={clamp.by === 'lines' ? { '--rfg-clamp-lines': String(clamp.limit) } : undefined}
+          innerHTML={text}
+        ></T>
+        {longer && clamp.mode === 'viewMore' && (
+          <button type="button" class="rfg-clamp-toggle" aria-expanded={open ? 'true' : 'false'} onClick={() => (this.expandedText = { ...this.expandedText, [field.id]: !open })}>
+            {this.tr(open ? 'ui.viewLess' : 'ui.viewMore')}
+          </button>
+        )}
+        {longer && clamp.mode === 'tooltip' && this.renderTip(`${field.id}-full`, htmlText(html))}
+      </div>
+    );
+  }
+
+  /** Marks which line-clamped texts really are longer than their limit (the browser knows only after drawing them). */
+  private measureClamps() {
+    const next = { ...this.clampOverflow };
+    let changed = false;
+    this.el.querySelectorAll('.rfg-clamp').forEach(box => {
+      const id = box.getAttribute('data-clamp-id') || '';
+      const text = box.querySelector('.rfg-clamp-lines.is-collapsed') as HTMLElement | null;
+      if (!text) return;
+      const over = text.scrollHeight > text.clientHeight + 1;
+      if (over !== !!next[id]) {
+        next[id] = over;
+        changed = true;
+      }
+    });
+    if (changed) this.clampOverflow = next;
+  }
+
   private renderCallout(field: FormField) {
     const tone = (field.config && field.config.tone) || 'info';
     const icons: { [tone: string]: string } = {
@@ -3065,7 +3085,7 @@ export class ReFormGenerator {
         </svg>
         <div class="rfg-callout-body">
           {field.label && <div class="rfg-callout-title" innerHTML={sanitizeHtml(field.label)}></div>}
-          {field.content && <div class="rfg-callout-text" innerHTML={sanitizeHtml(field.content)}></div>}
+          {field.content && this.renderClamped(field, sanitizeHtml(field.content), 'div', 'rfg-callout-text')}
         </div>
       </div>
     );

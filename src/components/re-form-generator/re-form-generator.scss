@@ -3670,11 +3670,15 @@ re-form-generator {
     gap: 6px;
     min-width: 0;
   }
-  // a read-only long text cut short (config.truncate): the start of it, then "View more" or a "?" with the whole text
+  // a text block / message box cut short (config.truncate): the start of it, then "View more" or a "?" with the whole text
   .rfg-clamp {
-    height: auto;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    .rfg-clamp-lines.is-collapsed {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--rfg-clamp-lines);
+      line-clamp: var(--rfg-clamp-lines);
+      overflow: hidden;
+    }
     .rfg-clamp-toggle {
       display: block;
       margin-top: 4px;

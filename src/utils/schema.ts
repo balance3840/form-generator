@@ -809,3 +809,49 @@ export function sanitizeHtml(html: string): string {
 export function deepClone<T>(value: T): T {
   return value === undefined ? value : JSON.parse(JSON.stringify(value));
 }
+
+export type TextClamp = { by: 'lines' | 'characters'; limit: number; mode: 'viewMore' | 'tooltip' };
+
+/** `config.truncate` of a text block / message box, when it is usable (a limit above zero). */
+export function textClamp(config: { [key: string]: any } | undefined): TextClamp | null {
+  const raw = config && config.truncate;
+  const limit = Math.floor(Number(raw && raw.limit));
+  if (!raw || !(limit > 0)) return null;
+  return { by: raw.by === 'characters' ? 'characters' : 'lines', limit, mode: raw.mode === 'tooltip' ? 'tooltip' : 'viewMore' };
+}
+
+/** The visible text of some (sanitized) HTML. */
+export function htmlText(html: string): string {
+  if (typeof document === 'undefined') return String(html || '').replace(/<[^>]*>/g, '');
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  return template.content.textContent || '';
+}
+
+/** The first `max` characters of some HTML with its tags kept (and closed), or null when the text is not longer than that. */
+export function truncateHtml(html: string, max: number): string | null {
+  if (typeof document === 'undefined') return null;
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  let left = max;
+  let cut = false;
+  const walk = (node: Node) => {
+    Array.from(node.childNodes).forEach(child => {
+      if (cut) {
+        child.parentNode && child.parentNode.removeChild(child);
+      } else if (child.nodeType === 3) {
+        const text = child.textContent || '';
+        if (text.length > left) {
+          child.textContent = text.slice(0, left).trimEnd() + '…';
+          cut = true;
+        } else {
+          left -= text.length;
+        }
+      } else {
+        walk(child);
+      }
+    });
+  };
+  walk(template.content);
+  return cut ? template.innerHTML : null;
+}
