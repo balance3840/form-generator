@@ -17,31 +17,19 @@ re-country-select {
       height: var(--rfg-input-height, 44px);
     }
 
-    .selected-country-wrapper {
+    // the chosen country's flag (a globe when none), inside the box's left padding
+    .selected-flag {
       position: absolute;
-      top: 0;
-      inset-inline: 0 36px;
-      height: var(--rfg-input-height, 44px);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 12px;
-      font-weight: normal;
+      top: 50%;
+      inset-inline-start: 12px;
+      width: 22px;
+      height: auto;
+      transform: translateY(-50%);
       pointer-events: none;
       z-index: 1;
-
-      .selected-flag {
-        width: 22px;
-        flex: none;
-      }
-      .selected-country-value {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: var(--rfg-text, #1f2937);
-      }
-      &.hidden {
-        display: none;
+      transition: opacity 0.12s;
+      &.is-searching {
+        opacity: 0.35;
       }
     }
 
@@ -56,13 +44,24 @@ re-country-select {
       border: 1px solid var(--rfg-border-strong, #d1d5db);
       border-radius: var(--rfg-radius, 8px);
       outline: none;
+      text-overflow: ellipsis;
+      cursor: pointer;
 
+      &::placeholder {
+        color: var(--rfg-muted, #9ca3af);
+        opacity: 1;
+      }
+      // the chosen country is shown as the placeholder: it looks like the value until the person types over it
+      &.has-selection::placeholder {
+        color: var(--rfg-text, #1f2937);
+      }
       &:focus {
+        cursor: text;
         border-color: var(--rfg-primary, #4f46e5);
         box-shadow: 0 0 0 3px var(--rfg-focus, rgba(79, 70, 229, 0.25));
       }
-      &.no-indent {
-        padding-inline-start: 12px;
+      &:disabled {
+        cursor: not-allowed;
       }
     }
 
@@ -79,6 +78,10 @@ re-country-select {
       transform: rotate(45deg);
       pointer-events: none;
       transition: transform 0.15s;
+    }
+    // while the list is open the chosen country fades, as a hint that typing searches
+    &.is-open .country-search.has-selection::placeholder {
+      color: var(--rfg-muted, #9ca3af);
     }
     &.is-open .country-chevron {
       margin-top: -2px;
@@ -146,23 +149,13 @@ re-country-select {
 
 // Phone prefix: flag and dial code only; the list opens wider (see placePanel)
 re-country-select .is-compact {
-  .country-select-input-wrapper .selected-country-wrapper {
-    gap: 6px;
-    padding: 0 0 0 10px;
-    inset-inline: 0 26px;
-    .selected-flag {
-      width: 20px;
-    }
-    .selected-country-value {
-      font-variant-numeric: tabular-nums;
-    }
+  .country-select-input-wrapper .selected-flag {
+    inset-inline-start: 10px;
+    width: 20px;
   }
   .country-select-input-wrapper .country-search {
-    padding-inline: 10px 26px;
-    // the typed search text needs no room for the flag
-    &::placeholder {
-      color: transparent;
-    }
+    padding-inline: 36px 24px;
+    font-variant-numeric: tabular-nums;
   }
   .country-chevron {
     inset-inline-end: 8px;
